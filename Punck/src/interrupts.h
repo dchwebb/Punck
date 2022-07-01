@@ -7,13 +7,9 @@ void __attribute__((optimize("O0"))) TinyDelay() {
 }
 
 // I2S Interrupt
-void SPI2_IRQHandler() {
-
-	if (calculatingFilter) {
-		GPIOB->ODR |= GPIO_ODR_OD7;
-	}
-
-	delay.CalcSample();
+void SPI2_IRQHandler()
+{
+//	delay.CalcSample();
 
 	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
 	TinyDelay();
@@ -23,12 +19,6 @@ void SPI2_IRQHandler() {
 }
 
 
-// Audio Bootloader timer
-void TIM2_IRQHandler() {
-	TIM2->SR &= ~TIM_SR_UIF;				// clear Update Interrupt Flag
-	bootloader.GetSample();
-	TriggerADC1();
-}
 
 
 // System interrupts

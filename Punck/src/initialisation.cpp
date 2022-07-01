@@ -1,6 +1,6 @@
 #include "stm32h743xx.h"
 #include "initialisation.h"
-#include "DigitalDelay.h"
+#include <cstring>
 
 // Clock overview:
 // Main clock 4MHz: 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz
@@ -157,18 +157,6 @@ void InitCache()
 				(0     << MPU_RASR_C_Pos)    |		// Cacheable
 				(0     << MPU_RASR_B_Pos)    |		// Bufferable (ignored for non-cacheable configuration)
 				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
-				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
-
-
-	MPU->RNR = 1;									// Memory region number
-	MPU->RBAR = reinterpret_cast<uint32_t>(&led); 	// Store the address of the led DMA buffer into the region base address register
-
-	MPU->RASR = (0b11  << MPU_RASR_AP_Pos)   |		// All access permitted
-				(0b001 << MPU_RASR_TEX_Pos)  |		// Type Extension field: See truth table on p228 of Cortex M7 programming manual
-				(1     << MPU_RASR_S_Pos)    |		// Shareable: provides data synchronization between bus masters. Eg a processor with a DMA controller
-				(0     << MPU_RASR_C_Pos)    |		// Cacheable
-				(0     << MPU_RASR_B_Pos)    |		// Bufferable (ignored for non-cacheable configuration)
-				(15    << MPU_RASR_SIZE_Pos) |		// 64KB - D3 (size is log 2(mem size) - 1 ie 2^16 = 64k)
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
 
@@ -533,9 +521,6 @@ void suspendI2S()
 
 void resumeI2S()
 {
-	extern DigitalDelay delay;
-	delay.LR = left;
-
 	// to allow resume from debugging ensure suspended then clear buffer underrun flag
 	SPI2->CR1 |= SPI_CR1_CSUSP;
 	while ((SPI2->SR & SPI_SR_SUSP) == 0);
@@ -594,239 +579,6 @@ void InitIO()
 
 
 
-void InitLEDSPI()
-{
-	// Initialises SPI and DMA for controlling 3 RGB LEDs with Toshiba TB62781 9-way LED control (with 3k3 ohm resistors draws aroung 17mA from 5V)
-	// SPI Pins:
-	// PG14 (129) SPI6_MOSI
-	// PG13 (128) SPI6_SCK
-
-	// By default clock is from APB2 peripheral clock at 100MHz (RCC_D2CFGR_D2PPRE2)
-	RCC->APB4ENR |= RCC_APB4ENR_SPI6EN;
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port clock
-
-	// PG13 (128) SPI6_SCK
-	GPIOG->MODER  &= ~GPIO_MODER_MODE13_0;			// 10: Alternate function mode
-	GPIOG->AFR[1] |= 5 << GPIO_AFRH_AFSEL13_Pos;	// Alternate Function 5 (SPI6)
-
-	// PG14 (219) SPI6_MOSI
-	GPIOG->MODER  &= ~GPIO_MODER_MODE14_0;			// 10: Alternate function mode
-	GPIOG->AFR[1] |= 5 << GPIO_AFRH_AFSEL14_Pos;	// Alternate Function 5 (SPI6)
-
-	// Configure SPI
-	SPI6->CR1 |= SPI_CR1_SSI;						// Internal slave select
-	SPI6->CFG1 |= SPI_CFG1_MBR_2 | SPI_CFG1_MBR_0;					// Master Baud rate p2238: 100: SPI clock/32; 101: SPI clock/64
-	SPI6->CFG2 |= SPI_CFG2_COMM_0;					// 00: full-duplex, *01: simplex transmitter, 10: simplex receiver, 11: half-duplex
-	SPI6->CFG2 |= SPI_CFG2_SSM;						// Software slave management (ie do not use external pin)
-	SPI6->CFG2 |= SPI_CFG2_SSOM;					// SS output management in master mode
-	SPI6->CFG2 |= SPI_CFG2_MASTER;					// Master mode
-//	SPI6->CFG2 |= SPI_CFG2_CPHA;					// Clock phase - this setting potentially reduces risk of MOSI line idling high (See p9 of dm00725181)
-
-	// Configure DMA
-	RCC->AHB4ENR |= RCC_AHB4ENR_BDMAEN;
-
-	BDMA_Channel0->CCR &= ~BDMA_CCR_MSIZE;			// Memory size: 8 bit; 01 = 16 bit; 10 = 32 bit
-	BDMA_Channel0->CCR &= ~BDMA_CCR_PSIZE;			// Peripheral size: 8 bit; 01 = 16 bit; 10 = 32 bit
-	BDMA_Channel0->CCR |= BDMA_CCR_DIR;				// data transfer direction: 00: peripheral-to-memory; 01: memory-to-peripheral; 10: memory-to-memory
-	BDMA_Channel0->CCR |= BDMA_CCR_PL_0;			// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
-	BDMA_Channel0->CCR |= BDMA_CCR_MINC;			// Memory in increment mode
-
-	BDMA_Channel0->CPAR = (uint32_t)(&(SPI6->TXDR));// Configure the peripheral data register address
-
-	DMAMUX2_Channel0->CCR |= 12; 					// DMA request MUX input 86 = spi6_tx_dma (See p.697)
-	DMAMUX2_ChannelStatus->CFR |= DMAMUX_CFR_CSOF0; // Channel 5 Clear synchronization overrun event flag
-}
-
-void InitBootloaderTimer()
-{
-	// Timer clock operates at SysClk / 2  [specifically  ((hclk / HPRE) / D2PPRE1) * 2] = 200MHz
-	RCC->APB1LENR |= RCC_APB1LENR_TIM2EN;
-	TIM2->PSC = 0;									// [prescaler is PSC + 1] 200MHz / 1 = 200MHz
-	TIM2->ARR = 2083;								// Set auto reload register 200MHz / 2083 = 96kHz
-
-	TIM2->DIER |= TIM_DIER_UIE;						// DMA/interrupt enable register
-	NVIC_SetPriority(TIM2_IRQn, 1);					// Lower is higher priority
-	NVIC_EnableIRQ(TIM2_IRQn);
-
-	TIM2->CR1 |= TIM_CR1_CEN;
-	TIM2->EGR |= TIM_EGR_UG;						//  Re-initializes counter and generates update of registers
-}
-
-void DisableBootloaderTimer()
-{
-	TIM2->CR1 &= ~TIM_CR1_CEN;
-	TIM2->DIER &= ~TIM_DIER_UIE;					// DMA/interrupt enable register
-}
-
-
-#ifdef UNUSED
-// Unused
-void Init_WS2812_SPI()
-{
-	// Initialises SPI with DMA to send data to string of WS2812B smart RGB LEDs. This uses a hacky SPI format to send serial data in NRZ format.
-	// Note this requires 3x bit padding + extra dummy bytes to workaround MOSI line idling high (draws around 40mA at 5V)
-	// SPI Pins:
-	// PF7 (19) SPI5_SCK (only required for debugging)
-	// PF9 (21) SPI5_MOSI
-
-	// By default clock is from APB2 peripheral clock at 100MHz (RCC_D2CFGR_D2PPRE2)
-	RCC->APB2ENR |= RCC_APB2ENR_SPI5EN;
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOFEN;			// GPIO port clock
-
-	// PF7 (19) SPI5_SCK
-	GPIOF->MODER  &= ~GPIO_MODER_MODE7_0;			// 10: Alternate function mode
-	GPIOF->AFR[0] |= 5 << GPIO_AFRL_AFSEL7_Pos;		// Alternate Function 5 (SPI5)
-
-	// PF9 (21) SPI5_MOSI
-	GPIOF->MODER  &= ~GPIO_MODER_MODE9_0;			// 10: Alternate function mode
-	GPIOF->AFR[1] |= 5 << GPIO_AFRH_AFSEL9_Pos;		// Alternate Function 5 (SPI5)
-
-	// Configure SPI
-	SPI5->CR1 |= SPI_CR1_SSI;						// Internal slave select
-	SPI5->CFG1 |= SPI_CFG1_MBR_2;					// Master Baud rate p2238:  100: SPI master clock/32
-	SPI5->CFG2 |= SPI_CFG2_COMM_0;					// 00: full-duplex, *01: simplex transmitter, 10: simplex receiver, 11: half-duplex
-	SPI5->CFG2 |= SPI_CFG2_SSM;						// Software slave management (ie do not use external pin)
-	SPI5->CFG2 |= SPI_CFG2_SSOM;					// SS output management in master mode
-	SPI5->CFG2 |= SPI_CFG2_MASTER;					// Master mode
-	SPI5->CFG2 |= SPI_CFG2_CPHA;					// Clock phase - this setting potentially reduces risk of MOSI line idling high (See p9 of dm00725181)
-
-	// Configure DMA
-	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-
-	DMA1_Stream5->CR &= ~DMA_SxCR_MSIZE;			// Memory size: 8 bit; 01 = 16 bit; 10 = 32 bit
-	DMA1_Stream5->CR &= ~DMA_SxCR_PSIZE;			// Peripheral size: 8 bit; 01 = 16 bit; 10 = 32 bit
-	DMA1_Stream5->CR |= DMA_SxCR_DIR_0;				// data transfer direction: 00: peripheral-to-memory; 01: memory-to-peripheral; 10: memory-to-memory
-	DMA1_Stream5->CR |= DMA_SxCR_PL_0;				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
-	DMA1_Stream5->CR |= DMA_SxCR_MINC;				// Memory in increment mode
-	DMA1_Stream5->FCR &= ~DMA_SxFCR_FTH;			// FIFO threshold selection
-
-	DMA1_Stream5->PAR = (uint32_t)(&(SPI5->TXDR));	// Configure the peripheral data register address
-
-	DMAMUX1_Channel5->CCR |= 86; 					// DMA request MUX input 86 = spi5_tx_dma (See p.695) NB If using SPI6 need DMAMux2
-	DMAMUX1_ChannelStatus->CFR |= DMAMUX_CFR_CSOF5; // Channel 5 Clear synchronization overrun event flag
-}
-
-// Unused
-void InitI2C()
-{
-	//	Enable GPIO and I2C clocks
-	RCC->APB1LENR |= RCC_APB1LENR_I2C1EN;			// I2C1 Peripheral Clocks Enable
-	RCC->D2CCIP2R &= ~RCC_D2CCIP2R_I2C123SEL;		// Clock selection: 00: rcc_pclk1 (default); 01: pll3_r_ck; 10: hsi_ker_ck; 11: csi_ker_ck
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port clock
-
-	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-
-	// Initialize I2C DMA peripheral
-	DMA1_Stream0->CR &= ~DMA_SxCR_EN;
-	DMA1_Stream0->CR &= ~DMA_SxCR_CIRC;				// Disable Circular mode to keep refilling buffer
-	DMA1_Stream0->CR |= DMA_SxCR_MINC;				// Memory in increment mode
-	DMA1_Stream0->CR &= ~DMA_SxCR_PSIZE_0;			// Peripheral size: 00 = 8 bit; 01 = 16 bit; 10 = 32 bit
-	DMA1_Stream0->CR &= ~DMA_SxCR_MSIZE_0;			// Memory size: 00 = 8 bit; 01 = 16 bit; 10 = 32 bit
-	DMA1_Stream0->CR |= DMA_SxCR_PL_0;				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
-	DMA1_Stream0->CR |= DMA_SxCR_DIR_0;				// data transfer direction: 00: peripheral-to-memory; 01: memory-to-peripheral; 10: memory-to-memory				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
-
-	DMA1_Stream0->FCR &= ~DMA_SxFCR_FTH;			// Disable FIFO Threshold selection
-	DMA1->LIFCR = 0x3F << DMA_LIFCR_CFEIF0_Pos;		// clear all five interrupts for this stream
-
-	DMAMUX1_Channel0->CCR |= 34; 					// DMA request MUX input 34 = i2c1_tx_dma (See p.695)
-	DMAMUX1_ChannelStatus->CFR |= DMAMUX_CFR_CSOF0; // Channel 0 Clear synchronization overrun event flag
-
-
-	// PB7: I2C1_SDA [alternate function AF4]
-	GPIOB->OTYPER |= GPIO_OTYPER_OT7;				// Set pin output to Open Drain
-	GPIOB->MODER &= ~GPIO_MODER_MODE7_0;			// 10: Alternate function mode
-	GPIOB->AFR[0] |= 4 << GPIO_AFRL_AFSEL7_Pos;		// Alternate Function 4 (I2C1)
-
-	// PB8: I2C1_SCL [alternate function AF4]
-	GPIOB->OTYPER |= GPIO_OTYPER_OT8;				// Set pin output to Open Drain
-	GPIOB->MODER &= ~GPIO_MODER_MODE8_0;			// 10: Alternate function mode
-	GPIOB->AFR[1] |= 4 << GPIO_AFRH_AFSEL8_Pos;		// Alternate Function 4 (I2C1)
-
-	//I2C1->CR1 |= I2C_CR1_ANFOFF;					// Analog noise filter - on by default
-	//I2C1->CR1 |= I2C_CR1_DNF;						// Digital noise filter
-
-	// Timings taken from HAL for 100kHz:
-	// I2C1->TIMINGR =     0x10 C0 EC FF;
-	// Fast mode (400kHz)  0x00 90 34 B6
-	// Timing calculations: I2C frequency: 1 / ((SCLL + 1) + (SCLH + 1)) * (PRESC + 1) * 1/I2CCLK)
-	// [eg 1 / ((256 + 237) * 2 * 1/100MHz) = 100kHz] (Will actually be slightly slower as there are also sync times to be accounted for)
-//#define I2C_100KHZ
-#ifdef I2C_100KHZ
-	I2C1->TIMINGR |= 0x1 << I2C_TIMINGR_PRESC_Pos;	// Timing prescaler
-	I2C1->TIMINGR |= 0x2 << I2C_TIMINGR_SDADEL_Pos;	// Data Hold Time
-	I2C1->TIMINGR |= 0x4 << I2C_TIMINGR_SCLDEL_Pos;	// Data Setup Time
-	I2C1->TIMINGR |= 0xFF << I2C_TIMINGR_SCLL_Pos;	// SCLL low period
-	I2C1->TIMINGR |= 0xEC << I2C_TIMINGR_SCLH_Pos;	// SCLH high period
-#else
-	I2C1->TIMINGR |= 0x0 << I2C_TIMINGR_PRESC_Pos;	// Timing prescaler
-	I2C1->TIMINGR |= 0x0 << I2C_TIMINGR_SDADEL_Pos;	// Data Hold Time
-	I2C1->TIMINGR |= 0x9 << I2C_TIMINGR_SCLDEL_Pos;	// Data Setup Time
-	I2C1->TIMINGR |= 0xB6 << I2C_TIMINGR_SCLL_Pos;	// SCLL low period
-	I2C1->TIMINGR |= 0x34 << I2C_TIMINGR_SCLH_Pos;	// SCLH high period
-#endif
-
-	I2C1->CR1 &= ~I2C_CR1_NOSTRETCH;				// Clock stretching disable: Must be cleared in master mode
-	I2C1->CR1 |= I2C_CR1_TXDMAEN;					// Enable DMA transmission
-
-	NVIC_SetPriority(I2C1_EV_IRQn, 4);				// Lower is higher priority
-	NVIC_EnableIRQ(I2C1_EV_IRQn);
-
-
-	I2C1->CR1 |= I2C_CR1_PE;						// Peripheral enable
-}
-
-// Unused
-void InitClockTimer()
-{
-	// Configure timer to use Capture and Compare mode on external clock to time duration between pulses (not using as limited in duration)
-
-	// FIXME Production will use PA7 - temporarily using PB5 as also configured as TIM3_CH2
-	// See manual page 1670 for info on Capture and Compare Input mode
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port clock
-	GPIOB->MODER &= ~GPIO_MODER_MODE5_0;			// Alternate function is Mode 0b10 (defaults to 0b11)
-	GPIOB->AFR[0] |= 2 << GPIO_AFRL_AFSEL5_Pos;		// Alternate Function 2 for TIM3_CH2 on PB5 and PA7
-	RCC->APB1LENR |= RCC_APB1LENR_TIM3EN;
-	TIM3->ARR = 65535;
-	TIM3->PSC = 2000;
-
-	// TISEL Register is used to select which channel is routed to TI1, TI2, TI3 and TI4 inputs. By default CH2 is routed to TI2 so use that
-	// TIM3->TISEL |= 0 << TIM_TISEL_TI2SEL_Pos;
-
-	// There are two capture and compare registers. Configure the input to CCR1 to be CH2
-	TIM3->CCMR1 |= TIM_CCMR1_CC1S_1;				// 10: CC1 channel is configured as input, IC1 is mapped on TI2
-
-	// Configure the digital filter to allow time for the input signal to stabilise - initially set to 0
-	// Note that the number of units depends on the filter clock - this is either the main timer or a subdivision set by the DTS (See CKD in CR1)
-	TIM3->CCMR1 |= TIM_CCMR1_IC1F_0 & TIM_CCMR1_IC1F_1;
-
-	// TIMx_CCER register controls detection on rising (default) or falling edge of input
-	TIM3->CCER |= TIM_CCER_CC1E;					// Enable capture on 1
-
-	// Configure the timer to reset when a rising edge is detected
-	TIM3->SMCR |= 0b110 << TIM_SMCR_TS_Pos;			// 00110: Filtered Timer Input 2 (TI2FP2)
-	TIM3->SMCR |= TIM_SMCR_SMS_2;					// 0100: Reset Mode - Rising edge of the selected trigger input (TRGI) reinitializes the counter
-
-	TIM3->CR1 |= TIM_CR1_CEN;
-
-}
-
-
-void InitTempoClock()
-{
-	// Fire interrupt when clock pulse is received on PA7 - See manual p770
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;			// GPIO port clock
-	GPIOA->MODER &= ~GPIO_MODER_MODE7_Msk;			// 00: Input mode
-/*
-	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI7_PA;	// Select Pin PA7 which uses External interrupt 2
-	EXTI->RTSR1 |= EXTI_RTSR1_TR7;					// Enable rising edge trigger
-	EXTI->IMR1 |= EXTI_IMR1_IM7;					// Activate interrupt using mask register
-
-	NVIC_SetPriority(EXTI9_5_IRQn, 4);				// Lower is higher priority
-	NVIC_EnableIRQ(EXTI9_5_IRQn);
-	*/
-}
-#endif
-
 #define ITCMRAM
 #ifdef ITCMRAM
 void CopyToITCMRAM()
@@ -857,4 +609,33 @@ void CopyToITCMRAM()
 }
 #endif
 
+void InitQSPI()
+{
+	RCC->D1CCIPR &= ~RCC_D1CCIPR_QSPISEL;			// 00: hsi_ker_ck clock selected as per_ck cloc
+	RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN;				// Enable QSPI clock
 
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
+
+	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
+	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
+	GPIOB->MODER &= ~GPIO_MODER_MODE2_0;			// PB2: CLK
+	GPIOD->MODER &= ~GPIO_MODER_MODE11_0;			// PD11: IO0
+	GPIOD->MODER &= ~GPIO_MODER_MODE12_0;			// PD12: IO1
+	GPIOD->MODER &= ~GPIO_MODER_MODE13_0;			// PD13: IO3
+	GPIOE->MODER &= ~GPIO_MODER_MODE2_0;			// PE2: IO2
+	GPIOG->MODER &= ~GPIO_MODER_MODE6_0;			// PG6: NCS
+
+	GPIOB->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
+	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL11_Pos;	// Alternate function 9
+	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL12_Pos;	// Alternate function 9
+	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL13_Pos;	// Alternate function 9
+	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
+	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
+
+	QUADSPI->CR |= 255 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to 255 + 1 - should give a speed of 200MHz / 256 = ~780kHz
+	QUADSPI->DCR |= 23 <<  QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
+	QUADSPI->CR |= QUADSPI_CR_EN;					// Enable QSPI
+}

@@ -53,22 +53,7 @@ void Filter::Update(bool reset)
 			softSwitchTime = softSwitchDefault;
 		}
 
-		// Update filter LED
-		if (newFilterControl == Both) {
-			if (dampedADC < potCentre) {	// LP
-				float colourMult = std::pow(dampedADC / potCentre, 2.0f);
-				led.LEDColour(ledFilter, 0xFF99BB, 0xFF0000, colourMult, 1.0f);
-			} else {
-				float colourMult = std::pow((dampedADC - potCentre) / potCentre, 0.5f);
-				led.LEDColour(ledFilter, 0x0000FF, 0xBB99FF, colourMult, 1.0f);
-			}
-		} else 	if (newFilterControl == LP) {
-			float colourMult = std::pow(dampedADC / 65535.0f, 4.0f);
-			led.LEDColour(ledFilter, 0xFF5555, 0xFF0000, colourMult, 1.0f);
-		} else {
-			float colourMult = std::pow(1.0f - (dampedADC / 65535.0f), 4.0f);
-			led.LEDColour(ledFilter, 0x5555FF, 0x1100FF, colourMult, 1.0f);
-		}
+
 	}
 }
 
