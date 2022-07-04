@@ -3,8 +3,6 @@
 #include "initialisation.h"
 #include "USB.h"
 #include "Config.h"
-#include "sdram.h"
-
 
 
 class SerialHandler {

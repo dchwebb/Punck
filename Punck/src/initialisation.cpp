@@ -609,6 +609,7 @@ void CopyToITCMRAM()
 }
 #endif
 
+
 void InitQSPI()
 {
 	RCC->D1CCIPR &= ~RCC_D1CCIPR_QSPISEL;			// 00: hsi_ker_ck clock selected as per_ck cloc
@@ -637,5 +638,4 @@ void InitQSPI()
 
 	QUADSPI->CR |= 255 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to 255 + 1 - should give a speed of 200MHz / 256 = ~780kHz
 	QUADSPI->DCR |= 23 <<  QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
-	QUADSPI->CR |= QUADSPI_CR_EN;					// Enable QSPI
 }

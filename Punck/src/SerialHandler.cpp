@@ -1,4 +1,5 @@
 #include "SerialHandler.h"
+#include "ExtFlash.h"
 
 #include <stdio.h>
 
@@ -72,8 +73,28 @@ bool SerialHandler::Command()
 		usb->SendString("Press link button to dump output\r\n");
 #endif
 
-	} else if (ComCmd.compare("gateled\n") == 0) {				// Configure gate LED
+	} else if (ComCmd.compare("readreg\n") == 0) {				// Read QSPI register
 
+		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
+				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
+				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
+
+	} else if (ComCmd.compare(0, 5, "write") == 0) {			// Write QSPI register (format writeA:D where A is address and D is data)
+
+		int address = ParseInt(ComCmd, 'e', 0, 0xFFFFFF);
+		if (address >= 0) {
+			int data = ParseInt(ComCmd, ':', 0, 255);
+			if (data >= 0) {
+				extFlash.WriteData(address, data);
+			}
+		}
+
+	} else if (ComCmd.compare(0, 5, "read:") == 0) {			// Read QSPI register (format read:A where A is address)
+
+		int address = ParseInt(ComCmd, ':', 0, 0xFFFFFF);
+		if (address >= 0) {
+			usb->SendString("Data Read: " + std::to_string(extFlash.ReadData(address)) + "\r\n");
+		}
 
 	} else if (ComCmd.compare(0, 9, "mdlength:") == 0) {		// Modulated Delay length
 

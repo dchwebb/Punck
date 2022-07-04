@@ -1,9 +1,9 @@
 #include "initialisation.h"
 #include "USB.h"
 //#include "Filter.h"
-//#include "sdram.h"
 #include "SerialHandler.h"
 #include "config.h"
+#include "ExtFlash.h"
 
 
 volatile uint32_t SysTickVal;
@@ -30,7 +30,7 @@ int main(void) {
 //	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA beffers reside
-	InitQSPI();
+	extFlash.Init();				// Initialise external QSPI Flash
 //	InitIO();						// Initialise switches and LEDs
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 //	filter.Init();					// Initialise filter coefficients, windows etc

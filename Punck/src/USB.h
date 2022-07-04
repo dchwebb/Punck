@@ -87,8 +87,8 @@ extern bool USBDebug;
 #define USBD_LANGID_STRING				1033
 #define USBD_MANUFACTURER_STRING		"Mountjoy Modular"
 #define USBD_PID_FS						22352
-#define USBD_PRODUCT_STRING				"Mountjoy Retrospector"
-#define USBD_CDC_STRING					"Mountjoy Retrospector CDC"
+#define USBD_PRODUCT_STRING				"Mountjoy Punck"
+#define USBD_CDC_STRING					"Mountjoy Punck CDC"
 
 #define CLASS_SPECIFIC_DESC_SIZE		50
 #define USB_LEN_LANGID_STR_DESC			4
