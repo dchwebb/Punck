@@ -93,7 +93,7 @@ bool SerialHandler::Command()
 
 		int address = ParseInt(ComCmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
-			usb->SendString("Data Read: " + std::to_string(extFlash.ReadData(address)) + "\r\n");
+			usb->SendString("Data Read: " + std::to_string(extFlash.FastRead(address)) + "\r\n");
 		}
 
 	} else if (ComCmd.compare(0, 9, "mdlength:") == 0) {		// Modulated Delay length
