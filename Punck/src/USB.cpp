@@ -2,6 +2,14 @@
 
 bool USBDebug = true;
 
+extern "C" {
+// To enable USB for printf commands (To print floats enable 'Use float with printf from newlib-nano' MCU Build Settings)
+size_t _write(int handle, const unsigned char* buf, size_t bufSize)
+{
+	return usb.SendString(buf, bufSize);
+}
+}
+
 void USB::USBInterruptHandler() {		// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pcd.c
 
 	int epnum, ep_intr, epint;
@@ -748,18 +756,37 @@ bool USB::USB_ReadInterrupts(uint32_t interrupt) {
 	return ((USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK) & interrupt) == interrupt;
 }
 
-void USB::SendData(const uint8_t* data, uint16_t len, uint8_t endpoint) {
-	if (dev_state == USBD_STATE_CONFIGURED) {
-		if (!transmitting) {
-			transmitting = true;
-			outBuff = (uint8_t*)data;
-			outBuffSize = len;
-			outBuffCount = 0;
-			ep0_state = USBD_EP0_DATA_IN;
-			USB_EPStartXfer(Direction::in, endpoint, len);
-		}
+//void USB::SendData(const uint8_t* data, uint16_t len, uint8_t endpoint) {
+//	if (dev_state == USBD_STATE_CONFIGURED) {
+//		if (!transmitting) {
+//			transmitting = true;
+//			outBuff = (uint8_t*)data;
+//			outBuffSize = len;
+//			outBuffCount = 0;
+//			ep0_state = USBD_EP0_DATA_IN;
+//			USB_EPStartXfer(Direction::in, endpoint, len);
+//		}
+//	}
+//}
+
+
+
+size_t USB::SendData(const uint8_t* data, uint16_t len, uint8_t endpoint)
+{
+	if (dev_state == USBD_STATE_CONFIGURED && !transmitting) {
+		transmitting = true;
+		outBuff = (uint8_t*)data;
+		outBuffSize = len;
+		outBuffCount = 0;
+		ep0_state = USBD_EP0_DATA_IN;
+		USB_EPStartXfer(Direction::in, endpoint, len);
+		return len;
+	} else {
+		return 0;
 	}
 }
+
+
 void USB::SendString(const char* s) {
 	uint16_t counter = 0;
 	while (transmitting && counter < 10000) {
@@ -767,6 +794,17 @@ void USB::SendString(const char* s) {
 	}
 	SendData((uint8_t*)s, strlen(s), CDC_In);
 }
+
+
+size_t USB::SendString(const unsigned char* s, size_t len)
+{
+	uint16_t counter = 0;
+	while (transmitting && counter < 10000) {
+		++counter;
+	}
+	return SendData((uint8_t*)s, len, CDC_In);
+}
+
 void USB::SendString(std::string s) {
 	SendString(s.c_str());
 }
