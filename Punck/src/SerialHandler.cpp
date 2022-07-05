@@ -60,6 +60,10 @@ bool SerialHandler::Command()
 				"\r\nSupported commands:\r\n"
 				"info        -  Show diagnostic information\r\n"
 				"resume      -  Resume I2S after debugging\r\n"
+				"memmap      -  QSPI flash to memory mapped mode\r\n"
+				"readreg     -  Print QSPI flash status registers\r\n"
+				"writeA:D    -  Write byte to flash (A = address, D = data in decimal)\r\n"
+				"read:A      -  Read word from flash (where A is address in decimal)\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -73,13 +77,26 @@ bool SerialHandler::Command()
 		usb->SendString("Press link button to dump output\r\n");
 #endif
 
+	} else if (ComCmd.compare("memmap\n") == 0) {				// QSPI flash to memory mapped mode
+
+		extFlash.MemoryMapped();
+		usb->SendString("Changed to memory mapped mode\r\n");
+
+	} else if (ComCmd.compare("pmm\n") == 0) {					// QSPI flash: print memory mapped data
+
+		uint32_t* p = (uint32_t*)(0x90000000);
+
+		for (uint8_t a = 0; a < 200; ++a) {
+			printf("%d: %#010x\r\n", a, *p++);
+		}
+
 	} else if (ComCmd.compare("readreg\n") == 0) {				// Read QSPI register
 
 		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
 				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
 
-	} else if (ComCmd.compare(0, 5, "write") == 0) {			// Write QSPI register (format writeA:D where A is address and D is data)
+	} else if (ComCmd.compare(0, 5, "write") == 0) {			// Write QSPI  (format writeA:D where A is address and D is data)
 
 		int address = ParseInt(ComCmd, 'e', 0, 0xFFFFFF);
 		if (address >= 0) {
@@ -89,26 +106,13 @@ bool SerialHandler::Command()
 			}
 		}
 
-	} else if (ComCmd.compare(0, 5, "read:") == 0) {			// Read QSPI register (format read:A where A is address)
+	} else if (ComCmd.compare(0, 5, "read:") == 0) {			// Read QSPI data (format read:A where A is address)
 
 		int address = ParseInt(ComCmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
-			//usb->SendString("Data Read: " + std::to_string(extFlash.FastRead(address)) + "\r\n");
-			printf("Data Read: %#010x\r\n", extFlash.FastRead(address));
+			printf("Data Read: %#010x\r\n", (unsigned int)extFlash.FastRead(address));
 		}
 
-	} else if (ComCmd.compare(0, 9, "mdlength:") == 0) {		// Modulated Delay length
-
-
-//	} else if (ComCmd.compare("fdl\n") == 0) {					// Dump left filter buffer
-//		suspendI2S();
-//		uint16_t pos = filter.filterBuffPos[0];
-//		for (int f = 0; f < filter.firTaps; ++f) {
-//			usb->SendString(std::to_string(filter.filterBuffer[0][pos]) + "\r\n");
-//			if (++pos == filter.firTaps)
-//				pos = 0;
-//		}
-//		resumeI2S();
 
 	} else {
 		usb->SendString("Unrecognised command: " + ComCmd + "Type 'help' for supported commands\r\n");
