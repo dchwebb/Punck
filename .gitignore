@@ -1,4 +1,6 @@
 Punck/Debug/*
+Punck/Drivers/FatFs/doc/*
+
 *.html
 *.log
 *.bak
@@ -21,3 +23,4 @@ Punck/Debug/*
 *.list
 *.map
 *.launch
+
