@@ -5,6 +5,8 @@
 
 //extern Config config;
 
+uint32_t flashBuff[1024];
+
 int32_t SerialHandler::ParseInt(const std::string cmd, const char precedingChar, int low = 0, int high = 0) {
 	int32_t val = -1;
 	int8_t pos = cmd.find(precedingChar);		// locate position of character preceding
@@ -62,8 +64,10 @@ bool SerialHandler::Command()
 				"resume      -  Resume I2S after debugging\r\n"
 				"memmap      -  QSPI flash to memory mapped mode\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
-				"writeA:D    -  Write byte to flash (A = address, D = data in decimal)\r\n"
-				"read:A      -  Read word from flash (where A is address in decimal)\r\n"
+				"writeA:N    -  Write byte to flash (A = address, N = No of words in decimal)\r\n"
+				"read:A      -  Read word from flash (A = decimal address)\r\n"
+				"printflash:A   Print 100 words of flash (A = decimal address)\r\n"
+				"erasesect:A    Erase flash sector (A = decimal address)\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -78,17 +82,25 @@ bool SerialHandler::Command()
 #endif
 
 	} else if (ComCmd.compare("memmap\n") == 0) {				// QSPI flash to memory mapped mode
-
 		extFlash.MemoryMapped();
 		usb->SendString("Changed to memory mapped mode\r\n");
 
-	} else if (ComCmd.compare("pmm\n") == 0) {					// QSPI flash: print memory mapped data
+	} else if (ComCmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data
+		int address = ParseInt(ComCmd, ':', 0, 0xFFFFFF);
+		if (address >= 0) {
+			uint32_t* p = (uint32_t*)(0x90000000 + address);
 
-		uint32_t* p = (uint32_t*)(0x90000000);
-
-		for (uint8_t a = 0; a < 200; ++a) {
-			printf("%d: %#010x\r\n", a, *p++);
+			for (uint8_t a = 0; a < 100; ++a) {
+				printf("%d: %#010x\r\n", (a * 4) + address, *p++);
+			}
 		}
+	} else if (ComCmd.compare( 0, 10, "erasesect:") == 0) {		// Erase sector of flash memory
+		int address = ParseInt(ComCmd, ':', 0, 0xFFFFFF);
+		if (address >= 0) {
+			extFlash.SectorErase(address);
+			usb->SendString("Sector erased\r\n");
+		}
+		extFlash.MemoryMapped();
 
 	} else if (ComCmd.compare("readreg\n") == 0) {				// Read QSPI register
 
@@ -96,15 +108,22 @@ bool SerialHandler::Command()
 				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
 
-	} else if (ComCmd.compare(0, 5, "write") == 0) {			// Write QSPI  (format writeA:D where A is address and D is data)
+	} else if (ComCmd.compare(0, 5, "write") == 0) {			// Write QSPI format writeA:W [A = address; W = num words]
 
 		int address = ParseInt(ComCmd, 'e', 0, 0xFFFFFF);
 		if (address >= 0) {
-			int data = ParseInt(ComCmd, ':', 0, 255);
-			if (data >= 0) {
-				extFlash.WriteData(address, data);
+			int words = ParseInt(ComCmd, ':');
+			printf("Writing %d words to %d ...\r\n", words, address);
+
+			for (int a = 0; a < words; ++a) {
+				flashBuff[a] = a + 1;
 			}
+			extFlash.WriteData(address, flashBuff, words);
+
+			extFlash.MemoryMapped();
+			printf("Finished\r\n");
 		}
+
 
 	} else if (ComCmd.compare(0, 5, "read:") == 0) {			// Read QSPI data (format read:A where A is address)
 

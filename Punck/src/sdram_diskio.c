@@ -3,8 +3,9 @@
 
 static volatile DSTATUS Stat = STA_NOINIT;
 uint8_t fsWork[STORAGE_BLK_SIZ];			// a work buffer for the f_mkfs()
-uint8_t virtualDisk[STORAGE_BLK_SIZ * STORAGE_BLK_NBR];			// RAM used as virtual disk
-//extern uint8_t virtualDisk[STORAGE_BLK_SIZ * STORAGE_BLK_NBR];			// RAM used as virtual disk
+//uint8_t virtualDisk[STORAGE_BLK_SIZ * STORAGE_BLK_NBR];			// RAM used as virtual disk
+uint32_t* virtualDisk = (uint32_t*)(0x90000000);
+
 
 DSTATUS SDRAMDISK_initialize (BYTE);
 DSTATUS SDRAMDISK_status (BYTE);
@@ -12,7 +13,7 @@ DRESULT SDRAMDISK_read (BYTE, BYTE*, DWORD, UINT);
 DRESULT SDRAMDISK_write (BYTE, const BYTE*, DWORD, UINT);
 DRESULT SDRAMDISK_ioctl (BYTE, BYTE, void*);
 
-const Diskio_drvTypeDef  SDRAMDISK_Driver = {
+const Diskio_drvTypeDef  ExtFlashDriver = {
 		SDRAMDISK_initialize,
 		SDRAMDISK_status,
 		SDRAMDISK_read,
@@ -30,7 +31,7 @@ DSTATUS SDRAMDISK_initialize(BYTE lun)
 //	}
 
 	// Initialise virtual disk with 0xFF to mimic Flash storage
-	memset(virtualDisk, 0xFF, STORAGE_BLK_SIZ * STORAGE_BLK_NBR);
+	//memset(virtualDisk, 0xFF, STORAGE_BYTES);
 
 	Stat = RES_OK;
 	return Stat;
@@ -54,14 +55,16 @@ DSTATUS SDRAMDISK_status(BYTE lun)
  * @param  count: Number of sectors to read (1..128)
  * @retval DRESULT: Operation result
  */
-DRESULT SDRAMDISK_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
+DRESULT SDRAMDISK_read(BYTE lun, BYTE* buff, DWORD sector, UINT count)
 {
-	uint32_t *pSrcBuffer = (uint32_t *)buff;
-	uint32_t BufferSize = (STORAGE_BLK_SIZ * count)/4;
-	uint32_t *pSdramAddress = (uint32_t *) ((uint32_t)(&virtualDisk) + (sector * STORAGE_BLK_SIZ));
+	uint32_t* pSrcBuffer = (uint32_t *)buff;
+	uint32_t BufferSize = (STORAGE_BLK_SIZ * count) / 4;
+	//uint32_t *pSdramAddress = (uint32_t *) ((uint32_t)virtualDisk + (sector * STORAGE_BLK_SIZ));
+	uint32_t* pSdramAddress = virtualDisk + (sector * STORAGE_BLK_SIZ);
 
+	// FIXME - use memcpy
 	for (; BufferSize != 0; BufferSize--) {
-		*pSrcBuffer++ = *(volatile uint32_t *)pSdramAddress++;
+		*pSrcBuffer++ = *pSdramAddress++;
 	}
 
 	return RES_OK;
@@ -79,10 +82,10 @@ DRESULT SDRAMDISK_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
 {
 	uint32_t *pDstBuffer = (uint32_t *)buff;
 	uint32_t BufferSize = (STORAGE_BLK_SIZ * count)/4;
-	uint32_t *pSramAddress = (uint32_t *) ((uint32_t)(&virtualDisk) + (sector * STORAGE_BLK_SIZ));
+	uint32_t* pSramAddress = virtualDisk + (sector * STORAGE_BLK_SIZ);
 
 	for (; BufferSize != 0; BufferSize--) {
-		*(volatile uint32_t *)pSramAddress++ = *pDstBuffer++;
+	//	*(volatile uint32_t *)pSramAddress++ = *pDstBuffer++;
 	}
 
 	return RES_OK;
@@ -122,7 +125,7 @@ DRESULT SDRAMDISK_ioctl(BYTE lun, BYTE cmd, void *buff)
 
 		// Get erase block size in unit of sector (DWORD)
 		case GET_BLOCK_SIZE :
-			*(DWORD*)buff = 1;
+			*(DWORD*)buff = 1;		// FIXME - should be 4 (4 * 512 = 4096 which is the Flash sector erase size
 			res = RES_OK;
 			break;
 

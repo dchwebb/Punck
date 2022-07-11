@@ -159,7 +159,16 @@ void InitCache()
 				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
+	MPU->RNR = 1;									// Memory region number
+	MPU->RBAR = 0x90000000; 						// Address of the QSPI Flash
 
+	MPU->RASR = (0b11  << MPU_RASR_AP_Pos)   |		// All access permitted
+				(0b001 << MPU_RASR_TEX_Pos)  |		// Type Extension field: See truth table on p228 of Cortex M7 programming manual
+				(1     << MPU_RASR_S_Pos)    |		// Shareable: provides data synchronization between bus masters. Eg a processor with a DMA controller
+				(0     << MPU_RASR_C_Pos)    |		// Cacheable
+				(0     << MPU_RASR_B_Pos)    |		// Bufferable (ignored for non-cacheable configuration)
+				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
+				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
 	MPU->CTRL |= (1 << MPU_CTRL_PRIVDEFENA_Pos) |	// Enable PRIVDEFENA - this allows use of default memory map for memory areas other than those specific regions defined above
 				 (1 << MPU_CTRL_ENABLE_Pos);		// Enable the MPU
