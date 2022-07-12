@@ -91,7 +91,7 @@ bool SerialHandler::Command()
 			uint32_t* p = (uint32_t*)(0x90000000 + address);
 
 			for (uint8_t a = 0; a < 100; ++a) {
-				printf("%d: %#010x\r\n", (a * 4) + address, *p++);
+				printf("%d: %#010x\r\n", (a * 4) + address, (unsigned int)*p++);
 			}
 		}
 	} else if (ComCmd.compare( 0, 10, "erasesect:") == 0) {		// Erase sector of flash memory
@@ -118,7 +118,7 @@ bool SerialHandler::Command()
 			for (int a = 0; a < words; ++a) {
 				flashBuff[a] = a + 1;
 			}
-			extFlash.WriteData(address, flashBuff, words);
+			extFlash.WriteData(address, flashBuff, words, true);
 
 			extFlash.MemoryMapped();
 			printf("Finished\r\n");

@@ -1,6 +1,6 @@
 #include "initialisation.h"
 
-
+extern uint32_t* flashAddress;
 
 class ExtFlash {
 public:
@@ -12,7 +12,7 @@ public:
 	void MemoryMapped();
 	uint8_t ReadStatus(qspiRegister r);
 	void WriteEnable();
-	void WriteData(uint32_t address, uint32_t* data, uint32_t words);
+	void WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase = false);
 	void SectorErase(uint32_t address);
 	uint8_t ReadData(uint32_t address);
 	uint32_t FastRead(uint32_t address);
@@ -20,7 +20,7 @@ public:
 
 	bool memMapMode = false;
 private:
-	uint32_t* flashAddress = (uint32_t*)0x90000000;
+
 
 };
 

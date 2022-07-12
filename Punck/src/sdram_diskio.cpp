@@ -1,10 +1,10 @@
 #include "ff_gen_drv.h"
 #include "sdram_diskio.h"
+#include "ExtFlash.h"
+#include <cstring>
 
 static volatile DSTATUS Stat = STA_NOINIT;
 uint8_t fsWork[STORAGE_BLK_SIZ];			// a work buffer for the f_mkfs()
-//uint8_t virtualDisk[STORAGE_BLK_SIZ * STORAGE_BLK_NBR];			// RAM used as virtual disk
-uint32_t* virtualDisk = (uint32_t*)(0x90000000);
 
 
 DSTATUS SDRAMDISK_initialize (BYTE);
@@ -23,16 +23,6 @@ const Diskio_drvTypeDef  ExtFlashDriver = {
 
 DSTATUS SDRAMDISK_initialize(BYTE lun)
 {
-//	Stat = STA_NOINIT;
-//
-//	// Configure the SDRAM device
-//	if (BSP_SDRAM_Init() == SDRAM_OK) {
-//		Stat &= ~STA_NOINIT;
-//	}
-
-	// Initialise virtual disk with 0xFF to mimic Flash storage
-	//memset(virtualDisk, 0xFF, STORAGE_BYTES);
-
 	Stat = RES_OK;
 	return Stat;
 }
@@ -55,17 +45,12 @@ DSTATUS SDRAMDISK_status(BYTE lun)
  * @param  count: Number of sectors to read (1..128)
  * @retval DRESULT: Operation result
  */
-DRESULT SDRAMDISK_read(BYTE lun, BYTE* buff, DWORD sector, UINT count)
+DRESULT SDRAMDISK_read(BYTE lun, BYTE* writeAddress, DWORD sector, UINT count)
 {
-	uint32_t* pSrcBuffer = (uint32_t *)buff;
-	uint32_t BufferSize = (STORAGE_BLK_SIZ * count) / 4;
-	//uint32_t *pSdramAddress = (uint32_t *) ((uint32_t)virtualDisk + (sector * STORAGE_BLK_SIZ));
-	uint32_t* pSdramAddress = virtualDisk + (sector * STORAGE_BLK_SIZ);
+	uint32_t writeSize = STORAGE_BLK_SIZ * count;
+	uint32_t* readAddress = flashAddress + (sector * STORAGE_BLK_SIZ);
 
-	// FIXME - use memcpy
-	for (; BufferSize != 0; BufferSize--) {
-		*pSrcBuffer++ = *pSdramAddress++;
-	}
+	memcpy((uint32_t*)writeAddress, readAddress, writeSize);
 
 	return RES_OK;
 }
@@ -78,15 +63,12 @@ DRESULT SDRAMDISK_read(BYTE lun, BYTE* buff, DWORD sector, UINT count)
  * @param  count: Number of sectors to write (1..128)
  * @retval DRESULT: Operation result
  */
-DRESULT SDRAMDISK_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
+DRESULT SDRAMDISK_write(BYTE lun, const BYTE* buff, DWORD sector, UINT count)
 {
-	uint32_t *pDstBuffer = (uint32_t *)buff;
-	uint32_t BufferSize = (STORAGE_BLK_SIZ * count)/4;
-	uint32_t* pSramAddress = virtualDisk + (sector * STORAGE_BLK_SIZ);
+	uint32_t words = (STORAGE_BLK_SIZ * count) / 4;
+	uint32_t writeAddress = sector * STORAGE_BLK_SIZ;
 
-	for (; BufferSize != 0; BufferSize--) {
-	//	*(volatile uint32_t *)pSramAddress++ = *pDstBuffer++;
-	}
+	extFlash.WriteData(writeAddress, (uint32_t*)buff, words, true);
 
 	return RES_OK;
 }

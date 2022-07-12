@@ -2,7 +2,9 @@
 #include "ff.h"
 #include "sdram_diskio.h"
 
-// FIXME - canching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
+uint32_t* flashAddress = (uint32_t*)0x90000000;
+
+// FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 
 ExtFlash extFlash;
 
@@ -23,7 +25,7 @@ void InitFatFS()
 		res = f_mount(&RAMDISKFatFs, (char const*)RAMDISKPath, 1);
 		if (res == FR_NO_FILESYSTEM) {
 			// Mount FAT file system on External Flash
-			//f_mkfs((TCHAR const*)RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));
+			f_mkfs((TCHAR const*)RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));
 		}
 /*
 		// Create a FAT file system (format) on the logical drive (Use SFD to optimise space - otherwise partition seems to start at sector 63)
@@ -142,8 +144,23 @@ void ExtFlash::WriteEnable()
 }
 
 
-void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words)
+void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase)
 {
+	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
+	bool eraseRequired = false;
+	if (checkErase) {
+		for (uint32_t i = 0; i < words; ++i) {
+			if (((flashAddress + (address / 4))[i] & data[i]) != data[i]) {
+				eraseRequired = true;
+				break;
+			}
+		}
+		if (eraseRequired) {
+			// FIXME - should cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
+			SectorErase(address & ~0xFFF);					// Force address to 4096 byte boundary
+		}
+	}
+
 	do {
 		WriteEnable();
 
@@ -151,19 +168,19 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words)
 		uint32_t startPage = (address >> 8);
 		uint32_t endPage = (((address + (words * 4)) - 1) >> 8);
 
-		uint32_t writeSize = words * 4;							// Size of current write in bytes
+		uint32_t writeSize = words * 4;						// Size of current write in bytes
 		if (endPage != startPage) {
-			writeSize = ((startPage + 1) << 8) - address;		// When crossing pages only write up to the 256 byte boundary
+			writeSize = ((startPage + 1) << 8) - address;	// When crossing pages only write up to the 256 byte boundary
 		}
 
-		QUADSPI->DLR = writeSize - 1;							// number of bytes - 1 to transmit
-		QUADSPI->CR |= (3 << QUADSPI_CR_FTHRES_Pos);			// Set the threshold to 4 bytes
-		QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+		QUADSPI->DLR = writeSize - 1;						// number of bytes - 1 to transmit
+		QUADSPI->CR |= (3 << QUADSPI_CR_FTHRES_Pos);		// Set the threshold to 4 bytes
+		QUADSPI->CR |= QUADSPI_CR_EN;						// Enable QSPI
 
-		QUADSPI->CCR = (QUADSPI_CCR_ADSIZE_1 |					// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
-						QUADSPI_CCR_ADMODE_0 |					// Address: 00: None; *01: One line; 10: Two lines; 11: Four lines
-						QUADSPI_CCR_DMODE |						// Data: 00: None; 01: One line; 10: Two lines; *11: Four lines
-						QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
+		QUADSPI->CCR = (QUADSPI_CCR_ADSIZE_1 |				// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
+						QUADSPI_CCR_ADMODE_0 |				// Address: 00: None; *01: One line; 10: Two lines; 11: Four lines
+						QUADSPI_CCR_DMODE |					// Data: 00: None; 01: One line; 10: Two lines; *11: Four lines
+						QUADSPI_CCR_IMODE_0 |				// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
 						(quadPageProgram << QUADSPI_CCR_INSTRUCTION_Pos));
 		QUADSPI->AR = address;
 		for (uint8_t i = 0; i < (writeSize / 4); ++i) {
@@ -175,8 +192,9 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words)
 		address += writeSize;
 
 		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
-		QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+		QUADSPI->CR &= ~QUADSPI_CR_EN;						// Disable QSPI
 	} while (words > 0);
+	MemoryMapped();											// Switch back to memory mapped mode
 }
 
 
@@ -248,7 +266,7 @@ void ExtFlash::CheckBusy()
 	QUADSPI->PSMKR = 0b00000001;							// Mask on bit 1 (Busy)
 	QUADSPI->PSMAR = 0b00000000;							// Match Busy = 0
 	QUADSPI->PIR = 0x10;									// Polling interval in clock cycles
-	QUADSPI->CR |= QUADSPI_CR_APMS;							// Set the 'auto-stop' bit to end the transaction after a match.
+	QUADSPI->CR |= QUADSPI_CR_APMS;							// Set the 'auto-stop' bit to end transaction after a match.
 
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
