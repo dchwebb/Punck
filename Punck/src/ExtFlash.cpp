@@ -1,70 +1,61 @@
 #include "ExtFlash.h"
 #include "ff.h"
-#include "sdram_diskio.h"
+
+extern "C" {
+#include "diskio.h"
+}
 
 uint32_t* flashAddress = (uint32_t*)0x90000000;
+uint8_t fsWork[STORAGE_BLK_SIZ];							// a work buffer for the f_mkfs()
+
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 
 ExtFlash extFlash;
 
-FATFS RAMDISKFatFs;					// File system object for RAM disk logical drive
-FIL MyFile;							// File object
-char RAMDISKPath[4];				// RAM disk logical drive path
-FRESULT res;                                          // FatFs function common result code
-uint32_t byteswritten, bytesread;                     // File write/read counts
-uint8_t wtext[] = "This is STM32 working with FatFs"; // File write buffer
-uint8_t rtext[100];                                   // File read buffer
+FATFS RAMDISKFatFs;											// File system object for RAM disk logical drive
+const char RAMDISKPath[4] = "0:/";							// RAM disk logical drive path
+
 
 void InitFatFS()
 {
-	// Link the RAM disk I/O driver
-	if (FATFS_LinkDriver(&ExtFlashDriver, RAMDISKPath) == 0) {
+	// Register the file system object to the FatFs module
+	FRESULT res = f_mount(&RAMDISKFatFs, RAMDISKPath, 1);
 
-		// Register the file system object to the FatFs module
-		res = f_mount(&RAMDISKFatFs, (char const*)RAMDISKPath, 1);
-		if (res == FR_NO_FILESYSTEM) {
-			// Mount FAT file system on External Flash
-			f_mkfs((TCHAR const*)RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));
-		}
+	MKFS_PARM parms;
+
+	if (res == FR_NO_FILESYSTEM) {
+		f_mkfs(RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));		// Mount FAT file system on External Flash
+	}
+
 /*
-		// Create a FAT file system (format) on the logical drive (Use SFD to optimise space - otherwise partition seems to start at sector 63)
-		f_mkfs((TCHAR const*)RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));
+	uint32_t byteswritten, bytesread;						// File write/read counts
+	uint8_t wtext[] = "This is STM32 working with FatFs";	// File write buffer
+	uint8_t rtext[100];										// File read buffer
+	FIL MyFile;												// File object
 
-			// Create and Open a new text file object with write access
-			if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
-
-				// Write data to the text file
-				res = f_write(&MyFile, wtext, sizeof(wtext), (unsigned int*)&byteswritten);
-
-				if ((byteswritten != 0) && (res == FR_OK)) {
-					// Close the open text file
-					f_close(&MyFile);
-
-					// Open the text file object with read access
-					if (f_open(&MyFile, "STM32.TXT", FA_READ) == FR_OK) {
-
-						// Read data from the text file
-						res = f_read(&MyFile, rtext, sizeof(rtext), (unsigned int *)&bytesread);
-
-						if ((bytesread > 0) && (res == FR_OK)) {
-
-							//Close the open text file
-							f_close(&MyFile);
-						}
-					}
+	// Create and Open a new text file object with write access
+	if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
+		res = f_write(&MyFile, wtext, sizeof(wtext), (unsigned int*)&byteswritten);			// Write data to the text file
+		if ((byteswritten != 0) && (res == FR_OK)) {
+			f_close(&MyFile);																// Close the open text file
+			if (f_open(&MyFile, "STM32.TXT", FA_READ) == FR_OK) {							// Open the text file object with read access
+				res = f_read(&MyFile, rtext, sizeof(rtext), (unsigned int *)&bytesread);	// Read data from the text file
+				if ((bytesread > 0) && (res == FR_OK)) {
+					f_close(&MyFile);														// Close the open text file
 				}
 			}
+		}
+	}
 */
-
 
 //		DIR dp;						// Pointer to the directory object structure
 //		FILINFO fno;				// File information structure
 //		res = f_opendir(&dp, "");	// second parm is directory name (root)
 //		res = f_readdir(&dp, &fno);
 //		uint8_t dummy = 1;
-	}
 }
+
 
 void ExtFlash::Init()
 {
@@ -279,3 +270,72 @@ void ExtFlash::CheckBusy()
 	QUADSPI->FCR |= QUADSPI_FCR_CSMF;						// Acknowledge status match flag
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 }
+
+
+/*
+// Wrapper functions to interface FatFS library to ExtFlash handler
+uint8_t disk_initialize (uint8_t pdrv)
+{
+	return RES_OK;
+}
+
+
+uint8_t disk_status (uint8_t pdrv)
+{
+	return RES_OK;
+}
+
+
+uint8_t disk_read (uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount)
+{
+	uint32_t writeSize = STORAGE_BLK_SIZ * sectorCount;
+	uint32_t* readAddress = flashAddress + (readSector * STORAGE_BLK_SIZ);
+
+	memcpy((uint32_t*)writeAddress, readAddress, writeSize);
+	return RES_OK;
+}
+
+
+uint8_t disk_write (uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount)
+{
+	uint32_t words = (STORAGE_BLK_SIZ * sectorCount) / 4;
+	uint32_t writeAddress = writeSector * STORAGE_BLK_SIZ;
+
+	extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
+	return RES_OK;
+}
+
+
+uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff)
+{
+	uint8_t res = RES_OK;
+
+	switch (cmd) {
+		case CTRL_SYNC:					// Make sure that no pending write process
+			break;
+
+		case GET_SECTOR_COUNT:			// Get number of sectors on the disk
+			*(uint16_t*)buff = STORAGE_BLK_NBR;
+			break;
+
+		case GET_SECTOR_SIZE:			// Get R/W sector size
+			*(uint32_t*)buff = STORAGE_BLK_SIZ;
+			break;
+
+		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector
+			*(uint16_t*)buff = 1;		// FIXME - should be 4 (4 * 512 = 4096 which is the Flash sector erase size
+			break;
+
+		default:
+			res = RES_PARERR;
+	}
+
+	return res;
+}
+
+
+uint32_t get_fattime()
+{
+	return 0;
+}
+*/
