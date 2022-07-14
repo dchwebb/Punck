@@ -7,7 +7,7 @@ extern "C" {
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 
-const uint32_t* flashAddress = (uint32_t*)0x90000000;
+const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
 uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
 ExtFlash extFlash;											// Singleton external flash handler
 FATFS fatFs;												// File system object for RAM disk logical drive
@@ -140,17 +140,25 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
 	bool eraseRequired = false;
+	bool dataChanged = false;
 	if (checkErase) {
 		for (uint32_t i = 0; i < words; ++i) {
 			if (((flashAddress + (address / 4))[i] & data[i]) != data[i]) {
 				eraseRequired = true;
+				dataChanged = true;
 				break;
+			}
+			if ((flashAddress + (address / 4))[i] != data[i]) {
+				dataChanged = true;
 			}
 		}
 		if (eraseRequired) {
 			// FIXME - should cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 			SectorErase(address & ~0xFFF);					// Force address to 4096 byte boundary
 		}
+	}
+	if (!dataChanged) {										// No difference between Flash contents and write data
+		return;
 	}
 
 	do {

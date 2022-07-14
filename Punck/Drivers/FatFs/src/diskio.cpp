@@ -55,7 +55,7 @@ uint8_t disk_ioctl(uint8_t pdrv, uint8_t cmd, void* buff)
 			break;
 
 		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector
-			*(uint32_t*)buff = 1;		// FIXME - should be 4 (4 * 512 = 4096 which is the Flash sector erase size
+			*(uint32_t*)buff = 4;		// Set to 4 (4 * 512 = 4096 which is the Flash sector erase size)
 			break;
 
 		default:

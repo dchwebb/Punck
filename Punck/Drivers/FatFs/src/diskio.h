@@ -1,24 +1,5 @@
 #include "stm32h7xx.h"
 
-
-/* FatFS Structure:
-
-Sector = 512 bytes
-Cluster = 512 bytes
-
-16 MBytes on Flash = 31,250 Sectors
-
-NB - currently not set to full size of flash so using FAT12 - should be FAT16 when using full size of disk
-Bytes			Description
----------------------------
-    0 -   511	Boot Sector
-  512 -  1023	FAT
- 1024 -  3071	Root Directory: Currently hardwired to support 64 root directory entries at 32 bytes each (32 * 64 = 2048)
- 3072 - 		Data section
-
-*/
-
-
 // Disk Status Bits (DSTATUS)
 #define STA_NOINIT		0x01	// Drive not initialized
 #define STA_NODISK		0x02	// No medium in the drive
