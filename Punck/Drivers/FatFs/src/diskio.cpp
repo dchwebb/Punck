@@ -6,39 +6,39 @@ extern "C" {
 
 
 // Wrapper functions to interface FatFS library to ExtFlash handler
-uint8_t disk_initialize (uint8_t pdrv)
+uint8_t disk_initialize(uint8_t pdrv)
 {
 	return RES_OK;
 }
 
 
-uint8_t disk_status (uint8_t pdrv)
+uint8_t disk_status(uint8_t pdrv)
 {
 	return RES_OK;
 }
 
 
-uint8_t disk_read (uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount)
+uint8_t disk_read(uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount)
 {
-	uint32_t writeSize = STORAGE_BLK_SIZ * sectorCount;
-	uint32_t* readAddress = flashAddress + (readSector * STORAGE_BLK_SIZ);
+	const uint32_t writeSize = flashBlockSize * sectorCount;
+	const uint32_t* readAddress = flashAddress + (readSector * flashBlockSize);
 
 	memcpy((uint32_t*)writeAddress, readAddress, writeSize);
 	return RES_OK;
 }
 
 
-uint8_t disk_write (uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount)
+uint8_t disk_write(uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-	uint32_t words = (STORAGE_BLK_SIZ * sectorCount) / 4;
-	uint32_t writeAddress = writeSector * STORAGE_BLK_SIZ;
+	uint32_t words = (flashBlockSize * sectorCount) / 4;
+	uint32_t writeAddress = writeSector * flashBlockSize;
 
 	extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
 	return RES_OK;
 }
 
 
-uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff)
+uint8_t disk_ioctl(uint8_t pdrv, uint8_t cmd, void* buff)
 {
 	uint8_t res = RES_OK;
 
@@ -47,11 +47,11 @@ uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff)
 			break;
 
 		case GET_SECTOR_COUNT:			// Get number of sectors on the disk
-			*(uint32_t*)buff = STORAGE_BLK_NBR;
+			*(uint32_t*)buff = flashBlockCount;
 			break;
 
 		case GET_SECTOR_SIZE:			// Get R/W sector size
-			*(uint32_t*)buff = STORAGE_BLK_SIZ;
+			*(uint32_t*)buff = flashBlockSize;
 			break;
 
 		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector

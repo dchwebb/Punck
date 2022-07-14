@@ -1,10 +1,6 @@
 #include "stm32h7xx.h"
 
 
-#define STORAGE_BLK_SIZ                  0x200		// Block Size is 512 Bytes
-#define STORAGE_BLK_NBR                  128		// 200 * 512 = 102,400
-#define STORAGE_BYTES (STORAGE_BLK_SIZ * STORAGE_BLK_NBR)
-
 /* FatFS Structure:
 
 Sector = 512 bytes
@@ -17,8 +13,8 @@ Bytes			Description
 ---------------------------
     0 -   511	Boot Sector
   512 -  1023	FAT
- 1024 - 17407	Root Directory: Currently hardwired to support 512 root directory entries at 32 bytes each (32 * 512 = 16,384)
-17408 - 		Data section
+ 1024 -  3071	Root Directory: Currently hardwired to support 64 root directory entries at 32 bytes each (32 * 64 = 2048)
+ 3072 - 		Data section
 
 */
 

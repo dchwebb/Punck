@@ -5,27 +5,28 @@ extern "C" {
 #include "diskio.h"
 }
 
-uint32_t* flashAddress = (uint32_t*)0x90000000;
-uint8_t fsWork[STORAGE_BLK_SIZ];							// a work buffer for the f_mkfs()
-
-
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 
-ExtFlash extFlash;
-
-FATFS RAMDISKFatFs;											// File system object for RAM disk logical drive
-const char RAMDISKPath[4] = "0:/";							// RAM disk logical drive path
+const uint32_t* flashAddress = (uint32_t*)0x90000000;
+uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
+ExtFlash extFlash;											// Singleton external flash handler
+FATFS fatFs;												// File system object for RAM disk logical drive
+const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 
 
 void InitFatFS()
 {
-	// Register the file system object to the FatFs module
-	FRESULT res = f_mount(&RAMDISKFatFs, RAMDISKPath, 1);
-
-	MKFS_PARM parms;
+	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
-		f_mkfs(RAMDISKPath, (FM_ANY | FM_SFD), 0, fsWork, sizeof(fsWork));		// Mount FAT file system on External Flash
+		MKFS_PARM parms;									// Create parameter struct
+		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
+		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
+		parms.align = 0;									// Default initialise remaining values
+		parms.au_size = 0;
+		parms.n_fat = 0;
+
+		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 	}
 
 /*
@@ -49,9 +50,9 @@ void InitFatFS()
 	}
 */
 
-//		DIR dp;						// Pointer to the directory object structure
-//		FILINFO fno;				// File information structure
-//		res = f_opendir(&dp, "");	// second parm is directory name (root)
+//		DIR dp;												// Pointer to the directory object structure
+//		FILINFO fno;										// File information structure
+//		res = f_opendir(&dp, "");							// second parm is directory name (root)
 //		res = f_readdir(&dp, &fno);
 //		uint8_t dummy = 1;
 }
@@ -271,71 +272,3 @@ void ExtFlash::CheckBusy()
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 }
 
-
-/*
-// Wrapper functions to interface FatFS library to ExtFlash handler
-uint8_t disk_initialize (uint8_t pdrv)
-{
-	return RES_OK;
-}
-
-
-uint8_t disk_status (uint8_t pdrv)
-{
-	return RES_OK;
-}
-
-
-uint8_t disk_read (uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount)
-{
-	uint32_t writeSize = STORAGE_BLK_SIZ * sectorCount;
-	uint32_t* readAddress = flashAddress + (readSector * STORAGE_BLK_SIZ);
-
-	memcpy((uint32_t*)writeAddress, readAddress, writeSize);
-	return RES_OK;
-}
-
-
-uint8_t disk_write (uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount)
-{
-	uint32_t words = (STORAGE_BLK_SIZ * sectorCount) / 4;
-	uint32_t writeAddress = writeSector * STORAGE_BLK_SIZ;
-
-	extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
-	return RES_OK;
-}
-
-
-uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff)
-{
-	uint8_t res = RES_OK;
-
-	switch (cmd) {
-		case CTRL_SYNC:					// Make sure that no pending write process
-			break;
-
-		case GET_SECTOR_COUNT:			// Get number of sectors on the disk
-			*(uint16_t*)buff = STORAGE_BLK_NBR;
-			break;
-
-		case GET_SECTOR_SIZE:			// Get R/W sector size
-			*(uint32_t*)buff = STORAGE_BLK_SIZ;
-			break;
-
-		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector
-			*(uint16_t*)buff = 1;		// FIXME - should be 4 (4 * 512 = 4096 which is the Flash sector erase size
-			break;
-
-		default:
-			res = RES_PARERR;
-	}
-
-	return res;
-}
-
-
-uint32_t get_fattime()
-{
-	return 0;
-}
-*/

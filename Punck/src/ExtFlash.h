@@ -1,6 +1,10 @@
+#pragma once
+
 #include "initialisation.h"
 
-extern uint32_t* flashAddress;
+extern const uint32_t* flashAddress;
+static constexpr uint32_t flashBlockSize = 512;			// Default block size used by FAT
+static constexpr uint32_t flashBlockCount = 31250;		// 31250 blocks of 512 bytes = 16 MBytes
 
 class ExtFlash {
 public:
