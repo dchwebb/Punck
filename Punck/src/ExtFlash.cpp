@@ -6,6 +6,7 @@ extern "C" {
 }
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
+// FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 
 const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
 uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
@@ -85,6 +86,8 @@ void ExtFlash::MemoryMapped()
 	// Activate memory mapped mode
 	//SCB_InvalidateDCache_by_Addr(flashAddress, 10000);		// Ensure cache is refreshed after write or erase
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+	CheckBusy();											// Check chip is not still writing data
+
 	QUADSPI->ABR = 0xFF;									// Use alternate bytes to pad the address with a dummy byte of 0xFF
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
@@ -136,24 +139,36 @@ void ExtFlash::WriteEnable()
 }
 
 
+uint32_t writeCount = 0;
+
 void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase)
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
+//	uint32_t testData1 = (flashAddress + (address / 4))[100];
+//	uint32_t testData = (flashAddress + (address / 4))[0];
+//	if (testData == 0x80) {
+//		volatile int susp = 1;
+//	}
+//	volatile uint32_t testData3 = (flashAddress + (address / 4))[0];
+
 	bool eraseRequired = false;
 	bool dataChanged = false;
 	if (checkErase) {
+		if (!memMapMode) {
+			volatile int susp = 1;
+		}
 		for (uint32_t i = 0; i < words; ++i) {
-			if (((flashAddress + (address / 4))[i] & data[i]) != data[i]) {
-				eraseRequired = true;
+			uint32_t flashData = (flashAddress + (address / 4))[i];		// pointer arithmetic will add in 32 bit words
+
+			if (flashData != data[i]) {
 				dataChanged = true;
-				break;
-			}
-			if ((flashAddress + (address / 4))[i] != data[i]) {
-				dataChanged = true;
+				if ((flashData & data[i]) != data[i]) {		// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
+					eraseRequired = true;
+					break;
+				}
 			}
 		}
 		if (eraseRequired) {
-			// FIXME - should cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 			SectorErase(address & ~0xFFF);					// Force address to 4096 byte boundary
 		}
 	}
@@ -162,6 +177,7 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 	}
 
 	do {
+		writeCount++;
 		WriteEnable();
 
 		// Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)
