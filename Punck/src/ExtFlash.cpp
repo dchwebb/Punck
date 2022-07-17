@@ -1,9 +1,6 @@
 #include "ExtFlash.h"
 #include "ff.h"
-
-extern "C" {
 #include "diskio.h"
-}
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 // FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
@@ -12,6 +9,7 @@ const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash st
 uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
 ExtFlash extFlash;											// Singleton external flash handler
 FATFS fatFs;												// File system object for RAM disk logical drive
+FIL MyFile;													// File object
 const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 
 
@@ -30,26 +28,25 @@ void InitFatFS()
 		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 	}
 
-/*
+
 	uint32_t byteswritten, bytesread;						// File write/read counts
 	uint8_t wtext[] = "This is STM32 working with FatFs";	// File write buffer
 	uint8_t rtext[100];										// File read buffer
-	FIL MyFile;												// File object
 
 	// Create and Open a new text file object with write access
-	if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
-		res = f_write(&MyFile, wtext, sizeof(wtext), (unsigned int*)&byteswritten);			// Write data to the text file
-		if ((byteswritten != 0) && (res == FR_OK)) {
-			f_close(&MyFile);																// Close the open text file
-			if (f_open(&MyFile, "STM32.TXT", FA_READ) == FR_OK) {							// Open the text file object with read access
-				res = f_read(&MyFile, rtext, sizeof(rtext), (unsigned int *)&bytesread);	// Read data from the text file
-				if ((bytesread > 0) && (res == FR_OK)) {
-					f_close(&MyFile);														// Close the open text file
-				}
-			}
-		}
-	}
-*/
+//	if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
+//		res = f_write(&MyFile, wtext, sizeof(wtext), (unsigned int*)&byteswritten);			// Write data to the text file
+//		if ((byteswritten != 0) && (res == FR_OK)) {
+//			f_close(&MyFile);																// Close the open text file
+//			if (f_open(&MyFile, "STM32.TXT", FA_READ) == FR_OK) {							// Open the text file object with read access
+//				res = f_read(&MyFile, rtext, sizeof(rtext), (unsigned int *)&bytesread);	// Read data from the text file
+//				if ((bytesread > 0) && (res == FR_OK)) {
+//					f_close(&MyFile);														// Close the open text file
+//				}
+//			}
+//		}
+//	}
+
 
 //		DIR dp;												// Pointer to the directory object structure
 //		FILINFO fno;										// File information structure
@@ -144,19 +141,9 @@ uint32_t writeCount = 0;
 void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase)
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
-//	uint32_t testData1 = (flashAddress + (address / 4))[100];
-//	uint32_t testData = (flashAddress + (address / 4))[0];
-//	if (testData == 0x80) {
-//		volatile int susp = 1;
-//	}
-//	volatile uint32_t testData3 = (flashAddress + (address / 4))[0];
-
 	bool eraseRequired = false;
 	bool dataChanged = false;
 	if (checkErase) {
-		if (!memMapMode) {
-			volatile int susp = 1;
-		}
 		for (uint32_t i = 0; i < words; ++i) {
 			uint32_t flashData = (flashAddress + (address / 4))[i];		// pointer arithmetic will add in 32 bit words
 

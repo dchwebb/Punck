@@ -14,7 +14,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 
 USB usb;
-SerialHandler serial(usb);
+//SerialHandler serial(usb);
 //Filter filter;
 //Config config;
 
@@ -90,18 +90,19 @@ int main(void) {
 
 
 
-	usb.InitUSB();
+	usb.Init();
 //	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 	while (1) {
-		serial.Command();			// Check for incoming CDC commands
+		// Check for incoming CDC commands
+		usb.cdc.ProcessCommand();
 
-#if (USB_DEBUG)
-		if ((GPIOB->IDR & GPIO_IDR_ID4) == 0 && USBDebug) {
-			USBDebug = false;
-			usb.OutputDebug();
-		}
-#endif
+//#if (USB_DEBUG)
+//		if ((GPIOB->IDR & GPIO_IDR_ID4) == 0 && USBDebug) {
+//			USBDebug = false;
+//			usb.OutputDebug();
+//		}
+//#endif
 
 	}
 }

@@ -4,10 +4,14 @@ extern "C" {
 #include "ExtFlash.h"
 #include <cstring>
 
+// Create cache for header part of Fat
+uint8_t FatCache[flashBlockSize * flashHeaderSize];		// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 // Wrapper functions to interface FatFS library to ExtFlash handler
 uint8_t disk_initialize(uint8_t pdrv)
 {
+	// Set up cache area for header
+	memcpy(FatCache, flashAddress, flashBlockSize * flashHeaderSize);
 	return RES_OK;
 }
 
@@ -18,22 +22,32 @@ uint8_t disk_status(uint8_t pdrv)
 }
 
 
-uint8_t disk_read(uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount)
+uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
 {
-	const uint32_t writeSize = flashBlockSize * sectorCount;
-	const uint32_t* readAddress = flashAddress + (readSector * flashBlockSize);
+	// If reading header data return from cache
+	const uint8_t* readAddress;
+	if (readSector < flashHeaderSize) {
+		readAddress = &(FatCache[readSector * flashBlockSize]);
+	} else {
+		readAddress = ((uint8_t*)flashAddress) + (readSector * flashBlockSize);
+	}
 
-	memcpy((uint32_t*)writeAddress, readAddress, writeSize);
+	memcpy(writeAddress, readAddress, flashBlockSize * sectorCount);
 	return RES_OK;
 }
 
 
-uint8_t disk_write(uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount)
+uint8_t disk_write(uint8_t pdrv, const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-	uint32_t words = (flashBlockSize * sectorCount) / 4;
-	uint32_t writeAddress = writeSector * flashBlockSize;
+	if (writeSector < flashHeaderSize) {
+		uint8_t* writeAddress = &(FatCache[writeSector * flashBlockSize]);
+		memcpy(writeAddress, readBuff, flashBlockSize * sectorCount);
+	} else {
+		uint32_t words = (flashBlockSize * sectorCount) / 4;
+		uint32_t writeAddress = writeSector * flashBlockSize;
+		extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
+	}
 
-	extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
 	return RES_OK;
 }
 

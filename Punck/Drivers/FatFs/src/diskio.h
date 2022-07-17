@@ -24,9 +24,18 @@ typedef enum {
 	RES_PARERR					// 4: Invalid Parameter
 } DRESULT;
 
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 uint8_t disk_initialize (uint8_t pdrv);
 uint8_t disk_status (uint8_t pdrv);
 uint8_t disk_read (uint8_t pdrv, uint8_t *writeAddress, uint32_t readSector, uint32_t sectorCount);
 uint8_t disk_write (uint8_t pdrv, const uint8_t *readBuff, uint32_t writeSector, uint32_t sectorCount);
 uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff);
 uint32_t get_fattime();
+
+#ifdef __cplusplus
+ }
+#endif
