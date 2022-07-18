@@ -1,5 +1,6 @@
 #include "diskio.h"
 #include "ExtFlash.h"
+#include "FatTools.h"
 #include <cstring>
 
 // Wrapper functions to interface FatFS library to ExtFlash handler
@@ -77,3 +78,5 @@ uint32_t get_fattime()
 {
 	return 0;
 }
+
+

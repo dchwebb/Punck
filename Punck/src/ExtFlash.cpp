@@ -1,67 +1,15 @@
 #include "ExtFlash.h"
-#include "ff.h"
 #include "diskio.h"
+#include "FatTools.h"
 #include <cstring>
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 // FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 
-// Create cache for header part of Fat
-uint8_t FatCache[flashBlockSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
-uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
-ExtFlash extFlash;											// Singleton external flash handler
-FATFS fatFs;												// File system object for RAM disk logical drive
-FIL MyFile;													// File object
-const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
-
-//DIR dirObj;												// Pointer to the directory object structure
-//FILINFO fileInfo;											// File information structure
-
-void InitFatFS()
-{
-	// Set up cache area for header - this is called multiple times (eg from opendir function) so only initialise cache once
-	memcpy(FatCache, flashAddress, flashBlockSize * flashHeaderSize);
-
-	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
-
-//	if (res == FR_NO_FILESYSTEM) {
-		MKFS_PARM parms;									// Create parameter struct
-		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
-		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
-		parms.align = 0;									// Default initialise remaining values
-		parms.au_size = 0;
-		parms.n_fat = 0;
-
-		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
-		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
-//	}
 
 
-	uint32_t byteswritten, bytesread;						// File write/read counts
-	uint8_t wtext[] = "This is STM32 working with FatFs";	// File write buffer
-	uint8_t rtext[100];										// File read buffer
-
-
-
-	// Create and Open a new text file object with write access
-//	if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
-//		res = f_write(&MyFile, wtext, sizeof(wtext), (unsigned int*)&byteswritten);			// Write data to the text file
-//		if ((byteswritten != 0) && (res == FR_OK)) {
-//			f_close(&MyFile);																// Close the open text file
-//			if (f_open(&MyFile, "STM32.TXT", FA_READ) == FR_OK) {							// Open the text file object with read access
-//				res = f_read(&MyFile, rtext, sizeof(rtext), (unsigned int *)&bytesread);	// Read data from the text file
-//				if ((bytesread > 0) && (res == FR_OK)) {
-//					f_close(&MyFile);														// Close the open text file
-//				}
-//			}
-//		}
-//	}
-
-
-
-}
 
 
 void ExtFlash::Init()
@@ -82,7 +30,7 @@ void ExtFlash::Init()
 	}
 
 	MemoryMapped();											// Switch to memory mapped mode
-	InitFatFS();											// Initialise FatFS
+	fatTools.InitFatFS();											// Initialise FatFS
 }
 
 
@@ -292,8 +240,4 @@ void ExtFlash::CheckBusy()
 }
 
 
-void ExtFlash::InvalidateFATCache()
-{
-	// Clear the cache window in the fatFS object so that new writes will be correctly read
-	fatFs.winsect = ~0;
-}
+

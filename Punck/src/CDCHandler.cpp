@@ -1,6 +1,7 @@
 #include "USB.h"
 #include "CDCHandler.h"
 #include "ExtFlash.h"
+#include "FatTools.h"
 #include "ff.h"
 
 uint32_t flashBuff[1024];
@@ -57,40 +58,6 @@ int32_t CDCHandler::ParseInt(const std::string cmd, const char precedingChar, in
 }
 
 
-FILINFO fileInfo;											// File information structure
-
-FRESULT scan_files (char* path)								// Start node to be scanned (also used as work area)
-{
-	DIR dirObj;													// Pointer to the directory object structure
-
-	FRESULT res = f_opendir(&dirObj, path);					// second parm is directory name (root)
-
-	if (res == FR_OK) {
-		for (;;) {
-			res = f_readdir(&dirObj, &fileInfo);			// Read a directory item */
-			if (res != FR_OK || fileInfo.fname[0] == 0) {	// Break on error or end of dir */
-				break;
-			}
-			if (fileInfo.fattrib & AM_DIR) {				// It is a directory
-				uint32_t i = strlen(path);
-				sprintf(&path[i], "/%s", fileInfo.fname);
-				res = scan_files(path);						// Enter the directory
-				if (res != FR_OK){
-					break;
-				}
-				path[i] = 0;
-			} else {										// It is a file
-				printf("%s/%s %i bytes\n", path, fileInfo.fname, (int)fileInfo.fsize);
-			}
-		}
-		f_closedir(&dirObj);
-	}
-
-    return res;
-}
-
-
-
 void CDCHandler::ProcessCommand()
 {
 	if (!cmdPending) {
@@ -129,12 +96,16 @@ void CDCHandler::ProcessCommand()
 		usb->SendString("Changed to memory mapped mode\r\n");
 
 
-	} else if (cmd.compare("dirinfo\n") == 0) {					// Get FAT directory info
+	} else if (cmd.compare("dirlist\n") == 0) {					// Get basic FAT directory list
 		char workBuff[256];
 		strcpy(workBuff, "/");
 
-		extFlash.InvalidateFATCache();							// Ensure that the FAT FS cache is updated
-		scan_files(workBuff);
+		fatTools.InvalidateFATCache();							// Ensure that the FAT FS cache is updated
+		fatTools.PrintFiles(workBuff);
+
+
+	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
+		fatTools.GetFileInfo();
 
 
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data

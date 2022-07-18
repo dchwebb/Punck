@@ -1,3 +1,4 @@
+#pragma once
 #include "stm32h7xx.h"
 
 // Disk Status Bits (DSTATUS)
@@ -25,8 +26,9 @@ typedef enum {
 } DRESULT;
 
 
+// The following functions are called from C FatFS library
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 uint8_t disk_initialize (uint8_t pdrv);
@@ -37,5 +39,9 @@ uint8_t disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff);
 uint32_t get_fattime();
 
 #ifdef __cplusplus
- }
+}
 #endif
+
+void getFileInfo();
+
+
