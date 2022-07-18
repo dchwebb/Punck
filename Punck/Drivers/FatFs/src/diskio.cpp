@@ -1,17 +1,10 @@
-extern "C" {
 #include "diskio.h"
-}
 #include "ExtFlash.h"
 #include <cstring>
-
-// Create cache for header part of Fat
-uint8_t FatCache[flashBlockSize * flashHeaderSize];		// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 // Wrapper functions to interface FatFS library to ExtFlash handler
 uint8_t disk_initialize(uint8_t pdrv)
 {
-	// Set up cache area for header
-	memcpy(FatCache, flashAddress, flashBlockSize * flashHeaderSize);
 	return RES_OK;
 }
 

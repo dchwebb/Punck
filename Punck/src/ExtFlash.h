@@ -23,6 +23,9 @@ static constexpr uint32_t flashBlockSize = 512;			// Default block size used by 
 static constexpr uint32_t flashBlockCount = 31250;		// 31250 blocks of 512 bytes = 16 MBytes
 static constexpr uint32_t flashHeaderSize = 52;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + 12 for testing
 
+extern uint8_t FatCache[flashBlockSize * flashHeaderSize];
+
+
 class ExtFlash {
 public:
 	enum qspiRegister : uint8_t {pageProgram = 0x02, quadPageProgram = 0x32, readData = 0x03, fastRead = 0x6B, fastReadIO = 0xEB, writeEnable = 0x06,
@@ -38,6 +41,7 @@ public:
 	uint8_t ReadData(uint32_t address);
 	uint32_t FastRead(uint32_t address);
 	void CheckBusy();
+	void InvalidateFATCache();
 
 	bool memMapMode = false;
 private:

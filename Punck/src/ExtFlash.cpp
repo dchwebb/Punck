@@ -1,9 +1,13 @@
 #include "ExtFlash.h"
 #include "ff.h"
 #include "diskio.h"
+#include <cstring>
 
 // FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
 // FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
+
+// Create cache for header part of Fat
+uint8_t FatCache[flashBlockSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
 uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
@@ -12,11 +16,14 @@ FATFS fatFs;												// File system object for RAM disk logical drive
 FIL MyFile;													// File object
 const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 
-//DIR dp;														// Pointer to the directory object structure
-//FILINFO fno;												// File information structure
+//DIR dirObj;												// Pointer to the directory object structure
+//FILINFO fileInfo;											// File information structure
 
 void InitFatFS()
 {
+	// Set up cache area for header - this is called multiple times (eg from opendir function) so only initialise cache once
+	memcpy(FatCache, flashAddress, flashBlockSize * flashHeaderSize);
+
 	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
 
 //	if (res == FR_NO_FILESYSTEM) {
@@ -28,12 +35,15 @@ void InitFatFS()
 		parms.n_fat = 0;
 
 		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
+		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
 //	}
 
 
 	uint32_t byteswritten, bytesread;						// File write/read counts
 	uint8_t wtext[] = "This is STM32 working with FatFs";	// File write buffer
 	uint8_t rtext[100];										// File read buffer
+
+
 
 	// Create and Open a new text file object with write access
 //	if (f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
@@ -281,3 +291,9 @@ void ExtFlash::CheckBusy()
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 }
 
+
+void ExtFlash::InvalidateFATCache()
+{
+	// Clear the cache window in the fatFS object so that new writes will be correctly read
+	fatFs.winsect = ~0;
+}
