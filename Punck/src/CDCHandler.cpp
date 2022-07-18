@@ -1,6 +1,7 @@
 #include "USB.h"
 #include "CDCHandler.h"
 #include "ExtFlash.h"
+#include "ff.h"
 
 uint32_t flashBuff[1024];
 
@@ -56,6 +57,10 @@ int32_t CDCHandler::ParseInt(const std::string cmd, const char precedingChar, in
 }
 
 
+DIR dp;														// Pointer to the directory object structure
+FILINFO fno;												// File information structure
+
+
 void CDCHandler::ProcessCommand()
 {
 	if (!cmdPending) {
@@ -92,6 +97,12 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare("memmap\n") == 0) {					// QSPI flash to memory mapped mode
 		extFlash.MemoryMapped();
 		usb->SendString("Changed to memory mapped mode\r\n");
+
+	} else if (cmd.compare("dirinfo\n") == 0) {					// Get FAT directory info
+		FRESULT res = f_opendir(&dp, "");							// second parm is directory name (root)
+		res = f_readdir(&dp, &fno);
+
+		printf("%s %i\r\n", fno.fname, (int)fno.fsize);
 
 
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data

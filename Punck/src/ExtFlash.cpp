@@ -12,12 +12,14 @@ FATFS fatFs;												// File system object for RAM disk logical drive
 FIL MyFile;													// File object
 const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 
+//DIR dp;														// Pointer to the directory object structure
+//FILINFO fno;												// File information structure
 
 void InitFatFS()
 {
 	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
 
-	if (res == FR_NO_FILESYSTEM) {
+//	if (res == FR_NO_FILESYSTEM) {
 		MKFS_PARM parms;									// Create parameter struct
 		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
 		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
@@ -26,7 +28,7 @@ void InitFatFS()
 		parms.n_fat = 0;
 
 		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
-	}
+//	}
 
 
 	uint32_t byteswritten, bytesread;						// File write/read counts
@@ -48,11 +50,7 @@ void InitFatFS()
 //	}
 
 
-//		DIR dp;												// Pointer to the directory object structure
-//		FILINFO fno;										// File information structure
-//		res = f_opendir(&dp, "");							// second parm is directory name (root)
-//		res = f_readdir(&dp, &fno);
-//		uint8_t dummy = 1;
+
 }
 
 

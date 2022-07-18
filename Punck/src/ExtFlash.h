@@ -13,15 +13,15 @@ Bytes			Description
 ---------------------------
     0 -   511	Boot Sector (AKA Reserved): 1 sector
   512 - 16383	FAT (holds cluster linked list): 31 sectors - 7812 entries each 16 bit
-16384 - 18431	Root Directory: 4 sectors - 64 root directory entries at 32 bytes each (32 * 64 = 2048)
-18432 - 		Data section: 7803 clusters = 31,212 sectors
+16384 - 20479	Root Directory: 4 sectors - 64 root directory entries at 32 bytes each (32 * 128 = 4096)
+20480 - 		Data section: 7803 clusters = 31,212 sectors
 
 */
 
 extern const uint32_t* flashAddress;
 static constexpr uint32_t flashBlockSize = 512;			// Default block size used by FAT
 static constexpr uint32_t flashBlockCount = 31250;		// 31250 blocks of 512 bytes = 16 MBytes
-static constexpr uint32_t flashHeaderSize = 36;			// Header: 1 sector Boot sector; 31 sectors FAT; 4 sectors Root Directory
+static constexpr uint32_t flashHeaderSize = 52;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + 12 for testing
 
 class ExtFlash {
 public:
