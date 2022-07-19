@@ -108,6 +108,43 @@ void CDCHandler::ProcessCommand()
 		fatTools.GetFileInfo();
 
 
+	} else if (cmd.compare("cachechanged\n") == 0) {			// List bytes that are different in cache to Flash
+		uint32_t count = 0;
+		uint8_t oldCache, oldFlash;
+		bool skipDuplicates = false;
+
+		printf("Checking cache changes. Dirty sectors: 0x%x ...\r\n", fatTools.cacheDirty);
+
+		for (uint32_t i = 0; i < (flashHeaderSize * flashBlockSize); ++i) {
+			uint8_t flashData = ((uint8_t*)flashAddress)[i];
+
+			// Data has changed
+			if (flashData != fatCache[i]) {
+				if (oldCache == fatCache[i] && oldFlash == flashData && i > 0) {
+					if (!skipDuplicates) {
+						printf("...\r\n");						// Print continuation mark
+						skipDuplicates = true;
+					}
+				} else {
+					printf("%5lu c: 0x%02x f: 0x%02x\r\n", i, fatCache[i], flashData);
+				}
+
+				oldCache = fatCache[i];
+				oldFlash = flashData;
+				++count;
+			} else {
+				if (skipDuplicates) {
+					printf("%5lu c: 0x%02x f: 0x%02x\r\n", i - 1, oldCache, oldFlash);
+					skipDuplicates = false;
+				}
+			}
+
+		}
+
+		printf("Found %lu different bytes\r\n", count);
+
+
+
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data
 		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
@@ -132,6 +169,13 @@ void CDCHandler::ProcessCommand()
 			extFlash.MemoryMapped();
 			printf("Finished\r\n");
 		}
+
+
+	} else if (cmd.compare("flushcache\n") == 0) {				// Flush FAT cache to Flash
+		uint8_t sectors = fatTools.FlushCache();
+		printf("%i sectors flushed\r\n", sectors);
+		extFlash.MemoryMapped();
+
 
 	} else if (cmd.compare(0, 10, "erasesect:") == 0) {			// Erase sector of flash memory
 		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);

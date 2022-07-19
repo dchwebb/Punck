@@ -21,7 +21,7 @@ uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint
 	// If reading header data return from cache
 	const uint8_t* readAddress;
 	if (readSector < flashHeaderSize) {
-		readAddress = &(FatCache[readSector * flashBlockSize]);
+		readAddress = &(fatCache[readSector * flashBlockSize]);
 	} else {
 		readAddress = ((uint8_t*)flashAddress) + (readSector * flashBlockSize);
 	}
@@ -34,7 +34,8 @@ uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint
 uint8_t disk_write(uint8_t pdrv, const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
 	if (writeSector < flashHeaderSize) {
-		uint8_t* writeAddress = &(FatCache[writeSector * flashBlockSize]);
+		fatTools.cacheDirty |= (1 << (writeSector >> 3));				// There are 8 x 612 sectors in a block (4096)
+		uint8_t* writeAddress = &(fatCache[writeSector * flashBlockSize]);
 		memcpy(writeAddress, readBuff, flashBlockSize * sectorCount);
 	} else {
 		uint32_t words = (flashBlockSize * sectorCount) / 4;

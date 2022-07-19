@@ -23,7 +23,7 @@ static constexpr uint32_t flashBlockSize = 512;			// Default block size used by 
 static constexpr uint32_t flashBlockCount = 31250;		// 31250 blocks of 512 bytes = 16 MBytes
 static constexpr uint32_t flashHeaderSize = 52;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + 12 for testing
 
-extern uint8_t FatCache[flashBlockSize * flashHeaderSize];
+extern uint8_t fatCache[flashBlockSize * flashHeaderSize];
 
 
 class ExtFlash {
@@ -36,7 +36,7 @@ public:
 	void MemoryMapped();
 	uint8_t ReadStatus(qspiRegister r);
 	void WriteEnable();
-	void WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase = false);
+	bool WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase = false);
 	void SectorErase(uint32_t address);
 	uint8_t ReadData(uint32_t address);
 	uint32_t FastRead(uint32_t address);

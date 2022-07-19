@@ -6,7 +6,7 @@
 FatTools fatTools;
 
 // Create cache for header part of Fat
-uint8_t FatCache[flashBlockSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
+uint8_t fatCache[flashBlockSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
 ExtFlash extFlash;											// Singleton external flash handler
@@ -16,11 +16,11 @@ const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	memcpy(FatCache, flashAddress, flashBlockSize * flashHeaderSize);
+	memcpy(fatCache, flashAddress, flashBlockSize * flashHeaderSize);
 
-	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
+	__attribute__((unused)) FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
-//	if (res == FR_NO_FILESYSTEM) {
+	if (res == FR_NO_FILESYSTEM) {
 		MKFS_PARM parms;									// Create parameter struct
 		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
 		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
@@ -30,25 +30,72 @@ void FatTools::InitFatFS()
 
 		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
-//	}
+	}
+}
 
 
+uint8_t FatTools::FlushCache()
+{
+	// Writes any dirty cache sectors to Flash
+	uint8_t blockPos = 0;
+	uint8_t count = 0;
+	while (cacheDirty != 0) {
+		if (cacheDirty & (1 << blockPos)) {
+			if (extFlash.WriteData(blockPos * 4096, (uint32_t*)&(fatCache[blockPos * 4096]), 1024, true)) {
+				printf("Written block %i\r\n", blockPos);
+				++count;
+			}
+			cacheDirty &= ~(1 << blockPos);
+		}
+		++blockPos;
+	}
+	return count;
 }
 
 
 void FatTools::GetFileInfo()
 {
-	FATFileInfo* fatInfo = (FATFileInfo*)(FatCache + fatFs.dirbase * flashBlockSize);
-	printf("Attrib Cluster Bytes Name\r\n");
+	FATFileInfo* fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashBlockSize);
+	printf("Attrib Cluster Bytes    Created   Accessed Name\r\n");
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {							// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("*LFN* order: %i %s\r\n", lfn->order & (~0x40), GetFileName(fatInfo).c_str());
+			printf("*LFN*  part %2i                             %s\r\n",
+					lfn->order & (~0x40),
+					GetFileName(fatInfo).c_str());
 		} else {
-			printf("%s %8i %6i %s\r\n", GetAttributes(fatInfo).c_str(), fatInfo->firstClusterLow, fatInfo->fileSize, GetFileName(fatInfo).c_str());
+			printf("%s %8i %5lu %10s %10s %s\r\n",
+					GetAttributes(fatInfo).c_str(),
+					fatInfo->firstClusterLow,
+					fatInfo->fileSize,
+					FileDate(fatInfo->createDate).c_str(),
+					FileDate(fatInfo->accessedDate).c_str(),
+					GetFileName(fatInfo).c_str());
 		}
 		fatInfo++;
 	}
+}
+
+//uint8_t createTimeTenth;		// File creation time in count of tenths of a second
+//uint16_t createTime;			// Time file was created
+//uint16_t createDate;			// Date file was created
+//uint16_t accessedDate;			// Last access date
+//uint16_t firstClusterHigh;		// High word of first cluster number (always 0 for a FAT12 or FAT16 volume)
+//uint16_t writeTime;				// Time of last write. Note that file creation is considered a write
+//uint16_t writeDate;				// Date of last write
+//
+
+std::string FatTools::FileDate(uint16_t date)
+{
+/*
+Date Format:
+Bits 0–4: Day of month, valid value range 1-31 inclusive.
+Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive.
+Bits 9–15: Count of years from 1980, valid value range 0–127 inclusive (1980–2107).
+*/
+	return  std::to_string( date & 0b0000000000011111) + "/" +
+			std::to_string((date & 0b0000000111100000) >> 5) + "/" +
+			std::to_string(((date & 0b1111111000000000) >> 9) + 1980);
 }
 
 
@@ -61,7 +108,6 @@ std::string FatTools::GetFileName(FATFileInfo* fi)
 		return std::string({lfn->name1[0], lfn->name1[2], lfn->name1[4], lfn->name1[6], lfn->name1[8],
 				lfn->name2[0], lfn->name2[2], lfn->name2[4], lfn->name2[6], lfn->name2[8], lfn->name2[10],
 				lfn->name3[0], lfn->name3[2], '\0'});
-	} else if (fi->attr == AM_DIR) {
 	} else {
 		uint8_t pos = 0;
 		for (uint8_t i = 0; i < 11; ++i) {

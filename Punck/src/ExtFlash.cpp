@@ -37,24 +37,26 @@ void ExtFlash::Init()
 void ExtFlash::MemoryMapped()
 {
 	// Activate memory mapped mode
-	//SCB_InvalidateDCache_by_Addr(flashAddress, 10000);		// Ensure cache is refreshed after write or erase
-	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
-	CheckBusy();											// Check chip is not still writing data
+	if (!memMapMode) {
+		//SCB_InvalidateDCache_by_Addr(flashAddress, 10000);// Ensure cache is refreshed after write or erase
+		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+		CheckBusy();										// Check chip is not still writing data
 
-	QUADSPI->ABR = 0xFF;									// Use alternate bytes to pad the address with a dummy byte of 0xFF
-	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+		QUADSPI->ABR = 0xFF;								// Use alternate bytes to pad the address with a dummy byte of 0xFF
+		QUADSPI->CR |= QUADSPI_CR_EN;						// Enable QSPI
 
-	QUADSPI->CCR = (QUADSPI_CCR_FMODE |						// 00: Indirect write; 01: Indirect read; 10: Automatic polling; *11: Memory-mapped
-					QUADSPI_CCR_ADSIZE_1 |					// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
-					QUADSPI_CCR_ADMODE |					// Address: 00: None; 01: One line; 10: Two lines; *11: Four lines
-					QUADSPI_CCR_ABMODE |					// Alternate Bytes: 00: None; 01: One line; 10: Two lines; *11: Four lines
-					QUADSPI_CCR_DMODE |						// Data: 00: None; 01: One line; 10: Two lines; *11: Four lines
-					QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines;
-					(4 << QUADSPI_CCR_DCYC_Pos) |			// insert 4 dummy clock cycles
-					(fastReadIO << QUADSPI_CCR_INSTRUCTION_Pos));
+		QUADSPI->CCR = (QUADSPI_CCR_FMODE |					// 00: Indirect write; 01: Indirect read; 10: Automatic polling; *11: Memory-mapped
+						QUADSPI_CCR_ADSIZE_1 |				// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
+						QUADSPI_CCR_ADMODE |				// Address: 00: None; 01: One line; 10: Two lines; *11: Four lines
+						QUADSPI_CCR_ABMODE |				// Alternate Bytes: 00: None; 01: One line; 10: Two lines; *11: Four lines
+						QUADSPI_CCR_DMODE |					// Data: 00: None; 01: One line; 10: Two lines; *11: Four lines
+						QUADSPI_CCR_IMODE_0 |				// Instruction: 00: None; *01: One line; 10: Two lines;
+						(4 << QUADSPI_CCR_DCYC_Pos) |		// insert 4 dummy clock cycles
+						(fastReadIO << QUADSPI_CCR_INSTRUCTION_Pos));
 
-	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
-	memMapMode = true;
+		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+		memMapMode = true;
+	}
 }
 
 
@@ -94,7 +96,7 @@ void ExtFlash::WriteEnable()
 
 uint32_t writeCount = 0;
 
-void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase)
+bool ExtFlash::WriteData(uint32_t address, uint32_t* writeBuff, uint32_t words, bool checkErase)
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
 	bool eraseRequired = false;
@@ -103,9 +105,9 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 		for (uint32_t i = 0; i < words; ++i) {
 			uint32_t flashData = (flashAddress + (address / 4))[i];		// pointer arithmetic will add in 32 bit words
 
-			if (flashData != data[i]) {
+			if (flashData != writeBuff[i]) {
 				dataChanged = true;
-				if ((flashData & data[i]) != data[i]) {		// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
+				if ((flashData & writeBuff[i]) != writeBuff[i]) {		// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
 					eraseRequired = true;
 					break;
 				}
@@ -116,7 +118,7 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 		}
 	}
 	if (!dataChanged) {										// No difference between Flash contents and write data
-		return;
+		return false;
 	}
 
 	do {
@@ -143,7 +145,7 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 						(quadPageProgram << QUADSPI_CCR_INSTRUCTION_Pos));
 		QUADSPI->AR = address;
 		for (uint8_t i = 0; i < (writeSize / 4); ++i) {
-			QUADSPI->DR = *data++;
+			QUADSPI->DR = *writeBuff++;
 			while ((QUADSPI->SR & QUADSPI_SR_FTF) == 0) {};
 		}
 
@@ -154,6 +156,7 @@ void ExtFlash::WriteData(uint32_t address, uint32_t* data, uint32_t words, bool 
 		QUADSPI->CR &= ~QUADSPI_CR_EN;						// Disable QSPI
 	} while (words > 0);
 	MemoryMapped();											// Switch back to memory mapped mode
+	return true;
 }
 
 
