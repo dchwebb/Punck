@@ -110,10 +110,10 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("cachechanged\n") == 0) {			// List bytes that are different in cache to Flash
 		uint32_t count = 0;
-		uint8_t oldCache, oldFlash;
+		uint8_t oldCache = 0, oldFlash = 0;
 		bool skipDuplicates = false;
 
-		printf("Checking cache changes. Dirty sectors: 0x%x ...\r\n", fatTools.cacheDirty);
+		printf("Checking cache changes. Dirty sectors: 0x%lu ...\r\n", fatTools.cacheDirty);
 
 		for (uint32_t i = 0; i < (flashHeaderSize * flashBlockSize); ++i) {
 			uint8_t flashData = ((uint8_t*)flashAddress)[i];

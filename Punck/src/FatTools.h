@@ -5,11 +5,6 @@
 
 
 /*
- Date Format:
- Bits 0–4: Day of month, valid value range 1-31 inclusive.
- Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive.
- Bits 9–15: Count of years from 1980, valid value range 0–127 inclusive (1980–2107).
-
  Time Format. A FAT directory entry time stamp is a 16-bit field that has a granularity of 2 seconds. Here is the format (bit 0 is the LSB of the 16-bit word, bit 15 is the MSB of the 16-bit word).
 
  Bits 0–4: 2-second count, valid value range 0–29 inclusive (0 – 58 seconds).

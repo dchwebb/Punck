@@ -56,7 +56,7 @@ uint8_t FatTools::FlushCache()
 void FatTools::GetFileInfo()
 {
 	FATFileInfo* fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashBlockSize);
-	printf("Attrib Cluster Bytes    Created   Accessed Name\r\n");
+	printf("\r\nAttrib Cluster Bytes    Created   Accessed Name\r\n-----------------------------------------------\r\n");
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {							// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
@@ -76,23 +76,12 @@ void FatTools::GetFileInfo()
 	}
 }
 
-//uint8_t createTimeTenth;		// File creation time in count of tenths of a second
-//uint16_t createTime;			// Time file was created
-//uint16_t createDate;			// Date file was created
-//uint16_t accessedDate;			// Last access date
-//uint16_t firstClusterHigh;		// High word of first cluster number (always 0 for a FAT12 or FAT16 volume)
-//uint16_t writeTime;				// Time of last write. Note that file creation is considered a write
-//uint16_t writeDate;				// Date of last write
-//
 
 std::string FatTools::FileDate(uint16_t date)
 {
-/*
-Date Format:
-Bits 0–4: Day of month, valid value range 1-31 inclusive.
-Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive.
-Bits 9–15: Count of years from 1980, valid value range 0–127 inclusive (1980–2107).
-*/
+	// Bits 0–4: Day of month, valid value range 1-31 inclusive.
+	// Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive.
+	// Bits 9–15: Count of years from 1980, valid value range 0–127 inclusive (1980–2107).
 	return  std::to_string( date & 0b0000000000011111) + "/" +
 			std::to_string((date & 0b0000000111100000) >> 5) + "/" +
 			std::to_string(((date & 0b1111111000000000) >> 9) + 1980);

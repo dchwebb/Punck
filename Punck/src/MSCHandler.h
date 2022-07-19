@@ -127,7 +127,6 @@ private:
 	uint8_t bot_data[MediaPacket];
 	uint32_t scsi_blk_addr;
 	uint32_t scsi_blk_len;
-	uint16_t scsi_blk_size = 0x200;			// Used to keep track of reads and writes
 	uint32_t scsi_medium_state = 0;
 
 

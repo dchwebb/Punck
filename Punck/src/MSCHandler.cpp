@@ -1,8 +1,7 @@
 #include "USB.h"
-#include <MSCHandler.h>
-//#include <functional>
-#include "usbd_storage_if.h"
+#include "MSCHandler.h"
 #include "ExtFlash.h"
+#include "diskio.h"
 
 void MSCHandler::DataIn()
 {
@@ -22,6 +21,7 @@ void MSCHandler::DataIn()
 		break;
 	}
 }
+
 
 void MSCHandler::DataOut()
 {
@@ -230,7 +230,6 @@ int8_t MSCHandler::SCSI_Inquiry()
 
 int8_t MSCHandler::SCSI_ReadFormatCapacity()
 {
-	// FIXME calls STORAGE_GetCapacity_FS
 	uint32_t blk_nbr = flashBlockCount - 1;
 	uint32_t blk_size = flashBlockSize;
 
@@ -366,7 +365,7 @@ int8_t MSCHandler::SCSI_Read()
 			return -1;
 		}
 
-		if (cbw.dDataLength != (scsi_blk_len * scsi_blk_size)) {
+		if (cbw.dDataLength != (scsi_blk_len * flashBlockSize)) {
 			SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
 			return -1;
 		}
@@ -381,9 +380,9 @@ int8_t MSCHandler::SCSI_Read()
 
 int8_t MSCHandler::SCSI_ProcessRead()
 {
-	uint32_t len = std::min(scsi_blk_len * scsi_blk_size, MediaPacket);
+	uint32_t len = std::min(scsi_blk_len * flashBlockSize, MediaPacket);
 
-	STORAGE_Read_FS(bot_data, scsi_blk_addr, (len / scsi_blk_size));
+	disk_read(0, bot_data, scsi_blk_addr, (len / flashBlockSize));
 
 	inBuff = bot_data;
 	inBuffSize = len;
@@ -391,8 +390,8 @@ int8_t MSCHandler::SCSI_ProcessRead()
 
 	EndPointTransfer(Direction::in, inEP, len);		// FIXME - this can possibly be handled in MSC_BOT_CBW_Decode
 
-	scsi_blk_addr += (len / scsi_blk_size);
-	scsi_blk_len -= (len / scsi_blk_size);
+	scsi_blk_addr += (len / flashBlockSize);
+	scsi_blk_len -= (len / flashBlockSize);
 	csw.dDataResidue -= len;
 
 	if (scsi_blk_len == 0) {
@@ -425,7 +424,7 @@ int8_t MSCHandler::SCSI_Write()
 			return -1;
 		}
 
-		uint32_t len = scsi_blk_len * scsi_blk_size;
+		uint32_t len = scsi_blk_len * flashBlockSize;
 
 		if (cbw.dDataLength != len) {
 			SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
@@ -448,18 +447,18 @@ int8_t MSCHandler::SCSI_Write()
 
 int8_t MSCHandler::SCSI_ProcessWrite()
 {
-	uint32_t len = std::min(scsi_blk_len * scsi_blk_size, MediaPacket);
+	uint32_t len = std::min(scsi_blk_len * flashBlockSize, MediaPacket);
 
-	STORAGE_Write_FS((uint8_t*)(outBuff), scsi_blk_addr, (len / scsi_blk_size));
+	disk_write(0, (uint8_t*)(outBuff), scsi_blk_addr, (len / flashBlockSize));
 
-	scsi_blk_addr += (len / scsi_blk_size);
-	scsi_blk_len -= (len / scsi_blk_size);
+	scsi_blk_addr += (len / flashBlockSize);
+	scsi_blk_len -= (len / flashBlockSize);
 	csw.dDataResidue -= len;			// case 12 : Ho = Do
 
 	if (scsi_blk_len == 0)	{
 		MSC_BOT_SendCSW(CSWCmdPassed);
 	} else {
-		len = std::min((scsi_blk_len * scsi_blk_size), MediaPacket);
+		len = std::min((scsi_blk_len * flashBlockSize), MediaPacket);
 		EndPointTransfer(Direction::out, outEP, len);				// Prepare EP to Receive next packet
 	}
 
