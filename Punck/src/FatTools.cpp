@@ -1,26 +1,24 @@
 #include "FatTools.h"
-#include "ff.h"
 #include "ExtFlash.h"
 #include <cstring>
 
 FatTools fatTools;
 
 // Create cache for header part of Fat
-uint8_t fatCache[flashBlockSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
+uint8_t fatCache[flashSectorSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
-uint8_t fsWork[flashBlockSize];								// Work buffer for the f_mkfs()
 ExtFlash extFlash;											// Singleton external flash handler
-FATFS fatFs;												// File system object for RAM disk logical drive
-const char fatPath[4] = "0:/";								// Logical drive path for FAT File system
 
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	memcpy(fatCache, flashAddress, flashBlockSize * flashHeaderSize);
+	memcpy(fatCache, flashAddress, flashSectorSize * flashHeaderSize);
 
 	__attribute__((unused)) FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
+		uint8_t fsWork[flashSectorSize];						// Work buffer for the f_mkfs()
+
 		MKFS_PARM parms;									// Create parameter struct
 		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
 		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
@@ -53,24 +51,45 @@ uint8_t FatTools::FlushCache()
 }
 
 
-void FatTools::GetFileInfo()
+void FatTools::PrintDirInfo(uint32_t cluster)
 {
-	FATFileInfo* fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashBlockSize);
-	printf("\r\nAttrib Cluster Bytes    Created   Accessed Name\r\n-----------------------------------------------\r\n");
+	// Output a detailed analysis of FAT directory structure
+	FATFileInfo* fatInfo;
+	if (cluster == 0) {
+		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n-----------------------------------------------\r\n");
+		fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashSectorSize);
+	} else {
+		// Check if cluster is in cache or not
+		uint32_t offsetByte = (fatFs.database * flashSectorSize) + (flashClusterSize * (cluster - 2));		// Byte offset of the cluster start (note cluster numbers start at 2)
+
+		if (offsetByte < flashHeaderSize * flashSectorSize) {		// In cache
+			fatInfo = (FATFileInfo*)(fatCache + offsetByte);	// in memory mapped flash data
+		} else {
+			fatInfo = (FATFileInfo*)((uint8_t*)flashAddress + offsetByte);	// in memory mapped flash data
+		}
+	}
+
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {							// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("*LFN*  part %2i                             %s\r\n",
+			printf("%c *LFN*  part %2i                             %s\r\n",
+					(cluster == 0 ? ' ' : '-'),
 					lfn->order & (~0x40),
 					GetFileName(fatInfo).c_str());
 		} else {
-			printf("%s %8i %5lu %10s %10s %s\r\n",
+			printf("%c %s %8i %5lu %10s %10s %s\r\n",
+					(cluster == 0 ? ' ' : '-'),
 					GetAttributes(fatInfo).c_str(),
 					fatInfo->firstClusterLow,
 					fatInfo->fileSize,
 					FileDate(fatInfo->createDate).c_str(),
 					FileDate(fatInfo->accessedDate).c_str(),
 					GetFileName(fatInfo).c_str());
+		}
+
+		// Recursively call function to print sub directory details (ignoring directories '.' and '..' which hold current and parent directory clusters
+		if ((fatInfo->attr & AM_DIR) && (fatInfo->name[0] != '.')) {
+			PrintDirInfo(fatInfo->firstClusterLow);
 		}
 		fatInfo++;
 	}

@@ -72,11 +72,15 @@ void CDCHandler::ProcessCommand()
 				"resume      -  Resume I2S after debugging\r\n"
 				"memmap      -  QSPI flash to memory mapped mode\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
-				"writeA:N    -  Write sequence to flash (A = address, N = No of words in decimal)\r\n"
-				"setzeroA:N  -  Write zero to flash (A = address, N = No of words in decimal)\r\n"
+				"writeA:N    -  Write sequence to flash (A = address, N = No of words decimal)\r\n"
+				"setzeroA:N  -  Write zero to flash (A = address, N = No of words decimal)\r\n"
 				"read:A      -  Read word from flash (A = decimal address)\r\n"
 				"printflash:A   Print 100 words of flash (A = decimal address)\r\n"
-				"erasesect:A    Erase flash sector (A = decimal address)\r\n"
+				"erasesect:A -  Erase flash sector (A = decimal address)\r\n"
+				"dirdetails  -  Print detailed file list for root directory\r\n"
+				"dirlist     -  Print list of all files and their directories\r\n"
+				"flushcache  -  Flush any changed data in cache to flash\r\n"
+				"cachechanged   Show all bytes changed in header cache\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -105,7 +109,7 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
-		fatTools.GetFileInfo();
+		fatTools.PrintDirInfo();
 
 
 	} else if (cmd.compare("cachechanged\n") == 0) {			// List bytes that are different in cache to Flash
@@ -115,7 +119,7 @@ void CDCHandler::ProcessCommand()
 
 		printf("Checking cache changes. Dirty sectors: 0x%lu ...\r\n", fatTools.cacheDirty);
 
-		for (uint32_t i = 0; i < (flashHeaderSize * flashBlockSize); ++i) {
+		for (uint32_t i = 0; i < (flashHeaderSize * flashSectorSize); ++i) {
 			uint8_t flashData = ((uint8_t*)flashAddress)[i];
 
 			// Data has changed

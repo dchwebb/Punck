@@ -131,8 +131,9 @@ void MSCHandler::MSC_BOT_Abort()
 
 int8_t MSCHandler::SCSI_ProcessCmd()
 {
+#if (USB_DEBUG)
 	usb->USBUpdateDbg({}, {}, {}, {}, cbw.CB[0], nullptr);
-
+#endif
 	switch (cbw.CB[0])
 	{
 	case SCSI_TEST_UNIT_READY:					// 0x00
@@ -230,8 +231,8 @@ int8_t MSCHandler::SCSI_Inquiry()
 
 int8_t MSCHandler::SCSI_ReadFormatCapacity()
 {
-	uint32_t blk_nbr = flashBlockCount - 1;
-	uint32_t blk_size = flashBlockSize;
+	uint32_t blk_nbr = flashSectorCount - 1;
+	uint32_t blk_size = flashSectorSize;
 
 	*(uint32_t*)&bot_data = 0; 						// blank out first three bytes of bot_data as reserved
 
@@ -259,8 +260,8 @@ int8_t MSCHandler::SCSI_ReadFormatCapacity()
 
 int8_t MSCHandler::SCSI_ReadCapacity10()
 {
-	uint32_t blk_nbr = flashBlockCount - 1;
-	uint32_t blk_size = flashBlockSize;
+	uint32_t blk_nbr = flashSectorCount - 1;
+	uint32_t blk_size = flashSectorSize;
 
 	uint8_t* blk8 = (uint8_t*)&blk_nbr;
 
@@ -285,8 +286,8 @@ int8_t MSCHandler::SCSI_ReadCapacity10()
 
 int8_t MSCHandler::SCSI_ReadCapacity16()		// Untested
 {
-	uint32_t blk_nbr = flashBlockCount - 1;
-	uint32_t blk_size = flashBlockSize;
+	uint32_t blk_nbr = flashSectorCount - 1;
+	uint32_t blk_size = flashSectorSize;
 
 	bot_data_length = ((uint32_t)cbw.CB[10] << 24) |
 			((uint32_t)cbw.CB[11] << 16) |
@@ -340,7 +341,7 @@ int8_t MSCHandler::SCSI_ModeSense6()
 
 int8_t MSCHandler::SCSI_CheckAddressRange(uint32_t blk_offset, uint32_t blk_nbr)
 {
-	if ((blk_offset + blk_nbr) > flashBlockCount) {
+	if ((blk_offset + blk_nbr) > flashSectorCount) {
 		SCSI_SenseCode(ILLEGAL_REQUEST, ADDRESS_OUT_OF_RANGE);
 		return -1;
 	}
@@ -365,7 +366,7 @@ int8_t MSCHandler::SCSI_Read()
 			return -1;
 		}
 
-		if (cbw.dDataLength != (scsi_blk_len * flashBlockSize)) {
+		if (cbw.dDataLength != (scsi_blk_len * flashSectorSize)) {
 			SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
 			return -1;
 		}
@@ -380,9 +381,9 @@ int8_t MSCHandler::SCSI_Read()
 
 int8_t MSCHandler::SCSI_ProcessRead()
 {
-	uint32_t len = std::min(scsi_blk_len * flashBlockSize, MediaPacket);
+	uint32_t len = std::min(scsi_blk_len * flashSectorSize, MediaPacket);
 
-	disk_read(0, bot_data, scsi_blk_addr, (len / flashBlockSize));
+	disk_read(0, bot_data, scsi_blk_addr, (len / flashSectorSize));
 
 	inBuff = bot_data;
 	inBuffSize = len;
@@ -390,8 +391,8 @@ int8_t MSCHandler::SCSI_ProcessRead()
 
 	EndPointTransfer(Direction::in, inEP, len);		// FIXME - this can possibly be handled in MSC_BOT_CBW_Decode
 
-	scsi_blk_addr += (len / flashBlockSize);
-	scsi_blk_len -= (len / flashBlockSize);
+	scsi_blk_addr += (len / flashSectorSize);
+	scsi_blk_len -= (len / flashSectorSize);
 	csw.dDataResidue -= len;
 
 	if (scsi_blk_len == 0) {
@@ -424,7 +425,7 @@ int8_t MSCHandler::SCSI_Write()
 			return -1;
 		}
 
-		uint32_t len = scsi_blk_len * flashBlockSize;
+		uint32_t len = scsi_blk_len * flashSectorSize;
 
 		if (cbw.dDataLength != len) {
 			SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
@@ -447,18 +448,18 @@ int8_t MSCHandler::SCSI_Write()
 
 int8_t MSCHandler::SCSI_ProcessWrite()
 {
-	uint32_t len = std::min(scsi_blk_len * flashBlockSize, MediaPacket);
+	uint32_t len = std::min(scsi_blk_len * flashSectorSize, MediaPacket);
 
-	disk_write(0, (uint8_t*)(outBuff), scsi_blk_addr, (len / flashBlockSize));
+	disk_write(0, (uint8_t*)(outBuff), scsi_blk_addr, (len / flashSectorSize));
 
-	scsi_blk_addr += (len / flashBlockSize);
-	scsi_blk_len -= (len / flashBlockSize);
+	scsi_blk_addr += (len / flashSectorSize);
+	scsi_blk_len -= (len / flashSectorSize);
 	csw.dDataResidue -= len;			// case 12 : Ho = Do
 
 	if (scsi_blk_len == 0)	{
 		MSC_BOT_SendCSW(CSWCmdPassed);
 	} else {
-		len = std::min((scsi_blk_len * flashBlockSize), MediaPacket);
+		len = std::min((scsi_blk_len * flashSectorSize), MediaPacket);
 		EndPointTransfer(Direction::out, outEP, len);				// Prepare EP to Receive next packet
 	}
 

@@ -2,7 +2,7 @@
 
 #include "diskio.h"
 #include <string>
-
+#include "ff.h"
 
 /*
  Time Format. A FAT directory entry time stamp is a 16-bit field that has a granularity of 2 seconds. Here is the format (bit 0 is the LSB of the 16-bit word, bit 15 is the MSB of the 16-bit word).
@@ -41,13 +41,16 @@ struct FATLongFilename {
 class FatTools
 {
 public:
-	uint32_t cacheDirty = 0;		// Bit array containing dirty sectors in cache
+	uint32_t cacheDirty = 0;		// Bit array containing dirty blocks in cache
 	void InitFatFS();
 	void InvalidateFATCache();
-	void GetFileInfo();
+	void PrintDirInfo(uint32_t cluster = 0);
 	void PrintFiles (char* path);
 	uint8_t FlushCache();
 private:
+	FATFS fatFs;					// File system object for RAM disk logical drive
+	const char fatPath[4] = "0:/";	// Logical drive path for FAT File system
+
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);

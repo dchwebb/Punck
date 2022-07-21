@@ -19,11 +19,14 @@ Bytes			Description
 */
 
 extern const uint32_t* flashAddress;
-static constexpr uint32_t flashBlockSize = 512;			// Default block size used by FAT
-static constexpr uint32_t flashBlockCount = 31250;		// 31250 blocks of 512 bytes = 16 MBytes
+static constexpr uint32_t flashSectorSize = 512;		// Sector size used by FAT
+static constexpr uint32_t flashClusterSize = 2048;		// Cluster size used by FAT (ie block size in data section)
+static constexpr uint32_t flashSectorCount = 31250;		// 31250 sectors of 512 bytes = 16 MBytes
 static constexpr uint32_t flashHeaderSize = 52;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + 12 for testing
 
-extern uint8_t fatCache[flashBlockSize * flashHeaderSize];
+
+
+extern uint8_t fatCache[flashSectorSize * flashHeaderSize];
 
 
 class ExtFlash {
