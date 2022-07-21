@@ -119,7 +119,7 @@ void CDCHandler::ProcessCommand()
 
 		printf("Checking cache changes. Dirty sectors: 0x%lu ...\r\n", fatTools.cacheDirty);
 
-		for (uint32_t i = 0; i < (flashHeaderSize * flashSectorSize); ++i) {
+		for (uint32_t i = 0; i < (flashCacheSize * flashSectorSize); ++i) {
 			uint8_t flashData = ((uint8_t*)flashAddress)[i];
 
 			// Data has changed

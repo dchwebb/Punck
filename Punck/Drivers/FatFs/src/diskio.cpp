@@ -20,7 +20,7 @@ uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint
 {
 	// If reading header data return from cache
 	const uint8_t* readAddress;
-	if (readSector < flashHeaderSize) {
+	if (readSector < flashCacheSize) {
 		readAddress = &(fatCache[readSector * flashSectorSize]);
 	} else {
 		readAddress = ((uint8_t*)flashAddress) + (readSector * flashSectorSize);
@@ -33,9 +33,9 @@ uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint
 
 uint8_t disk_write(uint8_t pdrv, const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-	if (writeSector < flashHeaderSize) {
-		// Update the bit array of dirty blocks [There are 8 x 612 sectors in a block (4096)]
-		fatTools.cacheDirty |= (1 << (writeSector >> 3));
+	if (writeSector < flashCacheSize) {
+		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
+		fatTools.cacheDirty |= (1 << (writeSector / flashEraseSectors));
 
 		uint8_t* writeAddress = &(fatCache[writeSector * flashSectorSize]);
 		memcpy(writeAddress, readBuff, flashSectorSize * sectorCount);
@@ -66,7 +66,7 @@ uint8_t disk_ioctl(uint8_t pdrv, uint8_t cmd, void* buff)
 			break;
 
 		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector
-			*(uint32_t*)buff = 4;		// Set to 4 (4 * 512 = 4096 which is the Flash sector erase size)
+			*(uint32_t*)buff = 8;		// 8 * 512 = 4096 which is the Flash sector erase size
 			break;
 
 		default:

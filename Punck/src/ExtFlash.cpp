@@ -11,7 +11,6 @@ const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash st
 
 
 
-
 void ExtFlash::Init()
 {
 	InitQSPI();												// Initialise hardware
@@ -114,7 +113,7 @@ bool ExtFlash::WriteData(uint32_t address, uint32_t* writeBuff, uint32_t words, 
 			}
 		}
 		if (eraseRequired) {
-			SectorErase(address & ~0xFFF);					// Force address to 4096 byte boundary
+			SectorErase(address & ~(flashEraseSectors - 1));			// Force address to 4096 byte boundary
 		}
 	}
 	if (!dataChanged) {										// No difference between Flash contents and write data

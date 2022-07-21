@@ -5,23 +5,23 @@
 FatTools fatTools;
 
 // Create cache for header part of Fat
-uint8_t fatCache[flashSectorSize * flashHeaderSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
+uint8_t fatCache[flashSectorSize * flashCacheSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
 
 ExtFlash extFlash;											// Singleton external flash handler
 
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	memcpy(fatCache, flashAddress, flashSectorSize * flashHeaderSize);
+	memcpy(fatCache, flashAddress, flashSectorSize * flashCacheSize);
 
 	__attribute__((unused)) FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
-		uint8_t fsWork[flashSectorSize];						// Work buffer for the f_mkfs()
+		uint8_t fsWork[flashSectorSize];					// Work buffer for the f_mkfs()
 
 		MKFS_PARM parms;									// Create parameter struct
 		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
-		parms.n_root = 64;									// Number of root directory entries (each uses 32 bytes of storage)
+		parms.n_root = 128;									// Number of root directory entries (each uses 32 bytes of storage)
 		parms.align = 0;									// Default initialise remaining values
 		parms.au_size = 0;
 		parms.n_fat = 0;
@@ -39,7 +39,7 @@ uint8_t FatTools::FlushCache()
 	uint8_t count = 0;
 	while (cacheDirty != 0) {
 		if (cacheDirty & (1 << blockPos)) {
-			if (extFlash.WriteData(blockPos * 4096, (uint32_t*)&(fatCache[blockPos * 4096]), 1024, true)) {
+			if (extFlash.WriteData(blockPos * flashEraseSectors, (uint32_t*)&(fatCache[blockPos * flashEraseSectors]), 1024, true)) {
 				printf("Written block %i\r\n", blockPos);
 				++count;
 			}
@@ -56,29 +56,31 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	// Output a detailed analysis of FAT directory structure
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
-		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n-----------------------------------------------\r\n");
+		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
 		fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashSectorSize);
 	} else {
 		// Check if cluster is in cache or not
-		uint32_t offsetByte = (fatFs.database * flashSectorSize) + (flashClusterSize * (cluster - 2));		// Byte offset of the cluster start (note cluster numbers start at 2)
 
-		if (offsetByte < flashHeaderSize * flashSectorSize) {		// In cache
-			fatInfo = (FATFileInfo*)(fatCache + offsetByte);	// in memory mapped flash data
+		// Byte offset of the cluster start (note cluster numbers start at 2)
+		uint32_t offsetByte = (fatFs.database * flashSectorSize) + (flashClusterSize * (cluster - 2));
+
+		if (offsetByte < flashCacheSize * flashSectorSize) {		// In cache
+			fatInfo = (FATFileInfo*)(fatCache + offsetByte);		// in memory mapped flash data
 		} else {
 			fatInfo = (FATFileInfo*)((uint8_t*)flashAddress + offsetByte);	// in memory mapped flash data
 		}
 	}
 
 	while (fatInfo->name[0] != 0) {
-		if (fatInfo->attr == 0xF) {							// Long file name
+		if (fatInfo->attr == 0xF) {									// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("%c *LFN*  part %2i                             %s\r\n",
-					(cluster == 0 ? ' ' : '-'),
+			printf("%c LFN %2i                                     %s\r\n",
+					(cluster == 0 ? ' ' : '>'),
 					lfn->order & (~0x40),
 					GetFileName(fatInfo).c_str());
 		} else {
 			printf("%c %s %8i %5lu %10s %10s %s\r\n",
-					(cluster == 0 ? ' ' : '-'),
+					(cluster == 0 ? ' ' : '>'),
 					GetAttributes(fatInfo).c_str(),
 					fatInfo->firstClusterLow,
 					fatInfo->fileSize,
