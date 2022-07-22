@@ -1,7 +1,7 @@
 #include "USB.h"
 #include "MSCHandler.h"
 #include "ExtFlash.h"
-#include "diskio.h"
+#include "FatTools.h"
 
 void MSCHandler::DataIn()
 {
@@ -383,7 +383,7 @@ int8_t MSCHandler::SCSI_ProcessRead()
 {
 	uint32_t len = std::min(scsi_blk_len * flashSectorSize, MediaPacket);
 
-	disk_read(0, bot_data, scsi_blk_addr, (len / flashSectorSize));
+	fatTools.Read(bot_data, scsi_blk_addr, (len / flashSectorSize));
 
 	inBuff = bot_data;
 	inBuffSize = len;
@@ -450,7 +450,7 @@ int8_t MSCHandler::SCSI_ProcessWrite()
 {
 	uint32_t len = std::min(scsi_blk_len * flashSectorSize, MediaPacket);
 
-	disk_write(0, (uint8_t*)(outBuff), scsi_blk_addr, (len / flashSectorSize));
+	fatTools.Write((uint8_t*)(outBuff), scsi_blk_addr, (len / flashSectorSize));
 
 	scsi_blk_addr += (len / flashSectorSize);
 	scsi_blk_len -= (len / flashSectorSize);

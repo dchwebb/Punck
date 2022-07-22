@@ -42,6 +42,6 @@ uint32_t get_fattime();
 }
 #endif
 
-void getFileInfo();
+
 
 

@@ -25,7 +25,7 @@ static constexpr uint32_t flashSectorSize = 512;		// Sector size used by FAT
 static constexpr uint32_t flashClusterSize = 2048;		// Cluster size used by FAT (ie block size in data section)
 static constexpr uint32_t flashEraseSectors = 8;		// Number of sectors in an erase block (4096 bytes)
 static constexpr uint32_t flashSectorCount = 31250;		// 31250 sectors of 512 bytes = 16 MBytes
-static constexpr uint32_t flashCacheSize = 68;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + extra for testing
+static constexpr uint32_t flashCacheSize = 72;			// Header: 1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory + extra for testing
 
 
 
@@ -43,7 +43,7 @@ public:
 	uint8_t ReadStatus(qspiRegister r);
 	void WriteEnable();
 	bool WriteData(uint32_t address, uint32_t* data, uint32_t words, bool checkErase = false);
-	void SectorErase(uint32_t address);
+	void BlockErase(uint32_t address);
 	uint8_t ReadData(uint32_t address);
 	uint32_t FastRead(uint32_t address);
 	void CheckBusy();

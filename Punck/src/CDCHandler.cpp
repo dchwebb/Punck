@@ -70,17 +70,17 @@ void CDCHandler::ProcessCommand()
 				"\r\nSupported commands:\r\n"
 				"info        -  Show diagnostic information\r\n"
 				"resume      -  Resume I2S after debugging\r\n"
-				"memmap      -  QSPI flash to memory mapped mode\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
 				"writeA:N    -  Write sequence to flash (A = address, N = No of words decimal)\r\n"
+				"writesector:S  Write 512 byte sequence via cache to sector S\r\n"
 				"setzeroA:N  -  Write zero to flash (A = address, N = No of words decimal)\r\n"
 				"read:A      -  Read word from flash (A = decimal address)\r\n"
-				"printflash:A   Print 100 words of flash (A = decimal address)\r\n"
+				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"erasesect:A -  Erase flash sector (A = decimal address)\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
 				"dirlist     -  Print list of all files and their directories\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
-				"cachechanged   Show all bytes changed in header cache\r\n"
+				"cacheinfo   -  Show all bytes changed in header cache\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -112,12 +112,35 @@ void CDCHandler::ProcessCommand()
 		fatTools.PrintDirInfo();
 
 
-	} else if (cmd.compare("cachechanged\n") == 0) {			// List bytes that are different in cache to Flash
+	} else if (cmd.compare("cacheinfo\n") == 0) {				// Basic counts of differences between cache and Flash
 		uint32_t count = 0;
 		uint8_t oldCache = 0, oldFlash = 0;
 		bool skipDuplicates = false;
 
-		printf("Checking cache changes. Dirty sectors: 0x%lu ...\r\n", fatTools.cacheDirty);
+		for (uint32_t blk = 0; blk < (flashCacheSize / flashEraseSectors); ++blk) {
+
+			// Check if block is actually dirty or clean
+			uint32_t dirtyBytes = 0, firstDirtyByte = 0, lastDirtyByte = 0;
+			for (uint32_t byte = 0; byte < (flashEraseSectors * flashSectorSize); ++byte) {
+				uint32_t offset = (blk * flashEraseSectors * flashSectorSize) + byte;
+				if (fatCache[offset] != ((uint8_t*)flashAddress)[offset]) {
+					++dirtyBytes;
+					if (firstDirtyByte == 0) {
+						firstDirtyByte = offset;
+					}
+				}
+			}
+
+			bool blockDirty = (fatTools.dirtyCacheBlocks & (1 << blk));
+			printf("Block %2lu: %s  Dirty bytes: %lu from %lu to %lu\r\n",
+					blk, (blockDirty ? "dirty" : "     "), dirtyBytes, firstDirtyByte, lastDirtyByte);
+
+		}
+
+	} else if (cmd.compare("cachechanges\n") == 0) {				// List bytes that are different in cache to Flash
+		uint32_t count = 0;
+		uint8_t oldCache = 0, oldFlash = 0;
+		bool skipDuplicates = false;
 
 		for (uint32_t i = 0; i < (flashCacheSize * flashSectorSize); ++i) {
 			uint8_t flashData = ((uint8_t*)flashAddress)[i];
@@ -152,10 +175,10 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data
 		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
-			uint32_t* p = (uint32_t*)(0x90000000 + address);
+			unsigned int* p = (unsigned int*)(0x90000000 + address);
 
-			for (uint8_t a = 0; a < 100; ++a) {
-				printf("%d: %#010x\r\n", (a * 4) + address, (unsigned int)*p++);
+			for (uint8_t a = 0; a < 128; a += 4) {
+				printf("%6d: %#010x %#010x %#010x %#010x\r\n", (a * 4) + address, p[a], p[a + 1], p[a + 2], p[a + 3]);
 			}
 		}
 
@@ -177,14 +200,14 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("flushcache\n") == 0) {				// Flush FAT cache to Flash
 		uint8_t sectors = fatTools.FlushCache();
-		printf("%i sectors flushed\r\n", sectors);
+		printf("%i blocks flushed\r\n", sectors);
 		extFlash.MemoryMapped();
 
 
 	} else if (cmd.compare(0, 10, "erasesect:") == 0) {			// Erase sector of flash memory
 		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
-			extFlash.SectorErase(address);
+			extFlash.BlockErase(address);
 			usb->SendString("Sector erased\r\n");
 		}
 		extFlash.MemoryMapped();
@@ -196,7 +219,22 @@ void CDCHandler::ProcessCommand()
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
 
 
+	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]
+
+		int sector = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		if (sector >= 0) {
+			printf("Writing to %d ...\r\n", sector);
+
+			for (uint32_t a = 0; a < flashSectorSize; ++a) {
+				flashBuff[a] = a + 1;
+			}
+			fatTools.Write((uint8_t*)flashBuff, sector, 1);
+
+			printf("Finished\r\n");
+		}
+
 	} else if (cmd.compare(0, 5, "write") == 0) {				// Write QSPI format writeA:W [A = address; W = num words]
+
 		int address = ParseInt(cmd, 'e', 0, 0xFFFFFF);
 		if (address >= 0) {
 			int words = ParseInt(cmd, ':');

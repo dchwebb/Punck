@@ -32,18 +32,64 @@ void FatTools::InitFatFS()
 }
 
 
+void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
+{
+	// If reading header data return from cache
+	const uint8_t* readAddress;
+	if (readSector < flashCacheSize) {
+		readAddress = &(fatCache[readSector * flashSectorSize]);
+	} else {
+		readAddress = ((uint8_t*)flashAddress) + (readSector * flashSectorSize);
+	}
+
+	memcpy(writeAddress, readAddress, flashSectorSize * sectorCount);
+}
+
+
+
+void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
+{
+	if (writeSector < flashCacheSize) {
+		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
+		fatTools.dirtyCacheBlocks |= (1 << (writeSector / flashEraseSectors));
+
+		uint8_t* writeAddress = &(fatCache[writeSector * flashSectorSize]);
+		memcpy(writeAddress, readBuff, flashSectorSize * sectorCount);
+	} else {
+		// Check which block is being written to
+		int32_t block = writeSector / flashEraseSectors;
+		if (block != writeBlock) {
+			if (writeBlock > 0) {		// Write previously cached block to flash
+				uint32_t writeAddress = writeBlock * flashEraseSectors * flashSectorSize;
+				extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (flashEraseSectors * flashSectorSize) / 4, true);
+				writeBlock = -1;		// Indicates that write cache is clean
+			}
+
+			// Load cache with current flash values
+			writeBlock = block;
+			uint8_t* readAddress = ((uint8_t*)flashAddress) + (block * flashEraseSectors * flashSectorSize);
+			memcpy(writeBlockCache, readAddress, flashEraseSectors * flashSectorSize);
+		}
+
+		// write cache is now valid - copy newly changed values into it
+		uint32_t byteOffset = (writeSector - (block * flashEraseSectors)) * flashSectorSize;		// Offset within currently block
+		memcpy(&(writeBlockCache[byteOffset]), readBuff, flashSectorSize * sectorCount);
+	}
+}
+
 uint8_t FatTools::FlushCache()
 {
 	// Writes any dirty cache sectors to Flash
 	uint8_t blockPos = 0;
 	uint8_t count = 0;
-	while (cacheDirty != 0) {
-		if (cacheDirty & (1 << blockPos)) {
-			if (extFlash.WriteData(blockPos * flashEraseSectors, (uint32_t*)&(fatCache[blockPos * flashEraseSectors]), 1024, true)) {
+	while (dirtyCacheBlocks != 0) {
+		if (dirtyCacheBlocks & (1 << blockPos)) {
+			uint32_t byteOffset = blockPos * flashEraseSectors * flashSectorSize;
+			if (extFlash.WriteData(byteOffset, (uint32_t*)&(fatCache[byteOffset]), 1024, true)) {
 				printf("Written block %i\r\n", blockPos);
 				++count;
 			}
-			cacheDirty &= ~(1 << blockPos);
+			dirtyCacheBlocks &= ~(1 << blockPos);
 		}
 		++blockPos;
 	}
@@ -59,20 +105,19 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
 		fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashSectorSize);
 	} else {
-		// Check if cluster is in cache or not
-
 		// Byte offset of the cluster start (note cluster numbers start at 2)
 		uint32_t offsetByte = (fatFs.database * flashSectorSize) + (flashClusterSize * (cluster - 2));
 
-		if (offsetByte < flashCacheSize * flashSectorSize) {		// In cache
-			fatInfo = (FATFileInfo*)(fatCache + offsetByte);		// in memory mapped flash data
+		// Check if cluster is in cache or not
+		if (offsetByte < flashCacheSize * flashSectorSize) {				// In cache
+			fatInfo = (FATFileInfo*)(fatCache + offsetByte);
 		} else {
 			fatInfo = (FATFileInfo*)((uint8_t*)flashAddress + offsetByte);	// in memory mapped flash data
 		}
 	}
 
 	while (fatInfo->name[0] != 0) {
-		if (fatInfo->attr == 0xF) {									// Long file name
+		if (fatInfo->attr == 0xF) {											// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
 			printf("%c LFN %2i                                     %s\r\n",
 					(cluster == 0 ? ' ' : '>'),

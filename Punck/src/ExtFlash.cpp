@@ -1,5 +1,4 @@
 #include "ExtFlash.h"
-#include "diskio.h"
 #include "FatTools.h"
 #include <cstring>
 
@@ -31,6 +30,7 @@ void ExtFlash::Init()
 	MemoryMapped();											// Switch to memory mapped mode
 	fatTools.InitFatFS();											// Initialise FatFS
 }
+
 
 
 void ExtFlash::MemoryMapped()
@@ -113,7 +113,9 @@ bool ExtFlash::WriteData(uint32_t address, uint32_t* writeBuff, uint32_t words, 
 			}
 		}
 		if (eraseRequired) {
-			SectorErase(address & ~(flashEraseSectors - 1));			// Force address to 4096 byte boundary
+			// f
+
+			BlockErase(address & ~(flashEraseSectors - 1));			// Force address to 4096 byte boundary
 		}
 	}
 	if (!dataChanged) {										// No difference between Flash contents and write data
@@ -159,7 +161,7 @@ bool ExtFlash::WriteData(uint32_t address, uint32_t* writeBuff, uint32_t words, 
 }
 
 
-void ExtFlash::SectorErase(uint32_t address)
+void ExtFlash::BlockErase(uint32_t address)
 {
 	WriteEnable();
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI

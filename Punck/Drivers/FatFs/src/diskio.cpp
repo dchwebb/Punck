@@ -3,7 +3,8 @@
 #include "FatTools.h"
 #include <cstring>
 
-// Wrapper functions to interface FatFS library to ExtFlash handler
+
+// Wrapper functions to interface FatFS library with FAT and ExtFlash handlers
 uint8_t disk_initialize(uint8_t pdrv)
 {
 	return RES_OK;
@@ -18,33 +19,14 @@ uint8_t disk_status(uint8_t pdrv)
 
 uint8_t disk_read(uint8_t pdrv, uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
 {
-	// If reading header data return from cache
-	const uint8_t* readAddress;
-	if (readSector < flashCacheSize) {
-		readAddress = &(fatCache[readSector * flashSectorSize]);
-	} else {
-		readAddress = ((uint8_t*)flashAddress) + (readSector * flashSectorSize);
-	}
-
-	memcpy(writeAddress, readAddress, flashSectorSize * sectorCount);
+	fatTools.Read(writeAddress, readSector, sectorCount);
 	return RES_OK;
 }
 
 
 uint8_t disk_write(uint8_t pdrv, const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-	if (writeSector < flashCacheSize) {
-		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
-		fatTools.cacheDirty |= (1 << (writeSector / flashEraseSectors));
-
-		uint8_t* writeAddress = &(fatCache[writeSector * flashSectorSize]);
-		memcpy(writeAddress, readBuff, flashSectorSize * sectorCount);
-	} else {
-		uint32_t words = (flashSectorSize * sectorCount) / 4;
-		uint32_t writeAddress = writeSector * flashSectorSize;
-		extFlash.WriteData(writeAddress, (uint32_t*)readBuff, words, true);
-	}
-
+	fatTools.Write(readBuff, writeSector, sectorCount);
 	return RES_OK;
 }
 

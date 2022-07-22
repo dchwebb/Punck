@@ -1,6 +1,7 @@
 #pragma once
 
-#include "diskio.h"
+//#include "diskio.h"
+#include "ExtFlash.h"
 #include <string>
 #include "ff.h"
 
@@ -41,8 +42,10 @@ struct FATLongFilename {
 class FatTools
 {
 public:
-	uint32_t cacheDirty = 0;		// Bit array containing dirty blocks in cache
+	uint32_t dirtyCacheBlocks = 0;		// Bit array containing dirty blocks in cache
 	void InitFatFS();
+	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);
+	void Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount);
 	void InvalidateFATCache();
 	void PrintDirInfo(uint32_t cluster = 0);
 	void PrintFiles (char* path);
@@ -50,6 +53,10 @@ public:
 private:
 	FATFS fatFs;					// File system object for RAM disk logical drive
 	const char fatPath[4] = "0:/";	// Logical drive path for FAT File system
+
+	// Initialise Write Cache - this is used to cache write data into blocks for safe erasing when overwriting existing data
+	uint8_t writeBlockCache[flashSectorSize * flashEraseSectors];
+	int32_t writeBlock = -1;		// Keep track of which block is currently held in the write cache
 
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
