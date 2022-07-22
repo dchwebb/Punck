@@ -4,17 +4,16 @@
 #include "SerialHandler.h"
 #include "config.h"
 #include "ExtFlash.h"
+#include "FatTools.h"
 
-volatile uint32_t SysTickVal;
+volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
 
 // Store buffers that need to live in special memory areas
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 
 
-
 USB usb;
-//SerialHandler serial(usb);
 //Filter filter;
 //Config config;
 
@@ -30,7 +29,7 @@ int main(void) {
 
 //	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
-	InitCache();					// Configure MPU to not cache memory regions where DMA beffers reside
+	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	extFlash.Init();				// Initialise external QSPI Flash
 //	InitIO();						// Initialise switches and LEDs
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
@@ -40,8 +39,10 @@ int main(void) {
 //	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 	while (1) {
-		// Check for incoming CDC commands
-		usb.cdc.ProcessCommand();
+
+		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
+
+		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
 
 //#if (USB_DEBUG)
 //		if ((GPIOB->IDR & GPIO_IDR_ID4) == 0 && USBDebug) {

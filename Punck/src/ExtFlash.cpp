@@ -6,8 +6,8 @@
 // FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 
 
-const uint32_t* flashAddress = (uint32_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
-
+const uint8_t* flashAddress = (uint8_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
+ExtFlash extFlash;											// Singleton external flash handler
 
 
 void ExtFlash::Init()
@@ -28,7 +28,7 @@ void ExtFlash::Init()
 	}
 
 	MemoryMapped();											// Switch to memory mapped mode
-	fatTools.InitFatFS();											// Initialise FatFS
+	fatTools.InitFatFS();									// Initialise FatFS
 }
 
 
@@ -93,37 +93,34 @@ void ExtFlash::WriteEnable()
 }
 
 
-uint32_t writeCount = 0;
-
-bool ExtFlash::WriteData(uint32_t address, uint32_t* writeBuff, uint32_t words, bool checkErase)
+bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t words, bool checkErase)
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
 	bool eraseRequired = false;
 	bool dataChanged = false;
 	if (checkErase) {
 		for (uint32_t i = 0; i < words; ++i) {
-			uint32_t flashData = (flashAddress + (address / 4))[i];		// pointer arithmetic will add in 32 bit words
+			uint32_t flashData = ((uint32_t*)(flashAddress + address))[i];
 
 			if (flashData != writeBuff[i]) {
 				dataChanged = true;
-				if ((flashData & writeBuff[i]) != writeBuff[i]) {		// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
+				if ((flashData & writeBuff[i]) != writeBuff[i]) {	// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
 					eraseRequired = true;
 					break;
 				}
 			}
 		}
 		if (eraseRequired) {
-			// f
-
-			BlockErase(address & ~(flashEraseSectors - 1));			// Force address to 4096 byte boundary
+			printf("Flash: Erasing block at %lu\r\n", address & ~(fatEraseSectors - 1));
+			BlockErase(address & ~(fatEraseSectors - 1));			// Force address to 4096 byte boundary
 		}
 	}
-	if (!dataChanged) {										// No difference between Flash contents and write data
+	if (!dataChanged) {												// No difference between Flash contents and write data
 		return false;
 	}
 
+	printf("Flash: Writing %lu bytes at %lu\r\n", words * 4, address);
 	do {
-		writeCount++;
 		WriteEnable();
 
 		// Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)

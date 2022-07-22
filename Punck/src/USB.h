@@ -98,6 +98,7 @@ public:
 	enum Interface {NoInterface = -1, MSCInterface = 0, CDCCmdInterface = 1, CDCDataInterface = 2, interfaceCount = 3};
 	enum EndPoint {MSC_In = 0x81, MSC_Out = 0x1, CDC_In = 0x82, CDC_Out = 0x2, CDC_Cmd = 0x83, };
 	enum EndPointType { Control = 0, Isochronous = 1, Bulk = 2, Interrupt = 3 };
+	enum class DeviceState {Default, Addressed, Configured, Suspended};
 
 	void InterruptHandler();
 	void Init();
@@ -110,8 +111,8 @@ public:
 	MSCHandler msc = MSCHandler(this, USB::MSC_In, USB::MSC_Out, MSCInterface);
 	CDCHandler cdc = CDCHandler(this, USB::CDC_In, USB::CDC_Out, CDCCmdInterface);
 	bool classPendingData= false;			// Set when class setup command received and data pending
+	DeviceState devState;
 private:
-	enum class DeviceState {Default, Addressed, Configured, Suspended};
 	enum class EP0State {Idle, Setup, DataIn, DataOut, StatusIn, StatusOut, Stall};
 
 	void ActivateEndpoint(uint8_t endpoint, Direction direction, EndPointType eptype);
@@ -130,7 +131,7 @@ private:
 
 	const uint8_t ep_maxPacket = 0x40;
 	EP0State ep0State;
-	DeviceState devState;
+
 	bool transmitting;
 	usbRequest req;
 

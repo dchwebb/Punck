@@ -40,11 +40,11 @@ uint8_t disk_ioctl(uint8_t pdrv, uint8_t cmd, void* buff)
 			break;
 
 		case GET_SECTOR_COUNT:			// Get number of sectors on the disk
-			*(uint32_t*)buff = flashSectorCount;
+			*(uint32_t*)buff = fatSectorCount;
 			break;
 
 		case GET_SECTOR_SIZE:			// Get R/W sector size
-			*(uint32_t*)buff = flashSectorSize;
+			*(uint32_t*)buff = fatSectorSize;
 			break;
 
 		case GET_BLOCK_SIZE:			// Get erase block size in unit of sector

@@ -6,7 +6,11 @@ extern "C" {
 // To enable USB for printf commands (To print floats enable 'Use float with printf from newlib-nano' MCU Build Settings)
 size_t _write(int handle, const unsigned char* buf, size_t bufSize)
 {
-	return usb.SendString(buf, bufSize);
+	if (usb.devState == USB::DeviceState::Configured) {
+		return usb.SendString(buf, bufSize);
+	} else {
+		return 0;
+	}
 }
 }
 
@@ -281,7 +285,10 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 
 		// USB_FlushTxFifo
 		USB_OTG_FS->GRSTCTL = (USB_OTG_GRSTCTL_TXFFLSH | (0x10 << 6));
-		while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH);
+		uint32_t waitCounter = SysTickVal;
+		while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH && waitCounter < 100000) {
+			waitCounter++;
+		}
 
 		for (int i = 0; i < 6; i++) {				// hpcd->Init.dev_endpoints
 			USBx_INEP(i)->DIEPINT = 0xFB7FU;		// see p1177 for explanation: based on datasheet should be more like 0b10100100111011

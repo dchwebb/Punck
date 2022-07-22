@@ -104,7 +104,7 @@ void CDCHandler::ProcessCommand()
 		char workBuff[256];
 		strcpy(workBuff, "/");
 
-		fatTools.InvalidateFATCache();							// Ensure that the FAT FS cache is updated
+		fatTools.InvalidateFatFSCache();						// Ensure that the FAT FS cache is updated
 		fatTools.PrintFiles(workBuff);
 
 
@@ -117,17 +117,18 @@ void CDCHandler::ProcessCommand()
 		uint8_t oldCache = 0, oldFlash = 0;
 		bool skipDuplicates = false;
 
-		for (uint32_t blk = 0; blk < (flashCacheSize / flashEraseSectors); ++blk) {
+		for (uint32_t blk = 0; blk < (fatCacheSectors / fatEraseSectors); ++blk) {
 
 			// Check if block is actually dirty or clean
 			uint32_t dirtyBytes = 0, firstDirtyByte = 0, lastDirtyByte = 0;
-			for (uint32_t byte = 0; byte < (flashEraseSectors * flashSectorSize); ++byte) {
-				uint32_t offset = (blk * flashEraseSectors * flashSectorSize) + byte;
-				if (fatCache[offset] != ((uint8_t*)flashAddress)[offset]) {
+			for (uint32_t byte = 0; byte < (fatEraseSectors * fatSectorSize); ++byte) {
+				uint32_t offset = (blk * fatEraseSectors * fatSectorSize) + byte;
+				if (fatTools.headerCache[offset] != flashAddress[offset]) {
 					++dirtyBytes;
 					if (firstDirtyByte == 0) {
 						firstDirtyByte = offset;
 					}
+					lastDirtyByte = offset;
 				}
 			}
 
@@ -137,27 +138,45 @@ void CDCHandler::ProcessCommand()
 
 		}
 
-	} else if (cmd.compare("cachechanges\n") == 0) {				// List bytes that are different in cache to Flash
+		// the write cache holds any blocks currently being written to to avoid multiple block erasing when writing large data
+		if (fatTools.writeCacheDirty) {
+			uint32_t dirtyBytes = 0, firstDirtyByte = 0, lastDirtyByte = 0;
+			for (uint32_t byte = 0; byte < (fatEraseSectors * fatSectorSize); ++byte) {
+				uint32_t offset = (fatTools.writeBlock * fatEraseSectors * fatSectorSize) + byte;
+				if (fatTools.writeBlockCache[byte] != flashAddress[offset]) {
+					++dirtyBytes;
+					if (firstDirtyByte == 0) {
+						firstDirtyByte = offset;
+					}
+					lastDirtyByte = offset;
+				}
+			}
+
+			printf("Block %2lu: %s  Dirty bytes: %lu from %lu to %lu\r\n",
+					fatTools.writeBlock, (fatTools.writeCacheDirty ? "dirty" : "     "), dirtyBytes, firstDirtyByte, lastDirtyByte);
+
+		}
+
+
+	} else if (cmd.compare("cachechanges\n") == 0) {			// List bytes that are different in cache to Flash
 		uint32_t count = 0;
 		uint8_t oldCache = 0, oldFlash = 0;
 		bool skipDuplicates = false;
 
-		for (uint32_t i = 0; i < (flashCacheSize * flashSectorSize); ++i) {
-			uint8_t flashData = ((uint8_t*)flashAddress)[i];
+		for (uint32_t i = 0; i < (fatCacheSectors * fatSectorSize); ++i) {
 
-			// Data has changed
-			if (flashData != fatCache[i]) {
-				if (oldCache == fatCache[i] && oldFlash == flashData && i > 0) {
+			if (flashAddress[i] != fatTools.headerCache[i]) {					// Data has changed
+				if (oldCache == fatTools.headerCache[i] && oldFlash == flashAddress[i] && i > 0) {
 					if (!skipDuplicates) {
 						printf("...\r\n");						// Print continuation mark
 						skipDuplicates = true;
 					}
 				} else {
-					printf("%5lu c: 0x%02x f: 0x%02x\r\n", i, fatCache[i], flashData);
+					printf("%5lu c: 0x%02x f: 0x%02x\r\n", i, fatTools.headerCache[i], flashAddress[i]);
 				}
 
-				oldCache = fatCache[i];
-				oldFlash = flashData;
+				oldCache = fatTools.headerCache[i];
+				oldFlash = flashAddress[i];
 				++count;
 			} else {
 				if (skipDuplicates) {
@@ -225,7 +244,7 @@ void CDCHandler::ProcessCommand()
 		if (sector >= 0) {
 			printf("Writing to %d ...\r\n", sector);
 
-			for (uint32_t a = 0; a < flashSectorSize; ++a) {
+			for (uint32_t a = 0; a < fatSectorSize; ++a) {
 				flashBuff[a] = a + 1;
 			}
 			fatTools.Write((uint8_t*)flashBuff, sector, 1);

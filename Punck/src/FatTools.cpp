@@ -4,20 +4,16 @@
 
 FatTools fatTools;
 
-// Create cache for header part of Fat
-uint8_t fatCache[flashSectorSize * flashCacheSize];			// Header consists of 1 block boot sector; 31 blocks FAT; 4 blocks Root Directory
-
-ExtFlash extFlash;											// Singleton external flash handler
 
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	memcpy(fatCache, flashAddress, flashSectorSize * flashCacheSize);
+	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
-	__attribute__((unused)) FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
+	FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
-		uint8_t fsWork[flashSectorSize];					// Work buffer for the f_mkfs()
+		uint8_t fsWork[fatSectorSize];						// Work buffer for the f_mkfs()
 
 		MKFS_PARM parms;									// Create parameter struct
 		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
@@ -36,62 +32,86 @@ void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorC
 {
 	// If reading header data return from cache
 	const uint8_t* readAddress;
-	if (readSector < flashCacheSize) {
-		readAddress = &(fatCache[readSector * flashSectorSize]);
+	if (readSector < fatCacheSectors) {
+		readAddress = &(headerCache[readSector * fatSectorSize]);
 	} else {
-		readAddress = ((uint8_t*)flashAddress) + (readSector * flashSectorSize);
+		readAddress = flashAddress + (readSector * fatSectorSize);
 	}
 
-	memcpy(writeAddress, readAddress, flashSectorSize * sectorCount);
+	memcpy(writeAddress, readAddress, fatSectorSize * sectorCount);
 }
-
 
 
 void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-	if (writeSector < flashCacheSize) {
+	if (writeSector < fatCacheSectors) {
 		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
-		fatTools.dirtyCacheBlocks |= (1 << (writeSector / flashEraseSectors));
+		dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
 
-		uint8_t* writeAddress = &(fatCache[writeSector * flashSectorSize]);
-		memcpy(writeAddress, readBuff, flashSectorSize * sectorCount);
+		uint8_t* writeAddress = &(headerCache[writeSector * fatSectorSize]);
+		memcpy(writeAddress, readBuff, fatSectorSize * sectorCount);
 	} else {
 		// Check which block is being written to
-		int32_t block = writeSector / flashEraseSectors;
+		int32_t block = writeSector / fatEraseSectors;
 		if (block != writeBlock) {
 			if (writeBlock > 0) {		// Write previously cached block to flash
-				uint32_t writeAddress = writeBlock * flashEraseSectors * flashSectorSize;
-				extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (flashEraseSectors * flashSectorSize) / 4, true);
-				writeBlock = -1;		// Indicates that write cache is clean
+				FlushCache();			// FIXME - add some handling to prevent constant Windows disk spam being written (access dates, indexer etc)
 			}
 
 			// Load cache with current flash values
 			writeBlock = block;
-			uint8_t* readAddress = ((uint8_t*)flashAddress) + (block * flashEraseSectors * flashSectorSize);
-			memcpy(writeBlockCache, readAddress, flashEraseSectors * flashSectorSize);
+			const uint8_t* readAddress = flashAddress + (block * fatEraseSectors * fatSectorSize);
+			memcpy(writeBlockCache, readAddress, fatEraseSectors * fatSectorSize);
 		}
 
 		// write cache is now valid - copy newly changed values into it
-		uint32_t byteOffset = (writeSector - (block * flashEraseSectors)) * flashSectorSize;		// Offset within currently block
-		memcpy(&(writeBlockCache[byteOffset]), readBuff, flashSectorSize * sectorCount);
+		uint32_t byteOffset = (writeSector - (block * fatEraseSectors)) * fatSectorSize;		// Offset within currently block
+		memcpy(&(writeBlockCache[byteOffset]), readBuff, fatSectorSize * sectorCount);
+		writeCacheDirty = true;
+	}
+
+	if (writeSector >= fatHeaderSectors) {
+		cacheUpdated = SysTickVal;
 	}
 }
 
+
+void FatTools::CheckCache()
+{
+	// If there are dirty buffers and sufficient time has elapsed since the cache updated flag was been set flush the cache to Flash
+	// FIXME - assuming only worth storing cached changes if there has been a change in the FAT data area (ie ignoring access date updates etc)
+	bool headerCacheDirty = (dirtyCacheBlocks > (1 << (fatHeaderSectors / fatEraseSectors)));
+	if ((headerCacheDirty || writeCacheDirty) && SysTickVal - cacheUpdated > 100)	{
+		FlushCache();
+	}
+}
+
+
 uint8_t FatTools::FlushCache()
 {
-	// Writes any dirty cache sectors to Flash
+	// Writes any dirty data in the header cache to Flash
 	uint8_t blockPos = 0;
 	uint8_t count = 0;
 	while (dirtyCacheBlocks != 0) {
 		if (dirtyCacheBlocks & (1 << blockPos)) {
-			uint32_t byteOffset = blockPos * flashEraseSectors * flashSectorSize;
-			if (extFlash.WriteData(byteOffset, (uint32_t*)&(fatCache[byteOffset]), 1024, true)) {
-				printf("Written block %i\r\n", blockPos);
+			uint32_t byteOffset = blockPos * fatEraseSectors * fatSectorSize;
+			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), 1024, true)) {
+				printf("Written cache block %i\r\n", blockPos);
 				++count;
 			}
 			dirtyCacheBlocks &= ~(1 << blockPos);
 		}
 		++blockPos;
+	}
+
+	// Write current working block to flash
+	if (writeCacheDirty && writeBlock > 0) {
+		uint32_t writeAddress = writeBlock * fatEraseSectors * fatSectorSize;
+		if (extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (fatEraseSectors * fatSectorSize) / 4, true)) {
+			printf("Written cache block %lu\r\n", writeBlock);
+			++count;
+		}
+		writeCacheDirty = false;		// Indicates that write cache is clean
 	}
 	return count;
 }
@@ -103,21 +123,21 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
 		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
-		fatInfo = (FATFileInfo*)(fatCache + fatFs.dirbase * flashSectorSize);
+		fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
 	} else {
 		// Byte offset of the cluster start (note cluster numbers start at 2)
-		uint32_t offsetByte = (fatFs.database * flashSectorSize) + (flashClusterSize * (cluster - 2));
+		uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
 
 		// Check if cluster is in cache or not
-		if (offsetByte < flashCacheSize * flashSectorSize) {				// In cache
-			fatInfo = (FATFileInfo*)(fatCache + offsetByte);
+		if (offsetByte < fatCacheSectors * fatSectorSize) {				// In cache
+			fatInfo = (FATFileInfo*)(headerCache + offsetByte);
 		} else {
-			fatInfo = (FATFileInfo*)((uint8_t*)flashAddress + offsetByte);	// in memory mapped flash data
+			fatInfo = (FATFileInfo*)(flashAddress + offsetByte);		// in memory mapped flash data
 		}
 	}
 
 	while (fatInfo->name[0] != 0) {
-		if (fatInfo->attr == 0xF) {											// Long file name
+		if (fatInfo->attr == 0xF) {										// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
 			printf("%c LFN %2i                                     %s\r\n",
 					(cluster == 0 ? ' ' : '>'),
@@ -154,11 +174,19 @@ std::string FatTools::FileDate(uint16_t date)
 }
 
 
+/*
+ Time Format. A FAT directory entry time stamp is a 16-bit field that has a granularity of 2 seconds. Here is the format (bit 0 is the LSB of the 16-bit word, bit 15 is the MSB of the 16-bit word).
+
+ Bits 0–4: 2-second count, valid value range 0–29 inclusive (0 – 58 seconds).
+ Bits 5–10: Minutes, valid value range 0–59 inclusive.
+ Bits 11–15: Hours, valid value range 0–23 inclusive.
+ */
+
 std::string FatTools::GetFileName(FATFileInfo* fi)
 {
 	char cs[14];
 	std::string s;
-	if (fi->attr == 0xF) {
+	if (fi->attr == 0xF) {									// NB - unicode characters not properly handled - just assuming ASCII char in lower byte
 		FATLongFilename* lfn = (FATLongFilename*)fi;
 		return std::string({lfn->name1[0], lfn->name1[2], lfn->name1[4], lfn->name1[6], lfn->name1[8],
 				lfn->name2[0], lfn->name2[2], lfn->name2[4], lfn->name2[6], lfn->name2[8], lfn->name2[10],
@@ -193,13 +221,14 @@ std::string FatTools::GetAttributes(FATFileInfo* fi)
 }
 
 
-void FatTools::InvalidateFATCache()
+void FatTools::InvalidateFatFSCache()
 {
 	// Clear the cache window in the fatFS object so that new writes will be correctly read
 	fatFs.winsect = ~0;
 }
 
 
+// Uses FatFS to get a recursive directory listing (just shows paths and files)
 void FatTools::PrintFiles(char* path)						// Start node to be scanned (also used as work area)
 {
 	DIR dirObj;												// Pointer to the directory object structure
