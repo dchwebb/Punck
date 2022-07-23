@@ -112,6 +112,17 @@ void CDCHandler::ProcessCommand()
 		fatTools.PrintDirInfo();
 
 
+	} else if (cmd.compare("clusterchain\n") == 0) {			// Print used clusters with links from FAT area
+		printf("Cluster | Link\r\n");
+		uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
+		uint32_t cluster = 0;
+		while (clusterChain[cluster]) {
+			printf("%7i   0x%04x\r\n", cluster, clusterChain[cluster]);
+			++cluster;
+		}
+
+
+
 	} else if (cmd.compare("cacheinfo\n") == 0) {				// Basic counts of differences between cache and Flash
 		uint32_t count = 0;
 		uint8_t oldCache = 0, oldFlash = 0;

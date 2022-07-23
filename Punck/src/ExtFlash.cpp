@@ -119,7 +119,7 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 		return false;
 	}
 
-	printf("Flash: Writing %lu bytes at %lu\r\n", words * 4, address);
+	//printf("Flash: Writing %lu bytes at %lu\r\n", words * 4, address);
 	do {
 		WriteEnable();
 
@@ -134,6 +134,8 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 
 		QUADSPI->DLR = writeSize - 1;						// number of bytes - 1 to transmit
 		QUADSPI->CR |= (3 << QUADSPI_CR_FTHRES_Pos);		// Set the threshold to 4 bytes
+		QUADSPI->CCR = 0;
+
 		QUADSPI->CR |= QUADSPI_CR_EN;						// Enable QSPI
 
 		QUADSPI->CCR = (QUADSPI_CCR_ADSIZE_1 |				// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
@@ -222,18 +224,20 @@ uint32_t ExtFlash::FastRead(uint32_t address)
 void ExtFlash::CheckBusy()
 {
 	// Use Automatic Polling mode to wait until Flash Busy flag is cleared
+	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	QUADSPI->DLR = 0;										// Return 1 byte
 	QUADSPI->PSMKR = 0b00000001;							// Mask on bit 1 (Busy)
 	QUADSPI->PSMAR = 0b00000000;							// Match Busy = 0
 	QUADSPI->PIR = 0x10;									// Polling interval in clock cycles
 	QUADSPI->CR |= QUADSPI_CR_APMS;							// Set the 'auto-stop' bit to end transaction after a match.
 
-	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
-
 	QUADSPI->CCR = (QUADSPI_CCR_FMODE_1 |					// 00: Indirect write; 01: Indirect read; *10: Automatic polling; 11: Memory-mapped
 					QUADSPI_CCR_DMODE_0 |					// Data: 00: None; *01: One line; 10: Two lines; 11: Four lines
-					QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
-					(readStatusReg1 << QUADSPI_CCR_INSTRUCTION_Pos));
+					QUADSPI_CCR_IMODE_0);					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
+
+	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+
+	QUADSPI->CCR |= (readStatusReg1 << QUADSPI_CCR_INSTRUCTION_Pos);
 
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->FCR |= QUADSPI_FCR_CSMF;						// Acknowledge status match flag

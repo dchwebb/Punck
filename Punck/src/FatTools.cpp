@@ -22,7 +22,7 @@ void FatTools::InitFatFS()
 		parms.au_size = 0;
 		parms.n_fat = 0;
 
-		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
+		//f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
 	}
 }
@@ -82,7 +82,10 @@ void FatTools::CheckCache()
 	// FIXME - assuming only worth storing cached changes if there has been a change in the FAT data area (ie ignoring access date updates etc)
 	bool headerCacheDirty = (dirtyCacheBlocks > (1 << (fatHeaderSectors / fatEraseSectors)));
 	if ((headerCacheDirty || writeCacheDirty) && SysTickVal - cacheUpdated > 100)	{
+
+		__disable_irq();					// FIXME disable all interrupts - fixes issues where USB interrupts trigger QSPI state changes during writes
 		FlushCache();
+		__enable_irq();						// enable all interrupts
 	}
 }
 
@@ -111,7 +114,7 @@ uint8_t FatTools::FlushCache()
 			printf("Written cache block %lu\r\n", writeBlock);
 			++count;
 		}
-		writeCacheDirty = false;		// Indicates that write cache is clean
+		writeCacheDirty = false;			// Indicates that write cache is clean
 	}
 	return count;
 }
@@ -122,7 +125,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	// Output a detailed analysis of FAT directory structure
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
-		printf("\r\n  Attrib Cluster Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
+		printf("\r\n  Attrib Cluster  Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
 		fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
 	} else {
 		// Byte offset of the cluster start (note cluster numbers start at 2)
@@ -139,19 +142,47 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {										// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("%c LFN %2i                                     %s\r\n",
+			printf("%c LFN %2i                                      %s\r\n",
 					(cluster == 0 ? ' ' : '>'),
 					lfn->order & (~0x40),
 					GetFileName(fatInfo).c_str());
 		} else {
-			printf("%c %s %8i %5lu %10s %10s %s\r\n",
+			printf("%c %s %8i %6lu %10s %10s %s\r\n",
 					(cluster == 0 ? ' ' : '>'),
-					GetAttributes(fatInfo).c_str(),
+					(fatInfo->name[0] == 0xE5 ? "*Del*" : GetAttributes(fatInfo).c_str()),
 					fatInfo->firstClusterLow,
 					fatInfo->fileSize,
 					FileDate(fatInfo->createDate).c_str(),
 					FileDate(fatInfo->accessedDate).c_str(),
 					GetFileName(fatInfo).c_str());
+
+			// Print cluster chain
+			if (fatInfo->name[0] != 0xE5 && fatInfo->fileSize > fatClusterSize) {
+
+				bool seq = false;					// used to check for sequential blocks
+
+				uint32_t cluster = fatInfo->firstClusterLow;
+				uint16_t* clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
+				printf("  Clusters: %lu", cluster);
+
+				while (clusterChain[cluster] != 0xFFFF) {
+					if (clusterChain[cluster] == cluster + 1) {
+						if (!seq) {
+							printf("-");
+							seq = true;
+						}
+					} else {
+						seq = false;
+						printf("%i, ", clusterChain[cluster]);
+					}
+					cluster = clusterChain[cluster];
+				}
+				if (seq) {
+					printf("%lu\r\n", cluster);
+				} else {
+					printf("\r\n");
+				}
+			}
 		}
 
 		// Recursively call function to print sub directory details (ignoring directories '.' and '..' which hold current and parent directory clusters
