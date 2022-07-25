@@ -95,9 +95,12 @@ void CDCHandler::ProcessCommand()
 		usb->SendString("Press link button to dump output\r\n");
 #endif
 
-	} else if (cmd.compare("memmap\n") == 0) {					// QSPI flash to memory mapped mode
-		extFlash.MemoryMapped();
-		usb->SendString("Changed to memory mapped mode\r\n");
+	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
+		uint32_t pos = 0;
+		while (fatTools.sampleInfo[pos].name[0] != 0) {
+			printf("%.11s\r\n", fatTools.sampleInfo[pos].name);
+			++pos;
+		}
 
 
 	} else if (cmd.compare("dirlist\n") == 0) {					// Get basic FAT directory list
@@ -117,7 +120,7 @@ void CDCHandler::ProcessCommand()
 		uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
 		uint32_t cluster = 0;
 		while (clusterChain[cluster]) {
-			printf("%7i   0x%04x\r\n", cluster, clusterChain[cluster]);
+			printf("%7lu   0x%04x\r\n", cluster, clusterChain[cluster]);
 			++cluster;
 		}
 

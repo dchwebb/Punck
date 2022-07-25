@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include "ff.h"
 
 
@@ -58,12 +59,23 @@ struct FATLongFilename {
 	char name3[4];						// Characters 12-13 of the long-name sub-component in this dir entry
 };
 
+// Store information about samples (file name, format etc)
+struct SampleInfo {
+	char name[11];
+	uint32_t size;
+	uint32_t cluster;
+	uint32_t address;
+	uint32_t sampleRate;
+	bool stereo;
+};
 
 // Class provides interface with FatFS library and some low level helpers not provided with the library
 class FatTools
 {
 	friend class CDCHandler;
 public:
+	std::array<SampleInfo, 128> sampleInfo;
+
 	void InitFatFS();
 	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);
 	void Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount);
@@ -86,6 +98,7 @@ private:
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
 
+	bool UpdateSampleList();
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);

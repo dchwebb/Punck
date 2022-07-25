@@ -462,16 +462,19 @@ void USB::ActivateEndpoint(uint8_t endpoint, Direction direction, EndPointType e
 		USBx_DEVICE->DAINTMSK |= USB_OTG_DAINTMSK_IEPM & (uint32_t)(1UL << (endpoint & EP_ADDR_MASK));
 
 		if ((USBx_INEP(endpoint)->DIEPCTL & USB_OTG_DIEPCTL_USBAEP) == 0U) {
-			USBx_INEP(endpoint)->DIEPCTL |= (ep_maxPacket & USB_OTG_DIEPCTL_MPSIZ) |
-					((uint32_t)eptype << 18) | (endpoint << 22) |
+			USBx_INEP(endpoint)->DIEPCTL |=
+					(ep_maxPacket & USB_OTG_DIEPCTL_MPSIZ) |
+					((uint32_t)eptype << USB_OTG_DIEPCTL_EPTYP_Pos) |
+					(endpoint << USB_OTG_DIEPCTL_TXFNUM_Pos) |
 					USB_OTG_DIEPCTL_USBAEP;
 		}
 	} else {
 		USBx_DEVICE->DAINTMSK |= USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << (endpoint & EP_ADDR_MASK)) << 16);
 
 		if (((USBx_OUTEP(endpoint)->DOEPCTL) & USB_OTG_DOEPCTL_USBAEP) == 0U) {
-			USBx_OUTEP(endpoint)->DOEPCTL |= (ep_maxPacket & USB_OTG_DOEPCTL_MPSIZ) |
-					((uint32_t)eptype << 18) |
+			USBx_OUTEP(endpoint)->DOEPCTL |=
+					(ep_maxPacket & USB_OTG_DOEPCTL_MPSIZ) |
+					((uint32_t)eptype << USB_OTG_DOEPCTL_EPTYP_Pos) |
 					USB_OTG_DOEPCTL_USBAEP;
 		}
 	}
@@ -711,7 +714,7 @@ void USB::EPStartXfer(Direction direction, uint8_t endpoint, uint32_t xfer_len) 
 		USBx_INEP(endpoint)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_PKTCNT & (((xfer_len + ep_maxPacket - 1) / ep_maxPacket) << 19));
 		USBx_INEP(endpoint)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_XFRSIZ & xfer_len);
 
-		USBx_INEP(endpoint)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);	// EP enable, IN data in FIFO
+		USBx_INEP(endpoint)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);		// EP enable, IN data in FIFO
 
 		// Enable the Tx FIFO Empty Interrupt for this EP
 		if (xfer_len > 0) {

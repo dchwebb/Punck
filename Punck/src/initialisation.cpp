@@ -555,6 +555,7 @@ void InitIO()
 {
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
 

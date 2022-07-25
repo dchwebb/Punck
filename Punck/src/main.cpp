@@ -12,7 +12,6 @@ extern uint32_t SystemCoreClock;
 // Store buffers that need to live in special memory areas
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 
-
 USB usb;
 //Filter filter;
 //Config config;
@@ -37,6 +36,14 @@ int main(void) {
 
 	usb.Init();
 //	InitI2S();						// Initialise I2S which will start main sample interrupts
+
+
+	// PD2 debug
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
+	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
+	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
+
 
 	while (1) {
 

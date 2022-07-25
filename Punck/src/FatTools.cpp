@@ -25,6 +25,12 @@ void FatTools::InitFatFS()
 		//f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
 	}
+
+	// Remove the ClnShutBitMask where Windows assumes a badly shut down drive is corrupt
+	uint32_t* cluster = (uint32_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
+	*cluster |= 0x80000000;
+
+	UpdateSampleList();										// Updated list of samples on flash
 }
 
 
@@ -54,8 +60,10 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 		// Check which block is being written to
 		int32_t block = writeSector / fatEraseSectors;
 		if (block != writeBlock) {
-			if (writeBlock > 0) {		// Write previously cached block to flash
-				FlushCache();			// FIXME - add some handling to prevent constant Windows disk spam being written (access dates, indexer etc)
+			if (writeBlock > 0) {					// Write previously cached block to flash
+				GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+				FlushCache();
+				GPIOD->ODR &= ~GPIO_ODR_OD2;
 			}
 
 			// Load cache with current flash values
@@ -70,22 +78,33 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 		writeCacheDirty = true;
 	}
 
-	if (writeSector >= fatHeaderSectors) {
-		cacheUpdated = SysTickVal;
-	}
+	cacheUpdated = SysTickVal;
 }
 
 
 void FatTools::CheckCache()
 {
 	// If there are dirty buffers and sufficient time has elapsed since the cache updated flag was been set flush the cache to Flash
-	// FIXME - assuming only worth storing cached changes if there has been a change in the FAT data area (ie ignoring access date updates etc)
-	bool headerCacheDirty = (dirtyCacheBlocks > (1 << (fatHeaderSectors / fatEraseSectors)));
-	if ((headerCacheDirty || writeCacheDirty) && SysTickVal - cacheUpdated > 100)	{
+	if ((dirtyCacheBlocks || writeCacheDirty) && cacheUpdated > 0 && ((int32_t)SysTickVal - (int32_t)cacheUpdated) > 100)	{
 
-		__disable_irq();					// FIXME disable all interrupts - fixes issues where USB interrupts trigger QSPI state changes during writes
-		FlushCache();
-		__enable_irq();						// enable all interrupts
+		// Update the sample list to check if any meaningful data has changed (ignores Windows disk spam, assuming this occurs in the header cache)
+		bool sampleChanged = false;
+		if (dirtyCacheBlocks) {
+			sampleChanged = UpdateSampleList();
+		}
+
+		if (sampleChanged || writeCacheDirty) {
+			GPIOC->ODR |= GPIO_ODR_OD11;		// PC11: debug pin
+
+			NVIC_DisableIRQ(OTG_FS_IRQn);
+			//__disable_irq();					// FIXME disable all interrupts - fixes issues where USB interrupts trigger QSPI state changes during writes
+			FlushCache();
+			//__enable_irq();						// enable all interrupts
+			NVIC_EnableIRQ(OTG_FS_IRQn);
+
+			GPIOC->ODR &= ~GPIO_ODR_OD11;
+		}
+		cacheUpdated = 0;
 	}
 }
 
@@ -117,6 +136,40 @@ uint8_t FatTools::FlushCache()
 		writeCacheDirty = false;			// Indicates that write cache is clean
 	}
 	return count;
+}
+
+
+bool FatTools::UpdateSampleList()
+{
+	// Updates list of samples from FAT root directory
+	FATFileInfo* fatInfo;
+	fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
+
+	uint32_t pos = 0;
+	bool changed = false;
+
+	while (fatInfo->name[0] != 0) {
+		// Check not LFN, not deleted, not directory, extension = WAV
+		if (fatInfo->attr != 0xF && fatInfo->name[0] != 0xE5 && (fatInfo->attr & AM_DIR) == 0 && strncmp(&(fatInfo->name[8]), "WAV", 3) == 0) {
+			SampleInfo* sample = &(sampleInfo[pos++]);
+
+			// Check if any fields have changed
+			if (sample->cluster != fatInfo->firstClusterLow || sample->size != fatInfo->fileSize || strncmp(sample->name, fatInfo->name, 11) != 0) {
+				changed = true;
+			}
+
+			strncpy(sample->name, fatInfo->name, 11);
+			sample->cluster = fatInfo->firstClusterLow;
+			sample->size = fatInfo->fileSize;
+		}
+		fatInfo++;
+	}
+
+	// Blank next sample (if exists) to show end of list
+	SampleInfo* sample = &(sampleInfo[pos++]);
+	sample->name[0] = 0;
+
+	return changed;
 }
 
 
