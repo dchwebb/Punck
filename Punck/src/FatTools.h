@@ -77,6 +77,7 @@ class FatTools
 	friend class CDCHandler;
 public:
 	SampleInfo sampleInfo[128];
+	bool busy = false;
 
 	void InitFatFS();
 	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);

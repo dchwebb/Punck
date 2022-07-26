@@ -30,7 +30,7 @@ int main(void) {
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	extFlash.Init();				// Initialise external QSPI Flash
-//	InitIO();						// Initialise switches and LEDs
+	InitIO();						// Initialise switches and LEDs
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 //	filter.Init();					// Initialise filter coefficients, windows etc
 
@@ -38,11 +38,6 @@ int main(void) {
 //	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 
-	// PD2 debug
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
-	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
-	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
 
 
 	while (1) {

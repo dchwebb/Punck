@@ -104,12 +104,18 @@ void FatTools::CheckCache()
 			GPIOC->ODR &= ~GPIO_ODR_OD11;
 		}
 		cacheUpdated = 0;
+
+		GPIOB->ODR &= ~GPIO_ODR_OD14;				// PB14: Red LED nucleo
+		busy = false;								// Current batch of writes has completed - release sample memory
 	}
 }
 
 
 uint8_t FatTools::FlushCache()
 {
+	GPIOB->ODR |= GPIO_ODR_OD14;					// PB14: Red LED nucleo
+	busy = true;									// Will be reset once CheckCache has confirmed that sufficient time has elapsed since last write
+
 	// Writes any dirty data in the header cache to Flash
 	uint8_t blockPos = 0;
 	uint8_t count = 0;
@@ -117,7 +123,6 @@ uint8_t FatTools::FlushCache()
 		if (dirtyCacheBlocks & (1 << blockPos)) {
 			uint32_t byteOffset = blockPos * fatEraseSectors * fatSectorSize;
 			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), 1024, true)) {
-				printf("Written cache block %i\r\n", blockPos);
 				++count;
 			}
 			dirtyCacheBlocks &= ~(1 << blockPos);
@@ -129,7 +134,6 @@ uint8_t FatTools::FlushCache()
 	if (writeCacheDirty && writeBlock > 0) {
 		uint32_t writeAddress = writeBlock * fatEraseSectors * fatSectorSize;
 		if (extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (fatEraseSectors * fatSectorSize) / 4, true)) {
-			printf("Written cache block %lu\r\n", writeBlock);
 			++count;
 		}
 		writeCacheDirty = false;			// Indicates that write cache is clean

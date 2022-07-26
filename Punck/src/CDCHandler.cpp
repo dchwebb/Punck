@@ -81,6 +81,7 @@ void CDCHandler::ProcessCommand()
 				"dirlist     -  Print list of all files and their directories\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"cacheinfo   -  Show all bytes changed in header cache\r\n"
+				"samplelist  -  Show details of all samples found in flash\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -94,6 +95,7 @@ void CDCHandler::ProcessCommand()
 		//USBDebug = true;
 		usb->SendString("Press link button to dump output\r\n");
 #endif
+
 
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;

@@ -111,7 +111,6 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 			}
 		}
 		if (eraseRequired) {
-			printf("Flash: Erasing block at %lu\r\n", address & ~(fatEraseSectors - 1));
 			BlockErase(address & ~(fatEraseSectors - 1));			// Force address to 4096 byte boundary
 		}
 	}

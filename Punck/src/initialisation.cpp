@@ -561,29 +561,12 @@ void InitIO()
 
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
 	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
-	GPIOB->MODER &= ~GPIO_MODER_MODE2;				// PB2: tempo clock
-	GPIOB->MODER &= ~GPIO_MODER_MODE4;				// PB4: lock button
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD4_0;
 
-	GPIOC->MODER &= ~GPIO_MODER_MODE10;				// PC10: LP switch, low when in LP mode
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPD10_0;
-	GPIOC->MODER &= ~GPIO_MODER_MODE11;				// PC11: HP switch
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPD11_0;
-
-	GPIOC->MODER &= ~GPIO_MODER_MODE12;				// PC12: Stereo Wide
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPD12_0;
-	GPIOG->MODER &= ~GPIO_MODER_MODE10;				// PG10: Modulated delay
-	GPIOG->PUPDR |= GPIO_PUPDR_PUPD10_0;
-
-	GPIOE->MODER &= ~GPIO_MODER_MODE2;				// PE2: Mode 1, low in reverse mode
-	GPIOE->PUPDR |= GPIO_PUPDR_PUPD2_0;
-	GPIOE->MODER &= ~GPIO_MODER_MODE3;				// PE3: Mode 2, low in short mode
-	GPIOE->PUPDR |= GPIO_PUPDR_PUPD3_0;
+	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
+	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
+	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
 
 
-	// PB7 (D), PB8 (C) - I2C/debug
-	GPIOB->MODER &= ~GPIO_MODER_MODE7_1;			// PB7: debug pin
-	GPIOB->MODER &= ~GPIO_MODER_MODE8_1;			// PB8: debug pin
 
 }
 
