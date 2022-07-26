@@ -1,6 +1,7 @@
 #include "FatTools.h"
 #include "ExtFlash.h"
 #include <cstring>
+#include "usb.h"
 
 FatTools fatTools;
 
@@ -94,13 +95,11 @@ void FatTools::CheckCache()
 		}
 
 		if (sampleChanged || writeCacheDirty) {
-			GPIOC->ODR |= GPIO_ODR_OD11;		// PC11: debug pin
+			GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin
 
-			NVIC_DisableIRQ(OTG_FS_IRQn);
-			//__disable_irq();					// FIXME disable all interrupts - fixes issues where USB interrupts trigger QSPI state changes during writes
+			usb.PauseEndpoint(usb.msc);				// Sends NAKs from the msc endpoint whilst the Flash device is unavailable
 			FlushCache();
-			//__enable_irq();						// enable all interrupts
-			NVIC_EnableIRQ(OTG_FS_IRQn);
+			usb.ResumeEndpoint(usb.msc);
 
 			GPIOC->ODR &= ~GPIO_ODR_OD11;
 		}
@@ -139,6 +138,57 @@ uint8_t FatTools::FlushCache()
 }
 
 
+const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
+{
+	uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
+
+	// Check if cluster is in cache or not
+	if (offsetByte < fatCacheSectors * fatSectorSize) {			// In cache
+		return headerCache + offsetByte;
+	} else {
+		return flashAddress + offsetByte;						// in memory mapped flash data
+	}
+}
+
+
+bool FatTools::GetSampleInfo(SampleInfo* sample)
+{
+	// populate the sample object with sample rate, number of channels etc
+	// Parsing the .wav format is a pain because the header is split into a variable number of chunks and sections are not word aligned
+
+	const uint8_t* wavHeader = GetClusterAddr(sample->cluster);
+
+	// Check validity
+	if (*(uint32_t*)wavHeader != 0x46464952) {					// wav file should start with letters 'RIFF'
+		return false;
+	}
+
+	// Jump through chunks looking for 'fmt' chunk
+	uint32_t pos = 12;				// First chunk ID at 12 byte (4 word) offset
+	while (*(uint32_t*)&(wavHeader[pos]) != 0x20746D66) {		// Look for string 'fmt '
+		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));			// Each chunk title is followed by the size of that chunk which can be used to locate the next one
+		if  (pos > 100) {
+			return false;
+		}
+	}
+
+	sample->sampleRate = *(uint32_t*)&(wavHeader[pos + 12]);
+	sample->channels = *(uint16_t*)&(wavHeader[pos + 10]);
+	sample->bitDepth = *(uint16_t*)&(wavHeader[pos + 22]);
+
+	// Navigate forward to find the start of the data area
+	while (*(uint32_t*)&(wavHeader[pos]) != 0x61746164) {		// Look for string 'data'
+		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));
+		if (pos > 200) {
+			return false;
+		}
+	}
+
+	sample->dataAddr = &(wavHeader[pos + 8]);
+	return true;
+}
+
+
 bool FatTools::UpdateSampleList()
 {
 	// Updates list of samples from FAT root directory
@@ -156,11 +206,12 @@ bool FatTools::UpdateSampleList()
 			// Check if any fields have changed
 			if (sample->cluster != fatInfo->firstClusterLow || sample->size != fatInfo->fileSize || strncmp(sample->name, fatInfo->name, 11) != 0) {
 				changed = true;
-			}
+				strncpy(sample->name, fatInfo->name, 11);
+				sample->cluster = fatInfo->firstClusterLow;
+				sample->size = fatInfo->fileSize;
 
-			strncpy(sample->name, fatInfo->name, 11);
-			sample->cluster = fatInfo->firstClusterLow;
-			sample->size = fatInfo->fileSize;
+				sample->valid = GetSampleInfo(sample);
+			}
 		}
 		fatInfo++;
 	}

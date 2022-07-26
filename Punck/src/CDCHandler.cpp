@@ -97,8 +97,19 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;
+
+		printf("Name          Bytes    Rate Bits Channels Valid Address\r\n");
+
 		while (fatTools.sampleInfo[pos].name[0] != 0) {
-			printf("%.11s\r\n", fatTools.sampleInfo[pos].name);
+			printf("%.11s %7lu %7lu %4u %8u %s     0x%08x\r\n",
+					fatTools.sampleInfo[pos].name,
+					fatTools.sampleInfo[pos].size,
+					fatTools.sampleInfo[pos].sampleRate,
+					fatTools.sampleInfo[pos].bitDepth,
+					fatTools.sampleInfo[pos].channels,
+					fatTools.sampleInfo[pos].valid ? "Y" : " ",
+					(uint32_t)fatTools.sampleInfo[pos].dataAddr
+					);
 			++pos;
 		}
 

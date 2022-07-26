@@ -62,11 +62,13 @@ struct FATLongFilename {
 // Store information about samples (file name, format etc)
 struct SampleInfo {
 	char name[11];
-	uint32_t size;
-	uint32_t cluster;
-	uint32_t address;
+	uint32_t size;						// Size of file in bytes
+	uint32_t cluster;					// Starting cluster
+	const uint8_t* dataAddr;			// Address of data section
 	uint32_t sampleRate;
-	bool stereo;
+	uint16_t bitDepth;
+	uint8_t channels;					// 1 = mono, 2 = stereo
+	bool valid;							// false if header cannot be processed
 };
 
 // Class provides interface with FatFS library and some low level helpers not provided with the library
@@ -74,7 +76,7 @@ class FatTools
 {
 	friend class CDCHandler;
 public:
-	std::array<SampleInfo, 128> sampleInfo;
+	SampleInfo sampleInfo[128];
 
 	void InitFatFS();
 	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);
@@ -98,12 +100,31 @@ private:
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
 
+	const uint8_t* GetClusterAddr(uint32_t cluster);
 	bool UpdateSampleList();
+	bool GetSampleInfo(SampleInfo* sample);
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);
 };
 
+
+// Create struct to hold wav file header
+struct WavFile {
+	char id[4];					// 'RIFF'
+	uint32_t chunkSize;			// Ssize of the entire file in bytes minus 8 bytes
+	char format[4];        		// 'WAVE'
+	char Subchunk1ID[4];   		// 'fmt '
+	uint32_t subChunk1Size;		// Sub chunk 1 size (ie 16) -effectively  header size
+	uint16_t audioFormat;  		// 1 = PCM format
+	uint16_t numChannels;  		// Number of channels = 1
+	uint32_t sampleRate;   		// sample rate
+	uint32_t byteRate;     		// byte rate (ie 1 channels, 8 bit = 1 bytes per sample)
+	uint16_t blockAlign;   		// Block align = 4
+	uint16_t bitsPerSample;		// Bits per sample = 8
+	char subChunk2ID[4];   		// 'data'
+	uint32_t subChunk2Size;		// subchunk 2 = number of bytes in the data. NumSamples * NumChannels * BitsPerSample/8
+};
 
 extern FatTools fatTools;
 

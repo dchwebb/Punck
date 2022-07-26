@@ -106,6 +106,9 @@ public:
 	void SendString(const char* s);
 	void SendString(std::string s);
 	size_t SendString(const unsigned char* s, size_t len);
+	void PauseEndpoint(USBHandler& handler);
+	void ResumeEndpoint(USBHandler& handler);
+
 
 	EP0Handler ep0 = EP0Handler(this, 0, 0, NoInterface);
 	MSCHandler msc = MSCHandler(this, USB::MSC_In, USB::MSC_Out, MSCInterface);

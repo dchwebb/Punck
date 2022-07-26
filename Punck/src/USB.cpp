@@ -505,8 +505,10 @@ void USB::WritePacket(const uint8_t* src, uint8_t endpoint, uint32_t len)
 	}
 }
 
+
 // Descriptors in usbd_desc.c
-void USB::GetDescriptor() {
+void USB::GetDescriptor()
+{
 	uint32_t strSize;
 
 	switch (req.Value >> 8)	{
@@ -740,7 +742,9 @@ void USB::EPStartXfer(Direction direction, uint8_t endpoint, uint32_t xfer_len) 
 	}
 }
 
-void USB::CtlError() {
+
+void USB::CtlError()
+{
 	USBx_INEP(0)->DIEPCTL |= USB_OTG_DIEPCTL_STALL;
 	USBx_OUTEP(0)->DOEPCTL |= USB_OTG_DOEPCTL_STALL;
 
@@ -761,6 +765,20 @@ bool USB::ReadInterrupts(uint32_t interrupt) {
 #endif
 
 	return ((USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK) & interrupt) == interrupt;
+}
+
+
+void USB::PauseEndpoint(USBHandler& handler)
+{
+	USBx_INEP(handler.inEP)->DIEPCTL |= USB_OTG_DIEPCTL_SNAK;
+	USBx_OUTEP(handler.outEP)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
+}
+
+
+void USB::ResumeEndpoint(USBHandler& handler)
+{
+	USBx_INEP(handler.inEP)->DIEPCTL |= USB_OTG_DIEPCTL_CNAK;
+	USBx_OUTEP(handler.outEP)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
 }
 
 
