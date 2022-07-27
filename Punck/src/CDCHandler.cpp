@@ -77,11 +77,14 @@ void CDCHandler::ProcessCommand()
 				"read:A      -  Read word from flash (A = decimal address)\r\n"
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"erasesect:A -  Erase flash sector (A = decimal address)\r\n"
+				"eraseflash  -  Erase all flash data\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
-				"dirlist     -  Print list of all files and their directories\r\n"
+				"dir         -  Print list of all files and their directories\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"cacheinfo   -  Show all bytes changed in header cache\r\n"
 				"samplelist  -  Show details of all samples found in flash\r\n"
+				"play:NN     -  Play the sample numbered NN\r\n"
+				"clusterchain   List chain of clusters\r\n"
 				"\r\n"
 #if (USB_DEBUG)
 				"usbdebug    -  Start USB debugging\r\n"
@@ -100,23 +103,30 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 
-		printf("Name          Bytes    Rate Bits Channels Valid Address\r\n");
+		printf("Num Name          Bytes    Rate Bits Channels Valid Address\r\n");
 
 		while (fatTools.sampleInfo[pos].name[0] != 0) {
-			printf("%.11s %7lu %7lu %4u %8u %s     0x%08x\r\n",
+			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x\r\n",
+					pos,
 					fatTools.sampleInfo[pos].name,
 					fatTools.sampleInfo[pos].size,
 					fatTools.sampleInfo[pos].sampleRate,
 					fatTools.sampleInfo[pos].bitDepth,
 					fatTools.sampleInfo[pos].channels,
 					fatTools.sampleInfo[pos].valid ? "Y" : " ",
-					(uint32_t)fatTools.sampleInfo[pos].dataAddr
+					(unsigned int)fatTools.sampleInfo[pos].dataAddr
 					);
 			++pos;
 		}
+		printf("\r\n");
 
 
-	} else if (cmd.compare("dirlist\n") == 0) {					// Get basic FAT directory list
+	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
+		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		printf("%s\r\n", fatTools.sampleInfo[sn].name);
+
+
+	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
 		char workBuff[256];
 		strcpy(workBuff, "/");
 
@@ -250,6 +260,11 @@ void CDCHandler::ProcessCommand()
 		extFlash.MemoryMapped();
 
 
+	} else if (cmd.compare("eraseflash\n") == 0) {			// Erase all flash memory
+		extFlash.FullErase();
+		usb->SendString("Flash erased\r\n");
+
+
 	} else if (cmd.compare(0, 10, "erasesect:") == 0) {			// Erase sector of flash memory
 		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
@@ -263,6 +278,7 @@ void CDCHandler::ProcessCommand()
 		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
 				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
+		extFlash.MemoryMapped();
 
 
 	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]
@@ -278,6 +294,7 @@ void CDCHandler::ProcessCommand()
 
 			printf("Finished\r\n");
 		}
+
 
 	} else if (cmd.compare(0, 5, "write") == 0) {				// Write QSPI format writeA:W [A = address; W = num words]
 

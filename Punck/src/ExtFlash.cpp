@@ -59,8 +59,20 @@ void ExtFlash::MemoryMapped()
 }
 
 
+void ExtFlash::MemMappedOff()
+{
+	if (memMapMode) {
+		QUADSPI->CR &= ~QUADSPI_CR_EN;						// Disable QSPI
+		QUADSPI->CCR = 0;
+		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+		memMapMode = false;
+	}
+}
+
+
 uint8_t ExtFlash::ReadStatus(qspiRegister r)
 {
+	MemMappedOff();
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
 	QUADSPI->CCR = (QUADSPI_CCR_FMODE_0 |					// 00: Indirect write mode; 01: Indirect read mode; 10: Automatic polling mode; 11: Memory-mapped mode
@@ -78,12 +90,7 @@ uint8_t ExtFlash::ReadStatus(qspiRegister r)
 
 void ExtFlash::WriteEnable()
 {
-	if (memMapMode) {
-		QUADSPI->CR &= ~QUADSPI_CR_EN;						// Disable QSPI
-		QUADSPI->CCR = 0;
-		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
-		memMapMode = false;
-	}
+	MemMappedOff();
 	CheckBusy();
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 	QUADSPI->CCR = (QUADSPI_CCR_IMODE_0 |					// 00: No instruction; 01: Instruction on single line; 10: Two lines; 11: Four lines
@@ -171,6 +178,19 @@ void ExtFlash::BlockErase(uint32_t address)
 	QUADSPI->AR = address;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+}
+
+
+void ExtFlash::FullErase()
+{
+	WriteEnable();
+	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+
+	QUADSPI->CCR = (QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
+					(chipErase << QUADSPI_CCR_INSTRUCTION_Pos));
+	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+	MemoryMapped();
 }
 
 

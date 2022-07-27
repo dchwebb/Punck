@@ -12,6 +12,11 @@ extern uint32_t SystemCoreClock;
 // Store buffers that need to live in special memory areas
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 
+// TODO:
+// caching
+// create Windows files on new disk creation
+// Store end address field in sample table (indicating if all memory is contiguous or next cluster must be found)
+
 USB usb;
 //Filter filter;
 //Config config;

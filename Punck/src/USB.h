@@ -108,6 +108,7 @@ public:
 	size_t SendString(const unsigned char* s, size_t len);
 	void PauseEndpoint(USBHandler& handler);
 	void ResumeEndpoint(USBHandler& handler);
+	uint32_t StringToUnicode(const uint8_t* desc, uint8_t* unicode);
 
 
 	EP0Handler ep0 = EP0Handler(this, 0, 0, NoInterface);
@@ -128,7 +129,6 @@ private:
 	void CtlError();
 	bool ReadInterrupts(uint32_t interrupt);
 	void IntToUnicode(uint32_t value, uint8_t* pbuf, uint8_t len);
-	uint32_t StringToUnicode(const uint8_t* desc, uint8_t* unicode);
 
 	std::array<USBHandler*, 3>classes = {&ep0, &msc, &cdc};
 

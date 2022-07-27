@@ -23,8 +23,11 @@ void FatTools::InitFatFS()
 		parms.au_size = 0;
 		parms.n_fat = 0;
 
-		//f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
+		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
 		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
+
+		// Populate Windows spam files to prevent them being created later in unwanted locations
+		MakeDummyFiles();
 	}
 
 	// Remove the ClnShutBitMask where Windows assumes a badly shut down drive is corrupt
@@ -33,6 +36,7 @@ void FatTools::InitFatFS()
 
 	UpdateSampleList();										// Updated list of samples on flash
 }
+
 
 
 void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
@@ -142,18 +146,6 @@ uint8_t FatTools::FlushCache()
 }
 
 
-const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
-{
-	uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
-
-	// Check if cluster is in cache or not
-	if (offsetByte < fatCacheSectors * fatSectorSize) {			// In cache
-		return headerCache + offsetByte;
-	} else {
-		return flashAddress + offsetByte;						// in memory mapped flash data
-	}
-}
-
 
 bool FatTools::GetSampleInfo(SampleInfo* sample)
 {
@@ -228,34 +220,96 @@ bool FatTools::UpdateSampleList()
 }
 
 
+const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
+{
+	// Byte offset of the cluster start (note cluster numbers start at 2)
+	uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
+
+	// Check if cluster is in cache or not
+	if (offsetByte < fatCacheSectors * fatSectorSize) {			// In cache
+		return headerCache + offsetByte;
+	} else {
+		return flashAddress + offsetByte;						// in memory mapped flash data
+	}
+}
+
+
+void FillLfn(const char* desc, uint8_t* lfn)
+{
+	// Populate the long file name entry in the directory with the supplied string, converting into pseudo-unicode and splitting as required
+	uint32_t idx = 1;
+
+	while (*desc != '\0') {
+		lfn[idx] = *desc++;
+		idx += 2;
+		if (idx == 11) idx = 14;		// name is split up so jump to next position
+		if (idx == 26) idx = 28;
+	}
+}
+
+
+
+void FatTools::MakeDummyFiles()
+{
+	// create block of memory to hold three directory entries holding the 'System Volum Information' folder
+	uint8_t dirEntries[96] = {};
+	FATLongFilename* dir = (FATLongFilename*)dirEntries;
+	dir->attr = 0xF;								// LFN attribute
+	dir->order = 0x42;								// 0x40 indicates first entry, 2 is second item in LFN
+	FillLfn(" Information", (uint8_t*)dir);
+	dir->checksum = 0x72;							// Checksum derived from short file name
+
+	dir++;
+	dir->attr = 0xF;
+	dir->order = 0x1;								// 1 = first part of LFN
+	FillLfn("System Volume", (uint8_t*)dir);
+	dir->checksum = 0x72;
+
+	FATFileInfo* sfn = (FATFileInfo*)&(dirEntries[64]);
+	strncpy(sfn->name, "SYSTEM~1   ", 11);
+	sfn->attr = (AM_HID | AM_SYS | AM_DIR);
+	sfn->firstClusterLow = 2;						// Set cluster to 2 which is first available
+
+	// Write to FAT header cache
+	uint8_t* writeAddress = &(headerCache[fatFs.dirbase * fatSectorSize]);
+	memcpy(writeAddress, dirEntries, 96);
+
+	// Create cluster chain entry
+	uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
+	clusterChain[2] = 0xFFFF;
+
+	// Blank out directory in cluster 2
+	memset(headerCache + (fatFs.database * fatSectorSize), 0, fatClusterSize);
+
+}
+
+
 void FatTools::PrintDirInfo(uint32_t cluster)
 {
 	// Output a detailed analysis of FAT directory structure
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
-		printf("\r\n  Attrib Cluster  Bytes    Created   Accessed Name\r\n  -----------------------------------------------\r\n");
+		printf("\r\n  Attrib Cluster  Bytes    Created   Accessed Name          Clusters\r\n"
+				   "  ------------------------------------------------------------------\r\n");
 		fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
 	} else {
-		// Byte offset of the cluster start (note cluster numbers start at 2)
-		uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
+		fatInfo = (FATFileInfo*)GetClusterAddr(cluster);
+	}
 
-		// Check if cluster is in cache or not
-		if (offsetByte < fatCacheSectors * fatSectorSize) {				// In cache
-			fatInfo = (FATFileInfo*)(headerCache + offsetByte);
-		} else {
-			fatInfo = (FATFileInfo*)(flashAddress + offsetByte);		// in memory mapped flash data
-		}
+	if (fatInfo->fileSize == 0xFFFFFFFF) {					// Handle corrupt subdirectory (where flash has not been initialised
+		return;
 	}
 
 	while (fatInfo->name[0] != 0) {
-		if (fatInfo->attr == 0xF) {										// Long file name
+		if (fatInfo->attr == 0xF) {							// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("%c LFN %2i                                      %s\r\n",
+			printf("%c LFN %2i                                      %-14s [0x%02x]\r\n",
 					(cluster == 0 ? ' ' : '>'),
 					lfn->order & (~0x40),
-					GetFileName(fatInfo).c_str());
+					GetFileName(fatInfo).c_str(),
+					lfn->checksum);
 		} else {
-			printf("%c %s %8i %6lu %10s %10s %s\r\n",
+			printf("%c %s %8i %6lu %10s %10s %-14s",
 					(cluster == 0 ? ' ' : '>'),
 					(fatInfo->name[0] == 0xE5 ? "*Del*" : GetAttributes(fatInfo).c_str()),
 					fatInfo->firstClusterLow,
@@ -271,7 +325,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 
 				uint32_t cluster = fatInfo->firstClusterLow;
 				uint16_t* clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
-				printf("  Clusters: %lu", cluster);
+				printf("%lu", cluster);
 
 				while (clusterChain[cluster] != 0xFFFF) {
 					if (clusterChain[cluster] == cluster + 1) {
@@ -286,11 +340,10 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 					cluster = clusterChain[cluster];
 				}
 				if (seq) {
-					printf("%lu\r\n", cluster);
-				} else {
-					printf("\r\n");
+					printf("%lu", cluster);
 				}
 			}
+			printf("\r\n");
 		}
 
 		// Recursively call function to print sub directory details (ignoring directories '.' and '..' which hold current and parent directory clusters

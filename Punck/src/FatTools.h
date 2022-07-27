@@ -107,6 +107,7 @@ private:
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);
+	void MakeDummyFiles();
 };
 
 
