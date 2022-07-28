@@ -239,6 +239,19 @@ void CDCHandler::ProcessCommand()
 		}
 
 
+	} else if (cmd.compare(0, 13, "printcluster:") == 0) {		// QSPI flash: print memory mapped data
+		int cluster = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		if (cluster >= 0) {
+			printf("Cluster %d:\r\n", cluster);
+
+			unsigned int* p = (unsigned int*)(fatTools.GetClusterAddr(cluster));
+
+			for (uint8_t a = 0; a < 128; a += 4) {
+				printf("0x%08lx: %#010x %#010x %#010x %#010x\r\n", (a * 4) + (uint32_t)p, p[a], p[a + 1], p[a + 2], p[a + 3]);
+			}
+		}
+
+
 	} else if (cmd.compare(0, 7, "setzero") == 0) {				// Set data at address to 0 [A = address; W = num words]
 		int address = ParseInt(cmd, 'o', 0, 0xFFFFFF);
 		if (address >= 0) {

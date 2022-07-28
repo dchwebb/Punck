@@ -14,7 +14,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // caching
-// create Windows files on new disk creation
 // Store end address field in sample table (indicating if all memory is contiguous or next cluster must be found)
 
 USB usb;

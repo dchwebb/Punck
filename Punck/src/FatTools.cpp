@@ -181,6 +181,21 @@ bool FatTools::GetSampleInfo(SampleInfo* sample)
 	}
 
 	sample->dataAddr = &(wavHeader[pos + 8]);
+
+	// Follow cluster chain and store next cluster if not contiguous
+	bool seq = false;					// used to check for sequential blocks
+	uint16_t* clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
+	uint32_t cluster = sample->cluster;
+	sample->nextCluster = 0;
+
+	while (clusterChain[cluster] != 0xFFFF) {
+		if (clusterChain[cluster] == cluster + 1) {
+			cluster = clusterChain[cluster];
+		} else {
+			sample->nextCluster = cluster;
+		}
+	}
+
 	return true;
 }
 
@@ -234,56 +249,6 @@ const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
 }
 
 
-void FillLfn(const char* desc, uint8_t* lfn)
-{
-	// Populate the long file name entry in the directory with the supplied string, converting into pseudo-unicode and splitting as required
-	uint32_t idx = 1;
-
-	while (*desc != '\0') {
-		lfn[idx] = *desc++;
-		idx += 2;
-		if (idx == 11) idx = 14;		// name is split up so jump to next position
-		if (idx == 26) idx = 28;
-	}
-}
-
-
-
-void FatTools::MakeDummyFiles()
-{
-	// create block of memory to hold three directory entries holding the 'System Volum Information' folder
-	uint8_t dirEntries[96] = {};
-	FATLongFilename* dir = (FATLongFilename*)dirEntries;
-	dir->attr = 0xF;								// LFN attribute
-	dir->order = 0x42;								// 0x40 indicates first entry, 2 is second item in LFN
-	FillLfn(" Information", (uint8_t*)dir);
-	dir->checksum = 0x72;							// Checksum derived from short file name
-
-	dir++;
-	dir->attr = 0xF;
-	dir->order = 0x1;								// 1 = first part of LFN
-	FillLfn("System Volume", (uint8_t*)dir);
-	dir->checksum = 0x72;
-
-	FATFileInfo* sfn = (FATFileInfo*)&(dirEntries[64]);
-	strncpy(sfn->name, "SYSTEM~1   ", 11);
-	sfn->attr = (AM_HID | AM_SYS | AM_DIR);
-	sfn->firstClusterLow = 2;						// Set cluster to 2 which is first available
-
-	// Write to FAT header cache
-	uint8_t* writeAddress = &(headerCache[fatFs.dirbase * fatSectorSize]);
-	memcpy(writeAddress, dirEntries, 96);
-
-	// Create cluster chain entry
-	uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
-	clusterChain[2] = 0xFFFF;
-
-	// Blank out directory in cluster 2
-	memset(headerCache + (fatFs.database * fatSectorSize), 0, fatClusterSize);
-
-}
-
-
 void FatTools::PrintDirInfo(uint32_t cluster)
 {
 	// Output a detailed analysis of FAT directory structure
@@ -296,7 +261,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 		fatInfo = (FATFileInfo*)GetClusterAddr(cluster);
 	}
 
-	if (fatInfo->fileSize == 0xFFFFFFFF) {					// Handle corrupt subdirectory (where flash has not been initialised
+	if (fatInfo->fileSize == 0xFFFFFFFF && (uint32_t)fatInfo->name == 0xFFFFFFFF) {		// Handle corrupt subdirectory (where flash has not been initialised
 		return;
 	}
 
@@ -410,6 +375,94 @@ std::string FatTools::GetAttributes(FATFileInfo* fi)
 			(fi->attr & AM_ARC) ? 'A' : '-', '\0'};
 	std::string s = std::string(cs);
 	return s;
+}
+
+
+void FillLFN(const char* desc, uint8_t* lfn)
+{
+	// Populate the long file name entry in the directory with the supplied string, converting into pseudo-unicode and splitting as required
+	uint32_t idx = 1;
+	bool padding = false;				// Will be set to true when reached the end of the text and starting to pad with 0xFF
+
+	while (idx < 32) {
+		if (!padding) {
+			if (*desc == '\0') {
+				padding = true;
+			}
+			lfn[idx] = *desc++;
+			idx += 2;
+		} else {
+			lfn[idx++] = 0xFF;
+		}
+		if (idx == 11) idx = 14;		// name is split up so jump to next position
+		if (idx == 26) idx = 28;
+	}
+}
+
+
+void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char* lfn1, const char* lfn2, uint8_t checksum, uint8_t attributes, uint16_t cluster, uint32_t size)
+{
+	// Quick 'n' Dirty routine to generate 2 LFN entries and main file entry for Windows dummy files
+	uint8_t dirEntries[96] = {};
+	FATLongFilename* dir = (FATLongFilename*)dirEntries;
+	dir->attr = 0xF;								// LFN attribute
+	dir->order = 0x42;								// 0x40 indicates first entry, 2 is second item in LFN
+	FillLFN(lfn1, (uint8_t*)dir);
+	dir->checksum = checksum;						// Checksum derived from short file name
+
+	++dir;
+	dir->attr = 0xF;
+	dir->order = 0x1;								// 1 = first part of LFN
+	FillLFN(lfn2, (uint8_t*)dir);
+	dir->checksum = checksum;
+
+	FATFileInfo* ds = (FATFileInfo*)&(dirEntries[64]);
+	strncpy(ds->name, sfn, 11);
+	ds->attr = attributes;
+	ds->firstClusterLow = cluster;					// Set cluster to 2 which is first available
+	ds->fileSize = size;
+
+	memcpy(writeAddress, dirEntries, 96);
+
+	// Create cluster chain entry
+	uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
+	clusterChain[cluster] = 0xFFFF;
+}
+
+
+void FatTools::MakeDummyFiles()
+{
+	// Kludgy code to create Windows spam folders/files to stop OS doing it where we don't want
+
+	// create block of memory to hold three directory entries holding the 'System Volume Information' folder
+	uint8_t* writeAddress = &(headerCache[fatFs.dirbase * fatSectorSize]);
+	LFNDirEntries(writeAddress, "SYSTEM~1   ", " Information", "System Volume", 0x72, (AM_HID | AM_SYS | AM_DIR), 2, 0);
+
+	// Blank out directory in cluster 2
+	uint8_t* cluster2Addr = headerCache + (fatFs.database * fatSectorSize);
+	memset(cluster2Addr, 0, fatClusterSize);
+
+	// Create '.' and '..' entries for 'System Volume Information' folder in cluster 2
+	uint8_t dirEntries[64] = {};
+	FATFileInfo* dir = (FATFileInfo*)dirEntries;
+	strncpy(dir->name, ".          ", 11);
+	dir->attr = AM_DIR;
+	dir->firstClusterLow = 2;						// '.' path points to containing directory cluster
+
+	++dir;
+	strncpy(dir->name, "..         ", 11);
+	dir->attr = AM_DIR;
+	dir->firstClusterLow = 0;						// '..' path points to root
+	memcpy(cluster2Addr, dirEntries, 64);
+
+	// Create 'IndexerVolumeGuid' and 'WPSettings.dat' files
+	LFNDirEntries(cluster2Addr + 64, "INDEXE~1   ", "Guid", "IndexerVolume", 0xff, AM_ARC, 3, 76);
+	uint8_t* cluster3Addr = cluster2Addr + fatClusterSize;
+	memcpy(cluster3Addr, "{DC903617-185C-4094-875D-7E83AE4C738E}", 76);		// Create file - no idea if the actual GUID matters but whatever
+
+	LFNDirEntries(cluster2Addr + 160, "WPSETT~1DAT", "t", "WPSettings.da", 0xce, AM_ARC, 4, 12);
+	uint32_t file[3] = {0x0000000c, 0x5e3739ac, 0x0b1690d4};				// This random file is just what it creates on my PC - undocumented
+	memcpy(cluster3Addr + fatClusterSize, file, 12);
 }
 
 

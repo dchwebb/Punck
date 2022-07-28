@@ -64,6 +64,7 @@ struct SampleInfo {
 	char name[11];
 	uint32_t size;						// Size of file in bytes
 	uint32_t cluster;					// Starting cluster
+	uint32_t nextCluster;				// If file spans multiple clusters store next cluster here - if 0 then clusters are contiguous
 	const uint8_t* dataAddr;			// Address of data section
 	uint32_t sampleRate;
 	uint16_t bitDepth;
@@ -108,6 +109,8 @@ private:
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);
 	void MakeDummyFiles();
+	void LFNDirEntries(uint8_t* address, const char* sfn, const char* lfn1, const char* lfn2, uint8_t checksum, uint8_t attributes, uint16_t cluster, uint32_t size);
+
 };
 
 
