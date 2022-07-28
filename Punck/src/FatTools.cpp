@@ -30,9 +30,9 @@ void FatTools::InitFatFS()
 		MakeDummyFiles();
 	}
 
-	// Remove the ClnShutBitMask where Windows assumes a badly shut down drive is corrupt
-	uint32_t* cluster = (uint32_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
-	*cluster |= 0x80000000;
+	// Store the address of the cluster chain for speed in future lookups
+	clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
+	clusterChain[1] |= 0x8000;								// Remove ClnShutBitMask where Windows records a badly shut down drive
 
 	UpdateSampleList();										// Updated list of samples on flash
 }
@@ -182,20 +182,19 @@ bool FatTools::GetSampleInfo(SampleInfo* sample)
 
 	sample->dataAddr = &(wavHeader[pos + 8]);
 
-	// Follow cluster chain and store next cluster if not contiguous
+	// Follow cluster chain and store last cluster if not contiguous to tell playback engine when to do a fresh address lookup
 	bool seq = false;					// used to check for sequential blocks
-	uint16_t* clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
 	uint32_t cluster = sample->cluster;
-	sample->nextCluster = 0;
+	sample->lastCluster = 0xFFFFFFFF;
 
 	while (clusterChain[cluster] != 0xFFFF) {
 		if (clusterChain[cluster] == cluster + 1) {
 			cluster = clusterChain[cluster];
 		} else {
-			sample->nextCluster = cluster;
+			sample->lastCluster = cluster;
+			break;
 		}
 	}
-
 	return true;
 }
 
@@ -289,7 +288,6 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 				bool seq = false;					// used to check for sequential blocks
 
 				uint32_t cluster = fatInfo->firstClusterLow;
-				uint16_t* clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
 				printf("%lu", cluster);
 
 				while (clusterChain[cluster] != 0xFFFF) {
@@ -300,7 +298,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 						}
 					} else {
 						seq = false;
-						printf("%i, ", clusterChain[cluster]);
+						printf("%i, %i", cluster, clusterChain[cluster]);
 					}
 					cluster = clusterChain[cluster];
 				}

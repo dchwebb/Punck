@@ -64,7 +64,7 @@ struct SampleInfo {
 	char name[11];
 	uint32_t size;						// Size of file in bytes
 	uint32_t cluster;					// Starting cluster
-	uint32_t nextCluster;				// If file spans multiple clusters store next cluster here - if 0 then clusters are contiguous
+	uint32_t lastCluster;				// If file spans multiple clusters store last cluster here - if 0xFFFFFFFF then clusters are contiguous
 	const uint8_t* dataAddr;			// Address of data section
 	uint32_t sampleRate;
 	uint16_t bitDepth;
@@ -101,6 +101,8 @@ private:
 	uint8_t writeBlockCache[fatSectorSize * fatEraseSectors];
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
+
+	uint16_t* clusterChain;				// Pointer to beginning of cluster chain (AKA FAT)
 
 	const uint8_t* GetClusterAddr(uint32_t cluster);
 	bool UpdateSampleList();

@@ -140,10 +140,10 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("clusterchain\n") == 0) {			// Print used clusters with links from FAT area
 		printf("Cluster | Link\r\n");
-		uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
+		//uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
 		uint32_t cluster = 0;
-		while (clusterChain[cluster]) {
-			printf("%7lu   0x%04x\r\n", cluster, clusterChain[cluster]);
+		while (fatTools.clusterChain[cluster]) {
+			printf("%7lu   0x%04x\r\n", cluster, fatTools.clusterChain[cluster]);
 			++cluster;
 		}
 
