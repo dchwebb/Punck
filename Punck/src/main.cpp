@@ -30,6 +30,10 @@ int main(void) {
 	SystemCoreClockUpdate();		// Update SystemCoreClock (system clock frequency)
 	InitSysTick();
 
+//	volatile uint32_t priGrp = NVIC_GetPriorityGrouping();
+//	NVIC_SetPriorityGrouping(2);
+//	priGrp = NVIC_GetPriorityGrouping();
+
 //	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
@@ -38,8 +42,10 @@ int main(void) {
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 //	filter.Init();					// Initialise filter coefficients, windows etc
 
+	volatile uint32_t prioGrp = NVIC_GetPriorityGrouping();
+
 	usb.Init();
-//	InitI2S();						// Initialise I2S which will start main sample interrupts
+	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 
 

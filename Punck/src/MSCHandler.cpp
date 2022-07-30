@@ -5,6 +5,8 @@
 
 void MSCHandler::DataIn()
 {
+	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+
 	switch (bot_state) {
 	case BotState::DataIn:
 		if (SCSI_ProcessCmd() < 0) {
@@ -20,11 +22,15 @@ void MSCHandler::DataIn()
 	default:
 		break;
 	}
+
+	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 
 void MSCHandler::DataOut()
 {
+	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+
 	if (outBuff[0] == USBD_BOT_CBW_SIGNATURE) {
 		memcpy(&cbw, outBuff, sizeof(cbw));
 	}
@@ -43,6 +49,8 @@ void MSCHandler::DataOut()
 	default:
 		break;
 	}
+
+	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 
@@ -81,7 +89,7 @@ void MSCHandler::MSC_BOT_CBW_Decode()
 				MSC_BOT_Abort();
 			}
 
-		} else if ((bot_state != BotState::DataIn) && (bot_state != BotState::DataOut) && (bot_state != BotState::LastDataIn))	{// Burst xfer handled internally
+		} else if ((bot_state != BotState::DataIn) && (bot_state != BotState::DataOut) && (bot_state != BotState::LastDataIn))	{
 			if (bot_data_length > 0) {
 
 				uint32_t length = std::min(cbw.dDataLength, bot_data_length);
@@ -383,13 +391,11 @@ int8_t MSCHandler::SCSI_ProcessRead()
 {
 	uint32_t len = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
 
-	fatTools.Read(bot_data, scsi_blk_addr, (len / fatSectorSize));
-
-	inBuff = bot_data;
+	inBuff = fatTools.GetSectorAddr(scsi_blk_addr);
 	inBuffSize = len;
 	inBuffCount = 0;
 
-	EndPointTransfer(Direction::in, inEP, len);		// FIXME - this can possibly be handled in MSC_BOT_CBW_Decode
+	EndPointTransfer(Direction::in, inEP, len);
 
 	scsi_blk_addr += (len / fatSectorSize);
 	scsi_blk_len -= (len / fatSectorSize);

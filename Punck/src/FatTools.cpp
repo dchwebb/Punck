@@ -38,7 +38,6 @@ void FatTools::InitFatFS()
 }
 
 
-
 void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
 {
 	// If reading header data return from cache
@@ -66,9 +65,9 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 		int32_t block = writeSector / fatEraseSectors;
 		if (block != writeBlock) {
 			if (writeBlock > 0) {					// Write previously cached block to flash
-				GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+				//GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
 				FlushCache();
-				GPIOD->ODR &= ~GPIO_ODR_OD2;
+				//GPIOD->ODR &= ~GPIO_ODR_OD2;
 			}
 
 			// Load cache with current flash values
@@ -99,13 +98,13 @@ void FatTools::CheckCache()
 		}
 
 		if (sampleChanged || writeCacheDirty) {
-			GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin
+			//GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin
 
 			usb.PauseEndpoint(usb.msc);				// Sends NAKs from the msc endpoint whilst the Flash device is unavailable
 			FlushCache();
 			usb.ResumeEndpoint(usb.msc);
 
-			GPIOC->ODR &= ~GPIO_ODR_OD11;
+			//GPIOC->ODR &= ~GPIO_ODR_OD11;
 		}
 		cacheUpdated = 0;
 
@@ -248,6 +247,17 @@ const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
 }
 
 
+const uint8_t* FatTools::GetSectorAddr(uint32_t sector)
+{
+	// Return pointer to sector address - If reading header data return cache address FIXME - take into account write cache??
+	if (sector < fatCacheSectors) {
+		return &(headerCache[sector * fatSectorSize]);
+	} else {
+		return flashAddress + (sector * fatSectorSize);
+	}
+}
+
+
 void FatTools::PrintDirInfo(uint32_t cluster)
 {
 	// Output a detailed analysis of FAT directory structure
@@ -298,7 +308,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 						}
 					} else {
 						seq = false;
-						printf("%i, %i", cluster, clusterChain[cluster]);
+						printf("%lu, %i", cluster, clusterChain[cluster]);
 					}
 					cluster = clusterChain[cluster];
 				}

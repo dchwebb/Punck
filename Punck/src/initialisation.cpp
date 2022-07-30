@@ -494,7 +494,7 @@ x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
 #ifdef I2S_PER_CLK
 	// Use peripheral clock - configured to internal HSI at 64MHz
 	RCC->D2CCIP1R |= RCC_D2CCIP1R_SPI123SEL_2;
-	SPI2->I2SCFGR |= (10 << SPI_I2SCFGR_I2SDIV_Pos);// Set I2SDIV to 45 with Odd factor prescaler
+	SPI2->I2SCFGR |= (10 << SPI_I2SCFGR_I2SDIV_Pos);// Set I2SDIV to 10 with Odd factor prescaler
 	SPI2->I2SCFGR |= SPI_I2SCFGR_ODD;
 #endif
 
@@ -512,9 +512,10 @@ x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
 #endif
 #endif
 
-	// Enable interrupt when TxFIFO threshold reached
-	SPI2->IER |= SPI_IER_TXPIE;
-	NVIC_SetPriority(SPI2_IRQn, 2);					// Lower is higher priority
+	// Enable interrupt when TxFIFO threshold reached, or underrun condition occurs
+	SPI2->IER |= (SPI_IER_TXPIE | SPI_IER_UDRIE);
+
+	NVIC_SetPriority(SPI2_IRQn, 0x1);				// Lower is higher priority
 	NVIC_EnableIRQ(SPI2_IRQn);
 
 	SPI2->CR1 |= SPI_CR1_SPE;						// Enable I2S
@@ -564,6 +565,7 @@ void InitIO()
 
 	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
 	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
+	GPIOG->MODER &= ~GPIO_MODER_MODE11_1;			// PG11: debug pin (SPI Underrun)
 	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
 
 

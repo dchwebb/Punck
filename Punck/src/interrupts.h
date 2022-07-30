@@ -6,16 +6,32 @@ void __attribute__((optimize("O0"))) TinyDelay() {
 	for (int x = 0; x < 2; ++x);
 }
 
+int32_t sample = 0;
+
+bool LR = false;
+
 // I2S Interrupt
 void SPI2_IRQHandler()
 {
+	// Check for Underrun condition
+	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {
+		GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
+	}
+
 //	delay.CalcSample();
+	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
+	LR = !LR;
+
+	sample += 5;
+	if (sample > 32767) {
+		sample = -32767;
+	}
+	int16_t outputSample = std::clamp(static_cast<int32_t>(sample), -32767L, 32767L);
+	SPI2->TXDR = outputSample;
 
 	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
 	TinyDelay();
-
-	GPIOB->ODR &= ~GPIO_ODR_OD7;  	// Clear red to show calc sample has finished
-	TriggerADC1();
+	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 
 
