@@ -5,7 +5,7 @@
 
 void MSCHandler::DataIn()
 {
-	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+//	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
 
 	switch (bot_state) {
 	case BotState::DataIn:
@@ -23,13 +23,13 @@ void MSCHandler::DataIn()
 		break;
 	}
 
-	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
+//	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 
 void MSCHandler::DataOut()
 {
-	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+//	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
 
 	if (outBuff[0] == USBD_BOT_CBW_SIGNATURE) {
 		memcpy(&cbw, outBuff, sizeof(cbw));
@@ -50,7 +50,7 @@ void MSCHandler::DataOut()
 		break;
 	}
 
-	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
+//	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 

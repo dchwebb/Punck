@@ -464,6 +464,8 @@ x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
 	SPI2->I2SCFGR &= ~SPI_I2SCFGR_DATLEN;			// Data Length 00=16-bit; 01=24-bit; 10=32-bit
 	SPI2->I2SCFGR |= SPI_I2SCFGR_CHLEN;				// Channel Length = 32bits
 
+	SPI2->CFG1 |= SPI_CFG1_UDRCFG_1;				// In the event of underrun slave repeats its lastly transmitted data frame
+
 	/* I2S Clock
 	000: pll1_q_ck clock selected as SPI/I2S1,2 and 3 kernel clock (default after reset)
 	001: pll2_p_ck clock selected as SPI/I2S1,2 and 3 kernel clock

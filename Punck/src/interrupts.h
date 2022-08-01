@@ -1,5 +1,10 @@
 void OTG_FS_IRQHandler(void) {
+	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+
 	usb.InterruptHandler();
+
+	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
+
 }
 
 void __attribute__((optimize("O0"))) TinyDelay() {
@@ -16,6 +21,7 @@ void SPI2_IRQHandler()
 	// Check for Underrun condition
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {
 		GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
+		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
 	}
 
 //	delay.CalcSample();
