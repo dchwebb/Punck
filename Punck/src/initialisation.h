@@ -52,3 +52,5 @@ void InitIO();
 void InitDebugTimer();
 void CopyToITCMRAM();
 void InitQSPI();
+void InitMDMA();
+void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t bytes);

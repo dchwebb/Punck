@@ -37,6 +37,8 @@ int main(void) {
 //	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
+	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
+
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise switches and LEDs
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)

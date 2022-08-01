@@ -101,56 +101,11 @@ void CDCHandler::ProcessCommand()
 #endif
 
 
-	} else if (cmd.compare("dmatest\n") == 0) {					// Test transferring from one memory area to another using DMA
-		/*
-		// Copy first 64 bytes from
-		uint8_t* sourcePtr = fatTools.headerCache;
-		RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-		DMA1_Stream7->CR &= ~DMA_SxCR_EN;
-		DMA1_Stream7->CR |= DMA_SxCR_DIR_1;				// Memory to memory
-		DMA1_Stream7->CR |= DMA_SxCR_MINC;				// Memory in increment mode
-		//DMA1_Stream7->CR |= DMA_SxCR_PSIZE_1;			// Peripheral size: 8 bit; 01 = 16 bit; 10 = 32 bit
-		//DMA1_Stream7->CR |= DMA_SxCR_MSIZE_1;			// Memory size: 8 bit; 01 = 16 bit; 10 = 32 bit
-		DMA1_Stream7->CR |= DMA_SxCR_PL_0;				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
+	} else if (cmd.compare("dmatest1\n") == 0) {					// Test transferring from one memory area to another using DMA
+		MDMATransfer(flashAddress, (uint8_t*)dmaTestBuffer, 64);
 
-		DMA1_Stream7->FCR &= ~DMA_SxFCR_FTH;			// 00: 1/4 full FIFO
-		DMA1->LIFCR = 0x3F << DMA_LIFCR_CFEIF1_Pos;		// clear all five interrupts for this stream
-
-		DMA1_Stream7->NDTR |= 64;		// Number of data items to transfer
-		DMA1_Stream7->PAR = (uint32_t)(flashAddress);	// Configure the peripheral data register address
-		DMA1_Stream7->M0AR = (uint32_t)(dmaTestBuffer);		// Configure the memory address (note that M1AR is used for double-buffer mode) 0x24000040
-
-		DMA1_Stream7->CR |= DMA_SxCR_EN;				// Enable DMA and wait
-		*/
-
-		// Copy first 64 bytes from
-		const uint8_t* sourcePtr = flashAddress;	// fatTools.headerCache
-		RCC->AHB3ENR |= RCC_AHB3ENR_MDMAEN;
-		MDMA_Channel0->CCR &= ~MDMA_CCR_EN;
-		MDMA_Channel0->CCR |= MDMA_CCR_PL_0;				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
-
-		MDMA_Channel0->CTCR |= MDMA_CTCR_DSIZE_1;			// Destination data size 0 = byte
-		MDMA_Channel0->CTCR |= MDMA_CTCR_SSIZE_1;			// Source data size 0 = byte
-		MDMA_Channel0->CTCR |= MDMA_CTCR_DINC_1;			// 10: Destination address pointer is incremented after each data transfer
-		MDMA_Channel0->CTCR |= MDMA_CTCR_SINC_1;			// 10: Source address pointer is incremented after each data transfer
-		MDMA_Channel0->CTCR |= MDMA_CTCR_DINCOS_1;			// Destination increment offset size 0b10 = word
-		MDMA_Channel0->CTCR |= MDMA_CTCR_SINCOS_1;			// Source increment offset size 0 = byte
-		MDMA_Channel0->CTCR |= (63 << MDMA_CTCR_TLEN_Pos);	// Transfer length in bytes - 1
-		MDMA_Channel0->CTCR |= MDMA_CTCR_BWM;				// Bufferable Write Mode
-		MDMA_Channel0->CTCR |= MDMA_CTCR_SWRM;				// Software Request Mode
-
-		//MDMA_Channel0->CTBR |= MDMA_CTBR_SBUS;				// Source: AHB Bus used for addresses starting 0x20xxxxxx
-		MDMA_Channel0->CTBR |= MDMA_CTBR_DBUS;				// Destination: Source: AHB Bus used for addresses starting 0x20xxxxxx
-
-		MDMA_Channel0->CBNDTR |= (64 << MDMA_CBNDTR_BNDT_Pos);	// Number of bytes in a block
-
-		MDMA_Channel0->CSAR = (uint32_t)(0x90004000);		// Configure the source address
-		MDMA_Channel0->CDAR = (uint32_t)(dmaTestBuffer);	// Configure the destination address
-
-		MDMA_Channel0->CCR |= MDMA_CCR_EN;					// Enable DMA
-		MDMA_Channel0->CCR |= MDMA_CCR_SWRQ;				// Activate the request Channel x
-
-		SCB_InvalidateDCache_by_Addr(dmaTestBuffer, 10000);	// Ensure cache is refreshed after write or erase
+	} else if (cmd.compare("dmatest2\n") == 0) {					// Test transferring from one memory area to another using DMA
+		MDMATransfer(flashAddress + 0x4000, (uint8_t*)dmaTestBuffer, 64);
 
 
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list

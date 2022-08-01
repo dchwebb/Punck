@@ -145,6 +145,47 @@ void SystemClock_Config()
 }
 
 
+void InitMDMA()
+{
+	// Initialises MDMA to background transfers of data from QSPI Flash to RAM
+	RCC->AHB3ENR |= RCC_AHB3ENR_MDMAEN;
+	MDMA_Channel0->CCR &= ~MDMA_CCR_EN;
+	MDMA_Channel0->CCR |= MDMA_CCR_PL_0;				// Priority: 00 = low; 01 = Medium; 10 = High; 11 = Very High
+
+	MDMA_Channel0->CTCR |= MDMA_CTCR_DSIZE_1;			// Destination data size - 00: 8-bit, 01: 16-bit, *10: 32-bit, 11: 64-bit
+	MDMA_Channel0->CTCR |= MDMA_CTCR_SSIZE_1;			// Source data size - 00: 8-bit, 01: 16-bit, *10: 32-bit, 11: 64-bit
+	MDMA_Channel0->CTCR |= MDMA_CTCR_DINC_1;			// 10: Destination address pointer is incremented after each data transfer
+	MDMA_Channel0->CTCR |= MDMA_CTCR_SINC_1;			// 10: Source address pointer is incremented after each data transfer
+	MDMA_Channel0->CTCR |= MDMA_CTCR_DINCOS_1;			// Destination increment - 00: 8-bit, 01: 16-bit, *10: 32-bit, 11: 64-bit
+	MDMA_Channel0->CTCR |= MDMA_CTCR_SINCOS_1;			// Source increment - 00: 8-bit, 01: 16-bit, *10: 32-bit, 11: 64-bit
+	MDMA_Channel0->CTCR |= MDMA_CTCR_BWM;				// Bufferable Write Mode
+	MDMA_Channel0->CTCR |= MDMA_CTCR_SWRM;				// Software Request Mode
+
+	MDMA_Channel0->CTBR &= ~MDMA_CTBR_SBUS;				// Source: AXI Bus used for QSPI
+	MDMA_Channel0->CTBR |= MDMA_CTBR_DBUS;				// Destination: AHB Bus used for addresses starting 0x20xxxxxx (DTCMRAM)
+
+	MDMA_Channel0->CCR |= MDMA_CCR_TCIE;				// Enable Transfer complete interrupt
+
+	NVIC_SetPriority(MDMA_IRQn, 0x3);					// Lower is higher priority
+	NVIC_EnableIRQ(MDMA_IRQn);
+
+}
+
+void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t bytes)
+{
+	MDMA_Channel0->CTCR |= ((bytes - 1) << MDMA_CTCR_TLEN_Pos);	// Transfer length in bytes - 1
+	MDMA_Channel0->CBNDTR |= (bytes << MDMA_CBNDTR_BNDT_Pos);	// Number of bytes in a block
+
+	MDMA_Channel0->CSAR = (uint32_t)srcAddr;			// Configure the source address
+	MDMA_Channel0->CDAR = (uint32_t)destAddr;			// Configure the destination address
+
+
+	MDMA_Channel0->CCR |= MDMA_CCR_EN;					// Enable DMA
+	MDMA_Channel0->CCR |= MDMA_CCR_SWRQ;				// Software Activate the request (fires interrupt when complete)
+
+}
+
+
 void InitCache()
 {
 	// Use the Memory Protection Unit (MPU) to set up a region of memory with data caching disabled for use with DMA buffers

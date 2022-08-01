@@ -15,11 +15,11 @@ int32_t sample = 0;
 
 bool LR = false;
 
-// I2S Interrupt
 void SPI2_IRQHandler()
 {
-	// Check for Underrun condition
-	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {
+	// I2S Interrupt
+
+	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
 	}
@@ -40,7 +40,18 @@ void SPI2_IRQHandler()
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 
+void MDMA_IRQHandler()
+{
+	// fires when MDMA Flash to memory transfer has completed
+	if (MDMA->GISR0 & MDMA_GISR0_GIF0) {
+		// Clear interrupt
+		MDMA_Channel0->CIFCR |= MDMA_CIFCR_CLTCIF;		// Clear transfer complete interrupt flag
 
+		extern uint32_t dmaTestBuffer[128];
+		SCB_InvalidateDCache_by_Addr(dmaTestBuffer, 10000);	// Ensure cache is refreshed after write or erase
+
+	}
+}
 
 
 // System interrupts
