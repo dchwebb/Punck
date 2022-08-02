@@ -90,6 +90,7 @@ public:
 	void DataOut() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
+	void dmaTransferDone();
 
 private:
 	enum class BotState {Idle, DataOut, DataIn, LastDataIn, SendData, NoData};

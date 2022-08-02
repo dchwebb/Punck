@@ -45,10 +45,10 @@ void MDMA_IRQHandler()
 	// fires when MDMA Flash to memory transfer has completed
 	if (MDMA->GISR0 & MDMA_GISR0_GIF0) {
 		// Clear interrupt
-		MDMA_Channel0->CIFCR |= MDMA_CIFCR_CLTCIF;		// Clear transfer complete interrupt flag
-
-		extern uint32_t dmaTestBuffer[128];
-		SCB_InvalidateDCache_by_Addr(dmaTestBuffer, 10000);	// Ensure cache is refreshed after write or erase
+		MDMA_Channel0->CIFCR |= MDMA_CIFCR_CBTIF;		// Clear transfer complete interrupt flag
+		usb.msc.dmaTransferDone();
+//		extern uint32_t dmaTestBuffer[128];
+//		SCB_InvalidateDCache_by_Addr(dmaTestBuffer, 10000);	// Ensure cache is refreshed after write or erase
 
 	}
 }

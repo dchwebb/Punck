@@ -160,11 +160,12 @@ void InitMDMA()
 	MDMA_Channel0->CTCR |= MDMA_CTCR_SINCOS_1;			// Source increment - 00: 8-bit, 01: 16-bit, *10: 32-bit, 11: 64-bit
 	MDMA_Channel0->CTCR |= MDMA_CTCR_BWM;				// Bufferable Write Mode
 	MDMA_Channel0->CTCR |= MDMA_CTCR_SWRM;				// Software Request Mode
+	MDMA_Channel0->CTCR |= MDMA_CTCR_TRGM;				// 01: Each MDMA request triggers a block transfer
 
 	MDMA_Channel0->CTBR &= ~MDMA_CTBR_SBUS;				// Source: AXI Bus used for QSPI
 	MDMA_Channel0->CTBR |= MDMA_CTBR_DBUS;				// Destination: AHB Bus used for addresses starting 0x20xxxxxx (DTCMRAM)
 
-	MDMA_Channel0->CCR |= MDMA_CCR_TCIE;				// Enable Transfer complete interrupt
+	MDMA_Channel0->CCR |= MDMA_CCR_BTIE;				// Enable Block Transfer complete interrupt
 
 	NVIC_SetPriority(MDMA_IRQn, 0x3);					// Lower is higher priority
 	NVIC_EnableIRQ(MDMA_IRQn);

@@ -386,12 +386,46 @@ int8_t MSCHandler::SCSI_Read()
 	return SCSI_ProcessRead();
 }
 
+uint32_t mdmaSeq[1024];
+uint32_t mdmaSeqNo = 0;
+
+void MSCHandler::dmaTransferDone()
+{
+	SCB_InvalidateDCache_by_Addr((uint32_t*)bot_data, inBuffSize);	// Ensure cache is refreshed after write or erase
+	mdmaSeq[++mdmaSeqNo] = 0x1000000;
+	inBuff = bot_data;
+	inBuffCount = 0;
+
+	EndPointTransfer(Direction::in, inEP, inBuffSize);
+
+	scsi_blk_addr += (inBuffSize / fatSectorSize);
+	scsi_blk_len -= (inBuffSize / fatSectorSize);
+	csw.dDataResidue -= inBuffSize;
+
+	if (scsi_blk_len == 0) {
+		bot_state = BotState::LastDataIn;
+	}
+}
+
 
 int8_t MSCHandler::SCSI_ProcessRead()
 {
 	uint32_t len = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
+	inBuffSize = len;
 
-	inBuff = fatTools.GetSectorAddr(scsi_blk_addr);
+//	fatTools.Read(bot_data, scsi_blk_addr, (len / fatSectorSize));
+//	inBuff = bot_data;
+	const uint8_t* sectorAddress = fatTools.GetSectorAddr(scsi_blk_addr);
+
+	// If reading directly off the FLash driver initiate an MDMA transfer and wait for interrupt
+	if ((uint32_t)sectorAddress & 0x90000000) {
+		mdmaSeq[++mdmaSeqNo] = (uint32_t)sectorAddress;
+		MDMATransfer(sectorAddress, bot_data, len);
+		return 0;
+	}
+
+	//inBuff = fatTools.GetSectorAddr(scsi_blk_addr);
+	inBuff = sectorAddress;
 	inBuffSize = len;
 	inBuffCount = 0;
 
