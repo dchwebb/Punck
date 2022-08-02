@@ -5,8 +5,6 @@
 
 void MSCHandler::DataIn()
 {
-//	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
-
 	switch (bot_state) {
 	case BotState::DataIn:
 		if (SCSI_ProcessCmd() < 0) {
@@ -22,15 +20,11 @@ void MSCHandler::DataIn()
 	default:
 		break;
 	}
-
-//	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 
 void MSCHandler::DataOut()
 {
-//	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
-
 	if (outBuff[0] == USBD_BOT_CBW_SIGNATURE) {
 		memcpy(&cbw, outBuff, sizeof(cbw));
 	}
@@ -49,8 +43,6 @@ void MSCHandler::DataOut()
 	default:
 		break;
 	}
-
-//	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
 }
 
 
@@ -381,26 +373,32 @@ int8_t MSCHandler::SCSI_Read()
 
 		bot_state = BotState::DataIn;
 	}
-	bot_data_length = MediaPacket;
 
-	return SCSI_ProcessRead();
+	inBuffSize = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
+	inBuffCount = 0;
+	csw.dDataResidue -= inBuffSize;
+
+	const uint8_t* sectorAddress = fatTools.GetSectorAddr(scsi_blk_addr);
+
+	// If reading directly off the Flash driver initiate an MDMA transfer and wait for interrupt
+	if ((uint32_t)sectorAddress & 0x90000000) {
+		MDMATransfer(sectorAddress, bot_data, inBuffSize);
+	} else {
+		inBuff = sectorAddress;
+		ReadReady();
+	}
+
+	return 0;
 }
 
-uint32_t mdmaSeq[1024];
-uint32_t mdmaSeqNo = 0;
 
-void MSCHandler::dmaTransferDone()
+void MSCHandler::ReadReady()
 {
-	SCB_InvalidateDCache_by_Addr((uint32_t*)bot_data, inBuffSize);	// Ensure cache is refreshed after write or erase
-	mdmaSeq[++mdmaSeqNo] = 0x1000000;
-	inBuff = bot_data;
-	inBuffCount = 0;
-
+	// Once read data is ready (may be waiting for DMA) start endpoint transfer
 	EndPointTransfer(Direction::in, inEP, inBuffSize);
 
 	scsi_blk_addr += (inBuffSize / fatSectorSize);
 	scsi_blk_len -= (inBuffSize / fatSectorSize);
-	csw.dDataResidue -= inBuffSize;
 
 	if (scsi_blk_len == 0) {
 		bot_state = BotState::LastDataIn;
@@ -408,38 +406,12 @@ void MSCHandler::dmaTransferDone()
 }
 
 
-int8_t MSCHandler::SCSI_ProcessRead()
+void MSCHandler::DMATransferDone()
 {
-	uint32_t len = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
-	inBuffSize = len;
-
-//	fatTools.Read(bot_data, scsi_blk_addr, (len / fatSectorSize));
-//	inBuff = bot_data;
-	const uint8_t* sectorAddress = fatTools.GetSectorAddr(scsi_blk_addr);
-
-	// If reading directly off the FLash driver initiate an MDMA transfer and wait for interrupt
-	if ((uint32_t)sectorAddress & 0x90000000) {
-		mdmaSeq[++mdmaSeqNo] = (uint32_t)sectorAddress;
-		MDMATransfer(sectorAddress, bot_data, len);
-		return 0;
-	}
-
-	//inBuff = fatTools.GetSectorAddr(scsi_blk_addr);
-	inBuff = sectorAddress;
-	inBuffSize = len;
-	inBuffCount = 0;
-
-	EndPointTransfer(Direction::in, inEP, len);
-
-	scsi_blk_addr += (len / fatSectorSize);
-	scsi_blk_len -= (len / fatSectorSize);
-	csw.dDataResidue -= len;
-
-	if (scsi_blk_len == 0) {
-		bot_state = BotState::LastDataIn;
-	}
-
-	return 0;
+	// Triggered once data has been read from flash and copied to local buffer
+	SCB_InvalidateDCache_by_Addr((uint32_t*)bot_data, inBuffSize);	// Ensure cache is refreshed after write or erase
+	inBuff = bot_data;
+	ReadReady();
 }
 
 
@@ -477,30 +449,24 @@ int8_t MSCHandler::SCSI_Write()
 		// Prepare EP to receive first data packet
 		bot_state = BotState::DataOut;
 		EndPointTransfer(Direction::out, outEP, len);
+
 	} else {
+
 		// Write Process ongoing
-		return SCSI_ProcessWrite();
-	}
+		uint32_t len = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
 
-	return 0;
-}
+		fatTools.Write((uint8_t*)(outBuff), scsi_blk_addr, (len / fatSectorSize));
 
+		scsi_blk_addr += (len / fatSectorSize);
+		scsi_blk_len -= (len / fatSectorSize);
+		csw.dDataResidue -= len;			// case 12 : Ho = Do
 
-int8_t MSCHandler::SCSI_ProcessWrite()
-{
-	uint32_t len = std::min(scsi_blk_len * fatSectorSize, MediaPacket);
-
-	fatTools.Write((uint8_t*)(outBuff), scsi_blk_addr, (len / fatSectorSize));
-
-	scsi_blk_addr += (len / fatSectorSize);
-	scsi_blk_len -= (len / fatSectorSize);
-	csw.dDataResidue -= len;			// case 12 : Ho = Do
-
-	if (scsi_blk_len == 0)	{
-		MSC_BOT_SendCSW(CSWCmdPassed);
-	} else {
-		len = std::min((scsi_blk_len * fatSectorSize), MediaPacket);
-		EndPointTransfer(Direction::out, outEP, len);				// Prepare EP to Receive next packet
+		if (scsi_blk_len == 0)	{
+			MSC_BOT_SendCSW(CSWCmdPassed);
+		} else {
+			len = std::min((scsi_blk_len * fatSectorSize), MediaPacket);
+			EndPointTransfer(Direction::out, outEP, len);				// Prepare EP to Receive next packet
+		}
 	}
 
 	return 0;

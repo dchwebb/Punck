@@ -90,7 +90,7 @@ public:
 	void DataOut() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
-	void dmaTransferDone();
+	void DMATransferDone();
 
 private:
 	enum class BotState {Idle, DataOut, DataIn, LastDataIn, SendData, NoData};
@@ -109,9 +109,8 @@ private:
 	int8_t SCSI_ModeSense10();
 	int8_t SCSI_ModeSense6();
 	int8_t SCSI_Read();
-	int8_t SCSI_ProcessRead();
+	void ReadReady();
 	int8_t SCSI_Write();
-	int8_t SCSI_ProcessWrite();
 	int8_t SCSI_CheckAddressRange(uint32_t blk_offset, uint32_t blk_nbr);
 	int8_t SCSI_TestUnitReady();
 	int8_t SCSI_AllowPreventRemovable();
