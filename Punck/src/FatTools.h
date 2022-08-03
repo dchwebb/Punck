@@ -59,30 +59,21 @@ struct FATLongFilename {
 	char name3[4];						// Characters 12-13 of the long-name sub-component in this dir entry
 };
 
-// Store information about samples (file name, format etc)
-struct SampleInfo {
-	char name[11];
-	uint32_t size;						// Size of file in bytes
-	uint32_t cluster;					// Starting cluster
-	uint32_t lastCluster;				// If file spans multiple clusters store last cluster here - if 0xFFFFFFFF then clusters are contiguous
-	const uint8_t* dataAddr;			// Address of data section
-	uint32_t sampleRate;
-	uint16_t bitDepth;
-	uint8_t channels;					// 1 = mono, 2 = stereo
-	bool valid;							// false if header cannot be processed
-};
+
 
 // Class provides interface with FatFS library and some low level helpers not provided with the library
 class FatTools
 {
 	friend class CDCHandler;
 public:
-	SampleInfo sampleInfo[128];
 	bool busy = false;
+	uint16_t* clusterChain;				// Pointer to beginning of cluster chain (AKA FAT)
+	FATFileInfo* rootDirectory;			// Pointer to start of FAT directory listing
 
 	void InitFatFS();
 	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);
-	const uint8_t* GetSectorAddr(uint32_t sector);
+	const uint8_t* GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_t bufferSize);
+	const uint8_t* GetClusterAddr(uint32_t cluster);
 	void Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount);
 	void PrintDirInfo(uint32_t cluster = 0);
 	void PrintFiles (char* path);
@@ -103,11 +94,8 @@ private:
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
 
-	uint16_t* clusterChain;				// Pointer to beginning of cluster chain (AKA FAT)
 
-	const uint8_t* GetClusterAddr(uint32_t cluster);
-	bool UpdateSampleList();
-	bool GetSampleInfo(SampleInfo* sample);
+
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
 	std::string FileDate(uint16_t date);

@@ -11,7 +11,7 @@ void __attribute__((optimize("O0"))) TinyDelay() {
 	for (int x = 0; x < 2; ++x);
 }
 
-int32_t sample = 0;
+int32_t testSample = 0;
 
 bool LR = false;
 
@@ -28,11 +28,11 @@ void SPI2_IRQHandler()
 	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
 	LR = !LR;
 
-	sample += 5;
-	if (sample > 32767) {
-		sample = -32767;
+	testSample += 5;
+	if (testSample > 32767) {
+		testSample = -32767;
 	}
-	int16_t outputSample = std::clamp(static_cast<int32_t>(sample), -32767L, 32767L);
+	int16_t outputSample = std::clamp(static_cast<int32_t>(testSample), -32767L, 32767L);
 	SPI2->TXDR = outputSample;
 
 	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
@@ -40,16 +40,13 @@ void SPI2_IRQHandler()
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 
+
 void MDMA_IRQHandler()
 {
 	// fires when MDMA Flash to memory transfer has completed
 	if (MDMA->GISR0 & MDMA_GISR0_GIF0) {
-		// Clear interrupt
 		MDMA_Channel0->CIFCR |= MDMA_CIFCR_CBTIF;		// Clear transfer complete interrupt flag
 		usb.msc.DMATransferDone();
-//		extern uint32_t dmaTestBuffer[128];
-//		SCB_InvalidateDCache_by_Addr(dmaTestBuffer, 10000);	// Ensure cache is refreshed after write or erase
-
 	}
 }
 

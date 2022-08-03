@@ -2,6 +2,7 @@
 #include "CDCHandler.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
+#include "Samples.h"
 #include "ff.h"
 
 uint32_t flashBuff[1024];
@@ -72,12 +73,7 @@ void CDCHandler::ProcessCommand()
 				"info        -  Show diagnostic information\r\n"
 				"resume      -  Resume I2S after debugging\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
-				"writeA:N    -  Write sequence to flash (A = address, N = No of words decimal)\r\n"
-				"writesector:S  Write 512 byte sequence via cache to sector S\r\n"
-				"setzeroA:N  -  Write zero to flash (A = address, N = No of words decimal)\r\n"
-				"read:A      -  Read word from flash (A = decimal address)\r\n"
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
-				"erasesect:A -  Erase flash sector (A = decimal address)\r\n"
 				"eraseflash  -  Erase all flash data\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
 				"dir         -  Print list of all files and their directories\r\n"
@@ -101,28 +97,21 @@ void CDCHandler::ProcessCommand()
 #endif
 
 
-	} else if (cmd.compare("dmatest1\n") == 0) {					// Test transferring from one memory area to another using DMA
-		MDMATransfer(flashAddress, (uint8_t*)dmaTestBuffer, 64);
-
-	} else if (cmd.compare("dmatest2\n") == 0) {					// Test transferring from one memory area to another using DMA
-		MDMATransfer(flashAddress + 0x4000, (uint8_t*)dmaTestBuffer, 64);
-
-
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 
 		printf("Num Name          Bytes    Rate Bits Channels Valid Address\r\n");
 
-		while (fatTools.sampleInfo[pos].name[0] != 0) {
+		while (samples.sampleInfo[pos].name[0] != 0) {
 			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x\r\n",
 					pos,
-					fatTools.sampleInfo[pos].name,
-					fatTools.sampleInfo[pos].size,
-					fatTools.sampleInfo[pos].sampleRate,
-					fatTools.sampleInfo[pos].bitDepth,
-					fatTools.sampleInfo[pos].channels,
-					fatTools.sampleInfo[pos].valid ? "Y" : " ",
-					(unsigned int)fatTools.sampleInfo[pos].dataAddr
+					samples.sampleInfo[pos].name,
+					samples.sampleInfo[pos].size,
+					samples.sampleInfo[pos].sampleRate,
+					samples.sampleInfo[pos].bitDepth,
+					samples.sampleInfo[pos].channels,
+					samples.sampleInfo[pos].valid ? "Y" : " ",
+					(unsigned int)samples.sampleInfo[pos].startAddr
 					);
 			++pos;
 		}
@@ -131,7 +120,7 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		printf("%s\r\n", fatTools.sampleInfo[sn].name);
+		printf("%s\r\n", samples.sampleInfo[sn].name);
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
@@ -269,7 +258,7 @@ void CDCHandler::ProcessCommand()
 			for (int a = 0; a < words; ++a) {
 				flashBuff[a] = 0;
 			}
-			extFlash.WriteData(address, flashBuff, words, true);
+			extFlash.WriteData(address, flashBuff, words);
 			extFlash.MemoryMapped();
 			printf("Finished\r\n");
 		}
@@ -281,7 +270,7 @@ void CDCHandler::ProcessCommand()
 		extFlash.MemoryMapped();
 
 
-	} else if (cmd.compare("eraseflash\n") == 0) {			// Erase all flash memory
+	} else if (cmd.compare("eraseflash\n") == 0) {				// Erase all flash memory
 		extFlash.FullErase();
 		usb->SendString("Flash erased\r\n");
 
@@ -303,7 +292,6 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]
-
 		int sector = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (sector >= 0) {
 			printf("Writing to %d ...\r\n", sector);
@@ -317,8 +305,7 @@ void CDCHandler::ProcessCommand()
 		}
 
 
-	} else if (cmd.compare(0, 5, "write") == 0) {				// Write QSPI format writeA:W [A = address; W = num words]
-
+	} else if (cmd.compare(0, 5, "write") == 0) {				// Write test pattern to flash writeA:W [A = address; W = num words]
 		int address = ParseInt(cmd, 'e', 0, 0xFFFFFF);
 		if (address >= 0) {
 			int words = ParseInt(cmd, ':');
@@ -327,7 +314,7 @@ void CDCHandler::ProcessCommand()
 			for (int a = 0; a < words; ++a) {
 				flashBuff[a] = a + 1;
 			}
-			extFlash.WriteData(address, flashBuff, words, true);
+			extFlash.WriteData(address, flashBuff, words);
 
 			extFlash.MemoryMapped();
 			printf("Finished\r\n");

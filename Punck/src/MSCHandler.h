@@ -165,7 +165,7 @@ private:
 	};
 	SCSISenseItem scsi_sense[SenseListDepth];		// Ring buffer to hold error codes
 
-	// USB Mass storage Page 0 Inquiry Data (Supported VPD pages PSC-3 345)
+	// USB Mass storage Page 0 Inquiry Data (Supported VPD pages SPC-3 345)
 	constexpr static uint8_t MSC_Page00_Inquiry_Data[] = {
 			0x00,
 			0x00,
@@ -187,7 +187,7 @@ private:
 			0x20
 	};
 
-	// USB Mass storage Standard Inquiry Data (See p144 of PSC-3)
+	// USB Mass storage Standard Inquiry Data (See p144 of SPC-3)
 	constexpr static uint8_t STORAGE_Inquirydata_FS[] = {
 			0x00,							// Peripheral qualifier and device type (0 = Direct access block device)
 			0x80,							// RMB (Removable media bit) 1= media removable
@@ -198,7 +198,7 @@ private:
 			0x00,							// BQUE | ENCSERV | VS | MULTIP | MCHNGR | Obsolete | Obsolete | ADDR16
 			0x00,							// Obsolete | Obsolete | WBUS16 | SYNC | LINKED | Obsolete | CMDQUE | VS
 			'M', 'o', 'u', 'n', 't', 'j', 'o', 'y',		// Manufacturer : 8 bytes
-			'P', 'r', 'o', 'd', 'u', 'c', 't', ' ',		// Product      : 16 Bytes
+			'P', 'u', 'n', 'c', 'k', ' ', ' ', ' ',		// Product      : 16 Bytes
 			' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
 			'0', '.', '0' ,'1'							// Version      : 4 Bytes
 	};

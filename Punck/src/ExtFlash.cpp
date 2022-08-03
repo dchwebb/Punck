@@ -100,40 +100,40 @@ void ExtFlash::WriteEnable()
 }
 
 
-bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t words, bool checkErase)
+bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t words)
 {
 	// Writes data to Flash memory breaking the writes at page boundaries; optionally checks if an erase is required first
 	bool eraseRequired = false;
 	bool dataChanged = false;
-	if (checkErase) {
-		for (uint32_t i = 0; i < words; ++i) {
-			uint32_t flashData = ((uint32_t*)(flashAddress + address))[i];
+	uint32_t* memAddr = (uint32_t*)(flashAddress + address);	// address is passed relative to zero - store the memory mapped address
 
-			if (flashData != writeBuff[i]) {
-				dataChanged = true;
-				if ((flashData & writeBuff[i]) != writeBuff[i]) {	// 'And' test checks if any bits that need to be set are currently at zero - therefore needing an erase
-					eraseRequired = true;
-					break;
-				}
+	for (uint32_t i = 0; i < words; ++i) {
+		if (memAddr[i] != writeBuff[i]) {
+			dataChanged = true;
+			if ((memAddr[i] & writeBuff[i]) != writeBuff[i]) {	// 'And' tests if any bits that need to be set are currently zero - ie needing an erase
+				eraseRequired = true;
+				break;
 			}
 		}
-		if (eraseRequired) {
-			BlockErase(address & ~(fatEraseSectors - 1));			// Force address to 4096 byte boundary
-		}
 	}
-	if (!dataChanged) {												// No difference between Flash contents and write data
+	if (!dataChanged) {										// No difference between Flash contents and write data
 		return false;
 	}
 
-	//printf("Flash: Writing %lu bytes at %lu\r\n", words * 4, address);
+	if (eraseRequired) {
+		BlockErase(address & ~(fatEraseSectors - 1));		// Force address to 4096 byte boundary
+	}
+
+	uint32_t remainingWords = words;
 	do {
 		WriteEnable();
 
 		// Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)
 		uint32_t startPage = (address >> 8);
-		uint32_t endPage = (((address + (words * 4)) - 1) >> 8);
+		uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> 8);
 
-		uint32_t writeSize = words * 4;						// Size of current write in bytes
+
+		uint32_t writeSize = remainingWords * 4;						// Size of current write in bytes
 		if (endPage != startPage) {
 			writeSize = ((startPage + 1) << 8) - address;	// When crossing pages only write up to the 256 byte boundary
 		}
@@ -155,12 +155,15 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 			while ((QUADSPI->SR & QUADSPI_SR_FTF) == 0) {};
 		}
 
-		words -= (writeSize / 4);
+		remainingWords -= (writeSize / 4);
 		address += writeSize;
 
 		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 		QUADSPI->CR &= ~QUADSPI_CR_EN;						// Disable QSPI
-	} while (words > 0);
+	} while (remainingWords > 0);
+
+	SCB_InvalidateDCache_by_Addr(memAddr, words * 4);		// Ensure cache is refreshed after write or erase
+
 	MemoryMapped();											// Switch back to memory mapped mode
 	return true;
 }

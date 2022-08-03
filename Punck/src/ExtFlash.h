@@ -15,7 +15,7 @@ public:
 	void MemMappedOff();
 	uint8_t ReadStatus(qspiRegister r);
 	void WriteEnable();
-	bool WriteData(uint32_t address, const uint32_t* data, uint32_t words, bool checkErase = false);
+	bool WriteData(uint32_t address, const uint32_t* data, uint32_t words);
 	void BlockErase(uint32_t address);
 	void FullErase();
 	uint8_t ReadData(uint32_t address);

@@ -1,5 +1,6 @@
 #include "FatTools.h"
 #include "ExtFlash.h"
+#include "Samples.h"
 #include <cstring>
 #include "usb.h"
 
@@ -34,7 +35,10 @@ void FatTools::InitFatFS()
 	clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
 	clusterChain[1] |= 0x8000;								// Remove ClnShutBitMask where Windows records a badly shut down drive
 
-	UpdateSampleList();										// Updated list of samples on flash
+	// Store pointer to start of root directoy
+	rootDirectory = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
+
+	samples.UpdateSampleList();								// Updated list of samples on flash
 }
 
 
@@ -94,7 +98,7 @@ void FatTools::CheckCache()
 		// Update the sample list to check if any meaningful data has changed (ignores Windows disk spam, assuming this occurs in the header cache)
 		bool sampleChanged = false;
 		if (dirtyCacheBlocks) {
-			sampleChanged = UpdateSampleList();
+			sampleChanged = samples.UpdateSampleList();
 		}
 
 		if (sampleChanged || writeCacheDirty) {
@@ -125,7 +129,7 @@ uint8_t FatTools::FlushCache()
 	while (dirtyCacheBlocks != 0) {
 		if (dirtyCacheBlocks & (1 << blockPos)) {
 			uint32_t byteOffset = blockPos * fatEraseSectors * fatSectorSize;
-			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), 1024, true)) {
+			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), 1024)) {
 				++count;
 			}
 			dirtyCacheBlocks &= ~(1 << blockPos);
@@ -136,7 +140,7 @@ uint8_t FatTools::FlushCache()
 	// Write current working block to flash
 	if (writeCacheDirty && writeBlock > 0) {
 		uint32_t writeAddress = writeBlock * fatEraseSectors * fatSectorSize;
-		if (extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (fatEraseSectors * fatSectorSize) / 4, true)) {
+		if (extFlash.WriteData(writeAddress, (uint32_t*)writeBlockCache, (fatEraseSectors * fatSectorSize) / 4)) {
 			++count;
 		}
 		writeCacheDirty = false;			// Indicates that write cache is clean
@@ -146,91 +150,7 @@ uint8_t FatTools::FlushCache()
 
 
 
-bool FatTools::GetSampleInfo(SampleInfo* sample)
-{
-	// populate the sample object with sample rate, number of channels etc
-	// Parsing the .wav format is a pain because the header is split into a variable number of chunks and sections are not word aligned
 
-	const uint8_t* wavHeader = GetClusterAddr(sample->cluster);
-
-	// Check validity
-	if (*(uint32_t*)wavHeader != 0x46464952) {					// wav file should start with letters 'RIFF'
-		return false;
-	}
-
-	// Jump through chunks looking for 'fmt' chunk
-	uint32_t pos = 12;				// First chunk ID at 12 byte (4 word) offset
-	while (*(uint32_t*)&(wavHeader[pos]) != 0x20746D66) {		// Look for string 'fmt '
-		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));			// Each chunk title is followed by the size of that chunk which can be used to locate the next one
-		if  (pos > 100) {
-			return false;
-		}
-	}
-
-	sample->sampleRate = *(uint32_t*)&(wavHeader[pos + 12]);
-	sample->channels = *(uint16_t*)&(wavHeader[pos + 10]);
-	sample->bitDepth = *(uint16_t*)&(wavHeader[pos + 22]);
-
-	// Navigate forward to find the start of the data area
-	while (*(uint32_t*)&(wavHeader[pos]) != 0x61746164) {		// Look for string 'data'
-		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));
-		if (pos > 200) {
-			return false;
-		}
-	}
-
-	sample->dataAddr = &(wavHeader[pos + 8]);
-
-	// Follow cluster chain and store last cluster if not contiguous to tell playback engine when to do a fresh address lookup
-	bool seq = false;					// used to check for sequential blocks
-	uint32_t cluster = sample->cluster;
-	sample->lastCluster = 0xFFFFFFFF;
-
-	while (clusterChain[cluster] != 0xFFFF) {
-		if (clusterChain[cluster] == cluster + 1) {
-			cluster = clusterChain[cluster];
-		} else {
-			sample->lastCluster = cluster;
-			break;
-		}
-	}
-	return true;
-}
-
-
-bool FatTools::UpdateSampleList()
-{
-	// Updates list of samples from FAT root directory
-	FATFileInfo* fatInfo;
-	fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
-
-	uint32_t pos = 0;
-	bool changed = false;
-
-	while (fatInfo->name[0] != 0) {
-		// Check not LFN, not deleted, not directory, extension = WAV
-		if (fatInfo->attr != 0xF && fatInfo->name[0] != 0xE5 && (fatInfo->attr & AM_DIR) == 0 && strncmp(&(fatInfo->name[8]), "WAV", 3) == 0) {
-			SampleInfo* sample = &(sampleInfo[pos++]);
-
-			// Check if any fields have changed
-			if (sample->cluster != fatInfo->firstClusterLow || sample->size != fatInfo->fileSize || strncmp(sample->name, fatInfo->name, 11) != 0) {
-				changed = true;
-				strncpy(sample->name, fatInfo->name, 11);
-				sample->cluster = fatInfo->firstClusterLow;
-				sample->size = fatInfo->fileSize;
-
-				sample->valid = GetSampleInfo(sample);
-			}
-		}
-		fatInfo++;
-	}
-
-	// Blank next sample (if exists) to show end of list
-	SampleInfo* sample = &(sampleInfo[pos++]);
-	sample->name[0] = 0;
-
-	return changed;
-}
 
 
 const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
@@ -247,13 +167,20 @@ const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
 }
 
 
-const uint8_t* FatTools::GetSectorAddr(uint32_t sector)
+const uint8_t* FatTools::GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_t bufferSize)
 {
-	// Return pointer to sector address - If reading header data return cache address FIXME - take into account write cache??
+	// If reading header data return cache address; if reading flash address and buffer passed trigger DMA transfer and return null pointer
+	// FIXME - take into account write cache??
 	if (sector < fatCacheSectors) {
 		return &(headerCache[sector * fatSectorSize]);
 	} else {
-		return flashAddress + (sector * fatSectorSize);
+		const uint8_t* sectorAddress = flashAddress + (sector * fatSectorSize);
+		if (buffer == nullptr) {
+			return sectorAddress;
+		} else {
+			MDMATransfer(sectorAddress, buffer, bufferSize);
+			return nullptr;
+		}
 	}
 }
 
@@ -265,7 +192,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	if (cluster == 0) {
 		printf("\r\n  Attrib Cluster  Bytes    Created   Accessed Name          Clusters\r\n"
 				   "  ------------------------------------------------------------------\r\n");
-		fatInfo = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
+		fatInfo = rootDirectory;
 	} else {
 		fatInfo = (FATFileInfo*)GetClusterAddr(cluster);
 	}
@@ -432,9 +359,8 @@ void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char*
 
 	memcpy(writeAddress, dirEntries, 96);
 
-	// Create cluster chain entry
-	uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
-	clusterChain[cluster] = 0xFFFF;
+	clusterChain[cluster] = 0xFFFF;					// Create cluster chain entry
+
 }
 
 

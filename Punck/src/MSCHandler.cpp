@@ -378,13 +378,10 @@ int8_t MSCHandler::SCSI_Read()
 	inBuffCount = 0;
 	csw.dDataResidue -= inBuffSize;
 
-	const uint8_t* sectorAddress = fatTools.GetSectorAddr(scsi_blk_addr);
+	// Data may be read from cache or flash; if flash (signalled by nullptr), pass a buffer to be filled and wait for DMA transfer to complete
+	inBuff = fatTools.GetSectorAddr(scsi_blk_addr, bot_data, inBuffSize);
 
-	// If reading directly off the Flash driver initiate an MDMA transfer and wait for interrupt
-	if ((uint32_t)sectorAddress & 0x90000000) {
-		MDMATransfer(sectorAddress, bot_data, inBuffSize);
-	} else {
-		inBuff = sectorAddress;
+	if (inBuff != nullptr) {
 		ReadReady();
 	}
 
@@ -409,7 +406,7 @@ void MSCHandler::ReadReady()
 void MSCHandler::DMATransferDone()
 {
 	// Triggered once data has been read from flash and copied to local buffer
-	SCB_InvalidateDCache_by_Addr((uint32_t*)bot_data, inBuffSize);	// Ensure cache is refreshed after write or erase
+	SCB_InvalidateDCache_by_Addr((uint32_t*)bot_data, inBuffSize);		// Ensure cache is refreshed after write or erase
 	inBuff = bot_data;
 	ReadReady();
 }
@@ -423,8 +420,7 @@ int8_t MSCHandler::SCSI_Write()
 			return -1;
 		}
 
-		// Reverse byte order for 32 bit and 16 bit parameters
-		scsi_blk_addr = __REV(*(uint32_t*)&(cbw.CB[2]));
+		scsi_blk_addr = __REV(*(uint32_t*)&(cbw.CB[2]));				// Reverse byte order for 32 bit and 16 bit parameters
 
 		if (cbw.CB[0] == SCSI_WRITE10) {
 			scsi_blk_len = __REVSH(*(uint16_t*)&(cbw.CB[7]));
@@ -432,8 +428,7 @@ int8_t MSCHandler::SCSI_Write()
 			scsi_blk_len = __REV(*(uint32_t*)&(cbw.CB[6]));				// Untested - Write16
 		}
 
-		// check if LBA address is in the right range
-		if (SCSI_CheckAddressRange(scsi_blk_addr, scsi_blk_len) < 0) {
+		if (SCSI_CheckAddressRange(scsi_blk_addr, scsi_blk_len) < 0) {	// check if LBA address is in the right range
 			return -1;
 		}
 
@@ -476,7 +471,6 @@ int8_t MSCHandler::SCSI_Write()
 int8_t MSCHandler::SCSI_TestUnitReady()
 {
 	// Tests if the storage device is ready to receive commands; called continuously in Windows every second or so
-
 	if (cbw.dDataLength != 0) {
 		SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
 		return -1;
@@ -543,8 +537,8 @@ int8_t MSCHandler::SCSI_RequestSense()
 	bot_data[0] = 0x70;
 	bot_data[7] = REQUEST_SENSE_DATA_LEN - 6;
 
-	if ((scsi_sense_head != scsi_sense_tail)) {
-		bot_data[2] = scsi_sense[scsi_sense_head].Skey;
+	if (scsi_sense_head != scsi_sense_tail) {
+		bot_data[2]  = scsi_sense[scsi_sense_head].Skey;
 		bot_data[12] = scsi_sense[scsi_sense_head].ASC;
 		bot_data[13] = scsi_sense[scsi_sense_head].ASCQ;
 		scsi_sense_head++;
