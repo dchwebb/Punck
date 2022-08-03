@@ -121,6 +121,7 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		printf("%s\r\n", samples.sampleInfo[sn].name);
+		samples.Play(sn);
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list

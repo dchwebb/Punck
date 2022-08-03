@@ -9,7 +9,25 @@ void Samples::Play(uint32_t index)
 	playing = true;
 	sampleIndex = index;
 	sampleAddress = sampleInfo[index].startAddr;
+	GPIOB->ODR |= GPIO_ODR_OD0;			// PB0: Green LED nucleo
+}
 
+
+std::pair<int32_t, int32_t> Samples::NextSamples()
+{
+	if (playing) {
+		int16_t* sampleAddr = (int16_t*)sampleAddress;
+
+		sampleAddress += 2;				// sampleAddress is 8 bit
+		if ((uint8_t*)sampleAddress > sampleInfo[sampleIndex].endAddr) {
+			playing = false;
+			GPIOB->ODR &= ~GPIO_ODR_OD0;			// PB0: Green LED nucleo
+
+		}
+		return std::make_pair((int32_t)(*sampleAddr), 0);
+	} else {
+		return std::make_pair(0, 0);
+	}
 }
 
 
@@ -53,16 +71,15 @@ bool Samples::GetSampleInfo(SampleInfo* sample)
 	// Follow cluster chain and store last cluster if not contiguous to tell playback engine when to do a fresh address lookup
 	bool seq = false;					// used to check for sequential blocks
 	uint32_t cluster = sample->cluster;
-	sample->lastCluster = 0xFFFFFFFF;
+	sample->lastCluster = 0;
 
 	while (fatTools.clusterChain[cluster] != 0xFFFF) {
-		if (fatTools.clusterChain[cluster] == cluster + 1) {
-			cluster = fatTools.clusterChain[cluster];
-		} else {
+		if (fatTools.clusterChain[cluster] != cluster + 1 && sample->lastCluster == 0) {		// Store cluster at first discontinuity of chain
 			sample->lastCluster = cluster;
-			break;
 		}
+		cluster = fatTools.clusterChain[cluster];
 	}
+	sample->endAddr = fatTools.GetClusterAddr(cluster);
 	return true;
 }
 

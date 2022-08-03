@@ -28,9 +28,13 @@ void SPI2_IRQHandler()
 	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
 	LR = !LR;
 
-	testSample += 5;
-	if (testSample > 32767) {
-		testSample = -32767;
+	if (LR) {
+		testSample = samples.NextSamples().first;
+	} else {
+		testSample += 5;
+		if (testSample > 32767) {
+			testSample = -32767;
+		}
 	}
 	int16_t outputSample = std::clamp(static_cast<int32_t>(testSample), -32767L, 32767L);
 	SPI2->TXDR = outputSample;

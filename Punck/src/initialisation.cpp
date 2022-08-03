@@ -611,6 +611,8 @@ void InitIO()
 	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
 	GPIOG->MODER &= ~GPIO_MODER_MODE11_1;			// PG11: debug pin (SPI Underrun)
 	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
+	GPIOB->MODER &= ~GPIO_MODER_MODE0_1;			// PB0: Green LED nucleo
+	GPIOE->MODER &= ~GPIO_MODER_MODE1_1;			// PE1: Yellow LED nucleo
 
 
 

@@ -5,6 +5,7 @@
 #include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
+#include "Samples.h"
 
 volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
