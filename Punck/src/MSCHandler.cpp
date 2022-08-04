@@ -192,6 +192,10 @@ int8_t MSCHandler::SCSI_ProcessCmd()
 		return SCSI_Verify10();
 		break;
 
+    case SCSI_START_STOP_UNIT:
+      return 0;
+      break;
+
 	default:
 		SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
 		return -1;

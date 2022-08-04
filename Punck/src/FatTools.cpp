@@ -153,13 +153,13 @@ uint8_t FatTools::FlushCache()
 
 
 
-const uint8_t* FatTools::GetClusterAddr(uint32_t cluster)
+const uint8_t* FatTools::GetClusterAddr(uint32_t cluster, bool ignoreCache)
 {
 	// Byte offset of the cluster start (note cluster numbers start at 2)
 	uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
 
 	// Check if cluster is in cache or not
-	if (offsetByte < fatCacheSectors * fatSectorSize) {			// In cache
+	if (offsetByte < fatCacheSectors * fatSectorSize && !ignoreCache) {			// In cache
 		return headerCache + offsetByte;
 	} else {
 		return flashAddress + offsetByte;						// in memory mapped flash data
@@ -190,7 +190,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	// Output a detailed analysis of FAT directory structure
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
-		printf("\r\n  Attrib Cluster  Bytes    Created   Accessed Name          Clusters\r\n"
+		printf("\r\n  Attrib Cluster   Bytes    Created   Accessed Name          Clusters\r\n"
 				   "  ------------------------------------------------------------------\r\n");
 		fatInfo = rootDirectory;
 	} else {
@@ -204,13 +204,13 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {							// Long file name
 			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
-			printf("%c LFN %2i                                      %-14s [0x%02x]\r\n",
+			printf("%c LFN %2i                                       %-14s [0x%02x]\r\n",
 					(cluster == 0 ? ' ' : '>'),
 					lfn->order & (~0x40),
 					GetFileName(fatInfo).c_str(),
 					lfn->checksum);
 		} else {
-			printf("%c %s %8i %6lu %10s %10s %-14s",
+			printf("%c %s %8i %7lu %10s %10s %-14s",
 					(cluster == 0 ? ' ' : '>'),
 					(fatInfo->name[0] == 0xE5 ? "*Del*" : GetAttributes(fatInfo).c_str()),
 					fatInfo->firstClusterLow,

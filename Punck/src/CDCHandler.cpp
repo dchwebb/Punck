@@ -108,7 +108,7 @@ void CDCHandler::ProcessCommand()
 					samples.sampleInfo[pos].name,
 					samples.sampleInfo[pos].size,
 					samples.sampleInfo[pos].sampleRate,
-					samples.sampleInfo[pos].bitDepth,
+					samples.sampleInfo[pos].byteDepth * 8,
 					samples.sampleInfo[pos].channels,
 					samples.sampleInfo[pos].valid ? "Y" : " ",
 					(unsigned int)samples.sampleInfo[pos].startAddr

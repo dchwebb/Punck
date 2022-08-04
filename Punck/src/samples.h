@@ -13,7 +13,7 @@ struct SampleInfo {
 	uint32_t dataSize;					// Size of data section in bytes
 	uint32_t sampleCount;				// Number of samples (stereo samples only counted once)
 	uint32_t sampleRate;
-	uint16_t bitDepth;
+	uint8_t byteDepth;
 	uint8_t channels;					// 1 = mono, 2 = stereo
 	bool valid;							// false if header cannot be processed
 };
@@ -24,9 +24,9 @@ public:
 
 	bool playing = false;
 	uint32_t sampleIndex = 0;
-	const uint16_t* sampleAddress;
+	const uint8_t* sampleAddress;
 
-	int16_t currentSamples[2] = {};
+	int32_t currentSamples[2] = {};
 
 	void Play(uint32_t sampleNo);
 	void CalcSamples();

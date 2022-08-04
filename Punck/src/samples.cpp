@@ -8,18 +8,35 @@ void Samples::Play(uint32_t index)
 {
 	playing = true;
 	sampleIndex = index;
-	sampleAddress = (uint16_t*)sampleInfo[index].startAddr;
-	GPIOB->ODR |= GPIO_ODR_OD0;			// PB0: Green LED nucleo
+	sampleAddress = sampleInfo[index].startAddr;
+	GPIOB->ODR |= GPIO_ODR_OD0;				// PB0: Green LED nucleo
+}
+
+
+static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
+{
+	if (bytes == 3) {
+		// 24 bit data: Read sample as 32 bits, discard last 8 bits and shift to 16 bit value (double shift preserves negative bit)
+		return (*(uint32_t*)(address) << 8) >> 16;
+	} else {
+		return *(uint16_t*)(address);		// assume 16 bit data
+	}
 }
 
 
 void Samples::CalcSamples()
 {
 	if (playing) {
-		currentSamples[0] = (*sampleAddress++);
+		auto& bytes = sampleInfo[sampleIndex].byteDepth;
+
+		currentSamples[0] = readBytes(sampleAddress, bytes);
+		sampleAddress += bytes;
 
 		if (sampleInfo[sampleIndex].channels == 2) {
-			currentSamples[1] = (*sampleAddress++);
+			currentSamples[1] = readBytes(sampleAddress, bytes);
+			sampleAddress += bytes;
+		} else {
+			currentSamples[1] = currentSamples[0];
 		}
 
 		if ((uint8_t*)sampleAddress > sampleInfo[sampleIndex].endAddr) {
@@ -37,7 +54,7 @@ bool Samples::GetSampleInfo(SampleInfo* sample)
 	// populate the sample object with sample rate, number of channels etc
 	// Parsing the .wav format is a pain because the header is split into a variable number of chunks and sections are not word aligned
 
-	const uint8_t* wavHeader = fatTools.GetClusterAddr(sample->cluster);
+	const uint8_t* wavHeader = fatTools.GetClusterAddr(sample->cluster, true);
 
 	// Check validity
 	if (*(uint32_t*)wavHeader != 0x46464952) {					// wav file should start with letters 'RIFF'
@@ -55,7 +72,7 @@ bool Samples::GetSampleInfo(SampleInfo* sample)
 
 	sample->sampleRate = *(uint32_t*)&(wavHeader[pos + 12]);
 	sample->channels = *(uint16_t*)&(wavHeader[pos + 10]);
-	sample->bitDepth = *(uint16_t*)&(wavHeader[pos + 22]);
+	sample->byteDepth = *(uint16_t*)&(wavHeader[pos + 22]) / 8;
 
 	// Navigate forward to find the start of the data area
 	while (*(uint32_t*)&(wavHeader[pos]) != 0x61746164) {		// Look for string 'data'
@@ -66,7 +83,7 @@ bool Samples::GetSampleInfo(SampleInfo* sample)
 	}
 
 	sample->dataSize = *(uint32_t*)&(wavHeader[pos + 4]);		// Num Samples * Num Channels * Bits per Sample / 8
-	sample->sampleCount = sample->dataSize / (sample->channels * (sample->bitDepth / 8));
+	sample->sampleCount = sample->dataSize / (sample->channels * sample->byteDepth);
 	sample->startAddr = &(wavHeader[pos + 8]);
 
 	// Follow cluster chain and store last cluster if not contiguous to tell playback engine when to do a fresh address lookup
