@@ -24,12 +24,12 @@ public:
 
 	bool playing = false;
 	uint32_t sampleIndex = 0;
-	const uint8_t* sampleAddress;
+	const uint16_t* sampleAddress;
 
-	uint16_t currentSamples[2];
+	int16_t currentSamples[2] = {};
 
 	void Play(uint32_t sampleNo);
-	std::pair<int32_t, int32_t> NextSamples();
+	void CalcSamples();
 	bool UpdateSampleList();
 	bool GetSampleInfo(SampleInfo* sample);
 };

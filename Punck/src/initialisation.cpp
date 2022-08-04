@@ -201,6 +201,8 @@ void InitCache()
 				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
+/*
+
 	MPU->RNR = 1;									// Memory region number
 	MPU->RBAR = 0x90000000; 						// Address of the QSPI Flash
 
@@ -211,6 +213,7 @@ void InitCache()
 				(0     << MPU_RASR_B_Pos)    |		// Bufferable (ignored for non-cacheable configuration)
 				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
+*/
 
 	MPU->CTRL |= (1 << MPU_CTRL_PRIVDEFENA_Pos) |	// Enable PRIVDEFENA - this allows use of default memory map for memory areas other than those specific regions defined above
 				 (1 << MPU_CTRL_ENABLE_Pos);		// Enable the MPU
@@ -503,10 +506,11 @@ x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
 	SPI2->I2SCFGR |= SPI_I2SCFGR_I2SCFG_1;			// I2S configuration mode: 00=Slave transmit; 01=Slave receive; 10=Master transmit*; 11=Master receive
 
 	// Use a 16bit data length but pack into the upper 16 bits of a 32 bit word
-	SPI2->I2SCFGR &= ~SPI_I2SCFGR_DATLEN;			// Data Length 00=16-bit; 01=24-bit; 10=32-bit
+	SPI2->I2SCFGR |= SPI_I2SCFGR_DATLEN_1;			// Data Length 00=16-bit; 01=24-bit; 10=32-bit
 	SPI2->I2SCFGR |= SPI_I2SCFGR_CHLEN;				// Channel Length = 32bits
 
-	SPI2->CFG1 |= SPI_CFG1_UDRCFG_1;				// In the event of underrun slave repeats its lastly transmitted data frame
+	SPI2->CFG1 |= SPI_CFG1_UDRCFG_1;				// In the event of underrun resend last transmitted data frame
+	SPI2->CFG1 |= SPI_CFG1_FTHLV_1;					// FIFO threshold level. 0001: 2-data
 
 	/* I2S Clock
 	000: pll1_q_ck clock selected as SPI/I2S1,2 and 3 kernel clock (default after reset)
@@ -677,6 +681,6 @@ void InitQSPI()
 	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
 	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
 
-	QUADSPI->CR |= 255 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to 255 + 1 - should give a speed of 200MHz / 256 = ~780kHz
+	QUADSPI->CR |= 31 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to 255 + 1 - should give a speed of 200MHz / 32 = ~6.25MHz
 	QUADSPI->DCR |= 23 <<  QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 }

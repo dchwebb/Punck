@@ -11,7 +11,6 @@ void __attribute__((optimize("O0"))) TinyDelay() {
 	for (int x = 0; x < 2; ++x);
 }
 
-int32_t testSample = 0;
 
 bool LR = false;
 
@@ -22,25 +21,29 @@ void SPI2_IRQHandler()
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
-	}
-
-//	delay.CalcSample();
-	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
-	LR = !LR;
-
-	if (LR) {
-		testSample = samples.NextSamples().first;
+		return;
 	} else {
-		testSample += 5;
-		if (testSample > 32767) {
-			testSample = -32767;
-		}
+		GPIOG->ODR &= ~GPIO_ODR_OD11;
 	}
-	int16_t outputSample = std::clamp(static_cast<int32_t>(testSample), -32767L, 32767L);
+
+	LR = !LR;
+	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
+
+/*	int16_t outputSample;
+	if (LR) {
+		samples.CalcSamples();
+		outputSample = samples.currentSamples[0];
+	} else {
+		outputSample = samples.currentSamples[1];
+	}
 	SPI2->TXDR = outputSample;
+*/
+	samples.CalcSamples();
+	SPI2->TXDR = (uint32_t)(samples.currentSamples[0]) << 16;
+	SPI2->TXDR = (uint32_t)(samples.currentSamples[1]) << 16;
 
 	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
-	TinyDelay();
+	//TinyDelay();
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 

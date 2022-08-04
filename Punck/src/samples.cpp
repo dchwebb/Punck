@@ -8,25 +8,26 @@ void Samples::Play(uint32_t index)
 {
 	playing = true;
 	sampleIndex = index;
-	sampleAddress = sampleInfo[index].startAddr;
+	sampleAddress = (uint16_t*)sampleInfo[index].startAddr;
 	GPIOB->ODR |= GPIO_ODR_OD0;			// PB0: Green LED nucleo
 }
 
 
-std::pair<int32_t, int32_t> Samples::NextSamples()
+void Samples::CalcSamples()
 {
 	if (playing) {
-		int16_t* sampleAddr = (int16_t*)sampleAddress;
+		currentSamples[0] = (*sampleAddress++);
 
-		sampleAddress += 2;				// sampleAddress is 8 bit
+		if (sampleInfo[sampleIndex].channels == 2) {
+			currentSamples[1] = (*sampleAddress++);
+		}
+
 		if ((uint8_t*)sampleAddress > sampleInfo[sampleIndex].endAddr) {
+			currentSamples[0] = 0;
+			currentSamples[1] = 0;
 			playing = false;
 			GPIOB->ODR &= ~GPIO_ODR_OD0;			// PB0: Green LED nucleo
-
 		}
-		return std::make_pair((int32_t)(*sampleAddr), 0);
-	} else {
-		return std::make_pair(0, 0);
 	}
 }
 
