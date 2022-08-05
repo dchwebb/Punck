@@ -39,8 +39,8 @@ void SPI2_IRQHandler()
 	SPI2->TXDR = outputSample;
 */
 	samples.CalcSamples();
-	SPI2->TXDR = (uint32_t)(samples.currentSamples[0]) << 16;
-	SPI2->TXDR = (uint32_t)(samples.currentSamples[1]) << 16;
+	SPI2->TXDR = (uint32_t)(samples.currentSamples[0]);
+	SPI2->TXDR = (uint32_t)(samples.currentSamples[1]);
 
 	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
 	//TinyDelay();

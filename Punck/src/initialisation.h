@@ -9,12 +9,12 @@ extern volatile uint32_t SysTickVal;
 
 #define ADC1_BUFFER_LENGTH 4
 #define ADC2_BUFFER_LENGTH 7
-#define SAMPLE_BUFFER_LENGTH 1048576		// Currently 2^20 (4MB of 16MB)
-#define SAMPLE_RATE 48000
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
 
+
+static constexpr uint32_t systemSampleRate = 48000;
 
 extern volatile uint16_t ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 extern int32_t adcZeroOffset[2];

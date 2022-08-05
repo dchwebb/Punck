@@ -100,18 +100,19 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 
-		printf("Num Name          Bytes    Rate Bits Channels Valid Address\r\n");
+		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
 
-		while (samples.sampleInfo[pos].name[0] != 0) {
-			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x\r\n",
+		while (samples.sampleList[pos].name[0] != 0) {
+			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x %.3f\r\n",
 					pos,
-					samples.sampleInfo[pos].name,
-					samples.sampleInfo[pos].size,
-					samples.sampleInfo[pos].sampleRate,
-					samples.sampleInfo[pos].byteDepth * 8,
-					samples.sampleInfo[pos].channels,
-					samples.sampleInfo[pos].valid ? "Y" : " ",
-					(unsigned int)samples.sampleInfo[pos].startAddr
+					samples.sampleList[pos].name,
+					samples.sampleList[pos].size,
+					samples.sampleList[pos].sampleRate,
+					samples.sampleList[pos].byteDepth * 8,
+					samples.sampleList[pos].channels,
+					samples.sampleList[pos].valid ? "Y" : " ",
+					(unsigned int)samples.sampleList[pos].startAddr,
+					(float)samples.sampleList[pos].sampleCount / samples.sampleList[pos].sampleRate
 					);
 			++pos;
 		}
@@ -120,7 +121,7 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		printf("%s\r\n", samples.sampleInfo[sn].name);
+		printf("%s\r\n", samples.sampleList[sn].name);
 		samples.Play(sn);
 
 

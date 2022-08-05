@@ -169,8 +169,8 @@ void InitMDMA()
 
 	NVIC_SetPriority(MDMA_IRQn, 0x3);					// Lower is higher priority
 	NVIC_EnableIRQ(MDMA_IRQn);
-
 }
+
 
 void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t bytes)
 {
@@ -505,9 +505,8 @@ x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
 	SPI2->I2SCFGR |= SPI_I2SCFGR_I2SMOD;			// I2S Mode
 	SPI2->I2SCFGR |= SPI_I2SCFGR_I2SCFG_1;			// I2S configuration mode: 00=Slave transmit; 01=Slave receive; 10=Master transmit*; 11=Master receive
 
-	// Use a 16bit data length but pack into the upper 16 bits of a 32 bit word
-	SPI2->I2SCFGR |= SPI_I2SCFGR_DATLEN_1;			// Data Length 00=16-bit; 01=24-bit; 10=32-bit
-	SPI2->I2SCFGR |= SPI_I2SCFGR_CHLEN;				// Channel Length = 32bits
+	SPI2->I2SCFGR |= SPI_I2SCFGR_DATLEN_1;			// Data Length 00=16-bit; 01=24-bit; *10=32-bit
+	SPI2->I2SCFGR |= SPI_I2SCFGR_CHLEN;				// Channel Length = 32 bits
 
 	SPI2->CFG1 |= SPI_CFG1_UDRCFG_1;				// In the event of underrun resend last transmitted data frame
 	SPI2->CFG1 |= SPI_CFG1_FTHLV_1;					// FIFO threshold level. 0001: 2-data
@@ -666,7 +665,6 @@ void InitQSPI()
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
 
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
-	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
 	GPIOB->MODER &= ~GPIO_MODER_MODE2_0;			// PB2: CLK
 	GPIOD->MODER &= ~GPIO_MODER_MODE11_0;			// PD11: IO0
 	GPIOD->MODER &= ~GPIO_MODER_MODE12_0;			// PD12: IO1
@@ -681,6 +679,6 @@ void InitQSPI()
 	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
 	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
 
-	QUADSPI->CR |= 31 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to 255 + 1 - should give a speed of 200MHz / 32 = ~6.25MHz
-	QUADSPI->DCR |= 23 <<  QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
+	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 16 = ~12.5MHz
+	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 }

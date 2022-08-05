@@ -47,16 +47,16 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 
 		USBUpdateDbg(receiveStatus, {}, epnum, packetSize, {}, nullptr);
 
-		if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == STS_DATA_UPDT && packetSize != 0) {		// 2 = OUT data packet received
+		if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutDataReceived && packetSize != 0) {	// 2 = OUT data packet received
 			ReadPacket(classes[epnum]->outBuff, packetSize, classes[epnum]->outBuffOffset);
 			USBUpdateDbg({}, {}, {}, {}, {}, classes[epnum]->outBuff + classes[epnum]->outBuffOffset);
 			if (classes[epnum]->outBuffPackets > 1) {
 				classes[epnum]->outBuffOffset += (packetSize / 4);			// When receiving multiple packets increase buffer offset (packet size in bytes -> 32 bit ints)
 			}
-		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == STS_SETUP_UPDT) {				// 6 = SETUP data packet received
+		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == SetupDataReceived) {				// 6 = SETUP data packet received
 			ReadPacket(classes[epnum]->outBuff, 8U, 0);
 			USBUpdateDbg({}, {}, {}, {}, {}, classes[epnum]->outBuff);
-		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == STS_XFER_COMP) {					// 3 = transfer completed
+		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutTransferCompleted) {			// 3 = transfer completed
 			classes[epnum]->outBuffOffset = 0;
 		}
 		if (packetSize != 0) {
@@ -87,7 +87,7 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 					if (epnum == 0) {
 
 						if (devState == DeviceState::Configured && classPendingData) {
-							if ((req.RequestType & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_CLASS) {
+							if ((req.RequestType & USB_REQ_TYPE_MASK) == RequestTypeClass) {
 								// Previous OUT interrupt contains instruction (eg host sending CDC LineCoding); next command sends data (Eg LineCoding data)
 								for (auto c : classes) {
 									if (c->interface == req.Index) {
@@ -122,12 +122,12 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 					ep0State = EP0State::Setup;
 
 					switch (req.RequestType & 0x1F) {		// originally USBD_LL_SetupStage
-					case USB_REQ_RECIPIENT_DEVICE:
+					case RequestRecipientDevice:
 						StdDevReq();
 						break;
 
-					case USB_REQ_RECIPIENT_INTERFACE:
-						if ((req.RequestType & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_CLASS) {		// 0xA1 & 0x60 == 0x20
+					case RequestRecipientInterface:
+						if ((req.RequestType & USB_REQ_TYPE_MASK) == RequestTypeClass) {		// 0xA1 & 0x60 == 0x20
 
 							// req.Index holds interface - locate which handler this relates to
 							if (req.Length > 0) {
@@ -143,7 +143,7 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 						}
 						break;
 
-					case USB_REQ_RECIPIENT_ENDPOINT:
+					case RequestRecipientEndpoint:
 						break;
 
 					default:
@@ -512,15 +512,15 @@ void USB::GetDescriptor()
 	uint32_t strSize;
 
 	switch (req.Value >> 8)	{
-	case USB_DESC_TYPE_DEVICE:
+	case DeviceDescriptor:
 		return EP0In(USBD_FS_DeviceDesc, sizeof(USBD_FS_DeviceDesc));
 		break;
 
-	case USB_DESC_TYPE_CONFIGURATION:
+	case ConfigurationDescriptor:
 		return EP0In(ConfigDesc, sizeof(ConfigDesc));
 		break;
 
-	case USB_DESC_TYPE_BOS:
+	case BosDescriptor:
 		return EP0In(USBD_FS_BOSDesc, sizeof(USBD_FS_BOSDesc));
 		break;
 
@@ -528,7 +528,7 @@ void USB::GetDescriptor()
 //		return EP0In(USBD_MSC_DeviceQualifierDesc, sizeof(USBD_MSC_DeviceQualifierDesc));
 //		break;
 
-	case USB_DESC_TYPE_STRING:
+	case StringDescriptor:
 
 		switch ((uint8_t)(req.Value)) {
 		case USBD_IDX_LANGID_STR:			// 300
@@ -602,7 +602,7 @@ uint32_t USB::StringToUnicode(const uint8_t* desc, uint8_t *unicode)
 			unicode[idx++] = 0;
 		}
 		unicode[0] = idx;
-		unicode[1] = USB_DESC_TYPE_STRING;
+		unicode[1] = StringDescriptor;
 	}
 	return idx;
 }
@@ -628,20 +628,20 @@ void USB::StdDevReq()
 	uint8_t dev_addr;
 	switch (req.RequestType & USB_REQ_TYPE_MASK)
 	{
-	case USB_REQ_TYPE_CLASS:
-	case USB_REQ_TYPE_VENDOR:
+	case RequestTypeClass:
+	case RequestTypeVendor:
 		// pdev->pClass->Setup(pdev, req);
 		break;
 
-	case USB_REQ_TYPE_STANDARD:
+	case RequestTypeStandard:
 
-		switch (req.Request)
+		switch (static_cast<Request>(req.Request))
 		{
-		case USB_REQ_GET_DESCRIPTOR:
+		case Request::GetDescriptor:
 			GetDescriptor();
 			break;
 
-		case USB_REQ_SET_ADDRESS:
+		case Request::SetAddress:
 			dev_addr = (uint8_t)(req.Value) & 0x7FU;
 			USBx_DEVICE->DCFG &= ~(USB_OTG_DCFG_DAD);
 			USBx_DEVICE->DCFG |= ((uint32_t)dev_addr << 4) & USB_OTG_DCFG_DAD;
@@ -650,7 +650,7 @@ void USB::StdDevReq()
 			devState = DeviceState::Addressed;
 			break;
 
-		case USB_REQ_SET_CONFIGURATION:
+		case Request::SetConfiguration:
 			if (devState == DeviceState::Addressed) {
 				devState = DeviceState::Configured;
 

@@ -20,11 +20,13 @@ struct SampleInfo {
 
 class Samples {
 public:
-	SampleInfo sampleInfo[128];
+	SampleInfo sampleList[128];
 
 	bool playing = false;
 	uint32_t sampleIndex = 0;
 	const uint8_t* sampleAddress;
+	float playbackSpeed;				// Multiplier to allow faster or slow playback (and compensate for non 48k samples)
+	float fractionalPosition;			// When playing sample at varying rate store how far through the current sample playback is
 
 	int32_t currentSamples[2] = {};
 

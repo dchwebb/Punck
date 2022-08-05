@@ -1,14 +1,20 @@
 #include <samples.h>
 #include "FatTools.h"
 #include <cstring>
+#include <cmath>
 
 Samples samples;
 
+uint32_t startTime;		// Debug
+
 void Samples::Play(uint32_t index)
 {
+	startTime = SysTickVal;
+
 	playing = true;
 	sampleIndex = index;
-	sampleAddress = sampleInfo[index].startAddr;
+	sampleAddress = sampleList[index].startAddr;
+	playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
 	GPIOB->ODR |= GPIO_ODR_OD0;				// PB0: Green LED nucleo
 }
 
@@ -17,9 +23,10 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 {
 	if (bytes == 3) {
 		// 24 bit data: Read sample as 32 bits, discard last 8 bits and shift to 16 bit value (double shift preserves negative bit)
-		return (*(uint32_t*)(address) << 8) >> 16;
+		//return (*(uint32_t*)(address) << 8) >> 16;
+		return *(uint32_t*)(address) << 8;
 	} else {
-		return *(uint16_t*)(address);		// assume 16 bit data
+		return *(uint16_t*)(address) << 16;		// assume 16 bit data
 	}
 }
 
@@ -27,22 +34,30 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 void Samples::CalcSamples()
 {
 	if (playing) {
-		auto& bytes = sampleInfo[sampleIndex].byteDepth;
+		auto& bytes = sampleList[sampleIndex].byteDepth;
 
 		currentSamples[0] = readBytes(sampleAddress, bytes);
-		sampleAddress += bytes;
 
-		if (sampleInfo[sampleIndex].channels == 2) {
-			currentSamples[1] = readBytes(sampleAddress, bytes);
-			sampleAddress += bytes;
+		if (sampleList[sampleIndex].channels == 2) {
+			currentSamples[1] = readBytes(sampleAddress + bytes, bytes);
+//			sampleAddress += bytes;
 		} else {
+
 			currentSamples[1] = currentSamples[0];
 		}
 
-		if ((uint8_t*)sampleAddress > sampleInfo[sampleIndex].endAddr) {
+		// Split the next position into an integer jump and fractional position
+		float addressJump;
+		fractionalPosition = std::modf(fractionalPosition + playbackSpeed, &addressJump);
+		sampleAddress += (sampleList[sampleIndex].channels * bytes * (uint32_t)addressJump);
+
+		if ((uint8_t*)sampleAddress > sampleList[sampleIndex].endAddr) {
 			currentSamples[0] = 0;
 			currentSamples[1] = 0;
 			playing = false;
+
+			printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
+
 			GPIOB->ODR &= ~GPIO_ODR_OD0;			// PB0: Green LED nucleo
 		}
 	}
@@ -87,12 +102,11 @@ bool Samples::GetSampleInfo(SampleInfo* sample)
 	sample->startAddr = &(wavHeader[pos + 8]);
 
 	// Follow cluster chain and store last cluster if not contiguous to tell playback engine when to do a fresh address lookup
-	bool seq = false;					// used to check for sequential blocks
 	uint32_t cluster = sample->cluster;
-	sample->lastCluster = 0;
+	sample->lastCluster = 0xFFFFFFFF;
 
 	while (fatTools.clusterChain[cluster] != 0xFFFF) {
-		if (fatTools.clusterChain[cluster] != cluster + 1 && sample->lastCluster == 0) {		// Store cluster at first discontinuity of chain
+		if (fatTools.clusterChain[cluster] != cluster + 1 && sample->lastCluster == 0xFFFFFFFF) {		// Store cluster at first discontinuity of chain
 			sample->lastCluster = cluster;
 		}
 		cluster = fatTools.clusterChain[cluster];
@@ -113,7 +127,7 @@ bool Samples::UpdateSampleList()
 	while (dirEntry->name[0] != 0) {
 		// Check not LFN, not deleted, not directory, extension = WAV
 		if (dirEntry->attr != 0xF && dirEntry->name[0] != 0xE5 && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
-			SampleInfo* sample = &(sampleInfo[pos++]);
+			SampleInfo* sample = &(sampleList[pos++]);
 
 			// Check if any fields have changed
 			if (sample->cluster != dirEntry->firstClusterLow || sample->size != dirEntry->fileSize || strncmp(sample->name, dirEntry->name, 11) != 0) {
@@ -129,7 +143,7 @@ bool Samples::UpdateSampleList()
 	}
 
 	// Blank next sample (if exists) to show end of list
-	SampleInfo* sample = &(sampleInfo[pos++]);
+	SampleInfo* sample = &(sampleList[pos++]);
 	sample->name[0] = 0;
 
 	return changed;
