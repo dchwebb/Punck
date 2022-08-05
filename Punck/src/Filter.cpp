@@ -33,7 +33,7 @@ void Filter::Update(bool reset)
 	}
 
 	// get filter values from pot and CV and smooth through fixed IIR filter
-	dampedADC = filterADC.FilterSample(std::min(static_cast<uint32_t>(ADC_array[ADC_Filter_Pot]) + (65535UL - ADC_array[ADC_Filter_CV]), 65535UL));
+	//dampedADC = filterADC.FilterSample(std::min(static_cast<uint32_t>(ADC_array[ADC_Filter_Pot]) + (65535UL - ADC_array[ADC_Filter_CV]), 65535UL));
 
 	if (newFilterType != filterType || reset || std::abs(dampedADC - previousADC) > hysteresis) {
 		calculatingFilter = true;

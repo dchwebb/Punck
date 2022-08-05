@@ -11,7 +11,7 @@ volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
 
 // Store buffers that need to live in special memory areas
-volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
+volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER_LENGTH];
 
 // TODO:
 // caching
@@ -35,7 +35,7 @@ int main(void) {
 //	NVIC_SetPriorityGrouping(2);
 //	priGrp = NVIC_GetPriorityGrouping();
 
-//	InitADC();
+	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers

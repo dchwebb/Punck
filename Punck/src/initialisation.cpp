@@ -65,7 +65,6 @@
 
 void SystemClock_Config()
 {
-
 	RCC->APB4ENR |= RCC_APB4ENR_SYSCFGEN;			// Enable System configuration controller clock
 
 	// Voltage scaling - see Datasheet page 113. VOS1 > 300MHz; VOS2 > 200MHz; VOS3 < 200MHz
@@ -183,7 +182,6 @@ void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t byte
 
 	MDMA_Channel0->CCR |= MDMA_CCR_EN;					// Enable DMA
 	MDMA_Channel0->CCR |= MDMA_CCR_SWRQ;				// Software Activate the request (fires interrupt when complete)
-
 }
 
 
@@ -289,7 +287,7 @@ void InitADC()
 
 	ADC12_COMMON->CCR |= ADC_CCR_PRESC_0;			// Set prescaler to ADC clock divided by 2 (if 64MHz = 32MHz)
 
-	InitADC1();
+	//InitADC1();
 	InitADC2();
 }
 
@@ -312,6 +310,7 @@ ADC2:
 	6	PC1 ADC123_INP11 	FILTER_POT
 */
 
+/*
 void InitADC1()
 {
 	// Initialize ADC peripheral
@@ -354,13 +353,13 @@ void InitADC1()
 	while ((ADC1->CR & ADC_CR_ADCAL) == ADC_CR_ADCAL) {};
 
 
-	/*--------------------------------------------------------------------------------------------
+	/--------------------------------------------------------------------------------------------
 	Configure ADC Channels to be converted:
 	0	PA3 ADC12_INP15		AUDIO_IN_L
 	1	PA2 ADC12_INP14		AUDIO_IN_R
 	2	PA1 ADC1_INP17		DELAY_POT_R
 	3	PA0 ADC1_INP16		DELAY_CV_SCALED_R
-	*/
+	/
 	InitAdcPins(ADC1, {15, 14, 17, 16});
 
 
@@ -392,7 +391,7 @@ void TriggerADC1()
 	DMA1->LIFCR |= DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1;
 	DMA1_Stream1->CR |= DMA_SxCR_EN;
 }
-
+*/
 
 void InitADC2()
 {
@@ -434,15 +433,16 @@ void InitADC2()
 	while ((ADC2->CR & ADC_CR_ADCAL) == ADC_CR_ADCAL) {};
 
 	/* Configure ADC Channels to be converted:
-	0	PC5 ADC12_INP8		WET_DRY_MIX
-	1	PB1 ADC12_INP5		DELAY_POT_L
-	2	PA6 ADC12_INP3 		DELAY_CV_SCALED_L
-	3	PB0 ADC12_INP9		FEEDBACK_POT
-	4	PA7 ADC12_INP7		FEEDBACK_CV_SCALED
-	5	PC4 ADC12_INP4		FILTER_CV_SCALED
-	6	PC1 ADC123_INP11 	FILTER_POT
+	0	PB1 ADC12_INP5
+	1	PA6 ADC12_INP3
+
+	PC5 ADC12_INP8
+	PB0 ADC12_INP9
+	PA7 ADC12_INP7
+	PC4 ADC12_INP4
+	PC1 ADC123_INP11
 	*/
-	InitAdcPins(ADC2, {8, 5, 3, 9, 7, 4, 11});
+	InitAdcPins(ADC2, {5, 3});
 
 	// Enable ADC
 	ADC2->CR |= ADC_CR_ADEN;
@@ -453,7 +453,7 @@ void InitADC2()
 
 	DMA1_Stream2->NDTR |= ADC2_BUFFER_LENGTH;		// Number of data items to transfer (ie size of ADC buffer)
 	DMA1_Stream2->PAR = reinterpret_cast<uint32_t>(&(ADC2->DR));	// Configure the peripheral data register address 0x40022040
-	DMA1_Stream2->M0AR = reinterpret_cast<uint32_t>(&ADC_array[ADC1_BUFFER_LENGTH]);		// Configure the memory address (note that M1AR is used for double-buffer mode) 0x24000040
+	DMA1_Stream2->M0AR = reinterpret_cast<uint32_t>(ADC_array);		// Configure the memory address (note that M1AR is used for double-buffer mode) 0x24000040
 
 	DMA1_Stream2->CR |= DMA_SxCR_EN;				// Enable DMA and wait
 	wait_loop_index = (SystemCoreClock / (100000UL * 2UL));
@@ -463,8 +463,6 @@ void InitADC2()
 
 	ADC2->CR |= ADC_CR_ADSTART;						// Start ADC
 }
-
-
 
 
 void InitI2S() {
@@ -576,6 +574,7 @@ void suspendI2S()
 	while ((SPI2->SR & SPI_SR_SUSP) == 0);
 }
 
+
 void resumeI2S()
 {
 	// to allow resume from debugging ensure suspended then clear buffer underrun flag
@@ -588,6 +587,7 @@ void resumeI2S()
 	while ((SPI2->SR & SPI_SR_SUSP) != 0);
 	SPI2->CR1 |= SPI_CR1_CSTART;
 }
+
 
 void InitDebugTimer()
 {
@@ -616,9 +616,6 @@ void InitIO()
 	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
 	GPIOB->MODER &= ~GPIO_MODER_MODE0_1;			// PB0: Green LED nucleo
 	GPIOE->MODER &= ~GPIO_MODER_MODE1_1;			// PE1: Yellow LED nucleo
-
-
-
 }
 
 

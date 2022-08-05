@@ -22,9 +22,7 @@ void Samples::Play(uint32_t index)
 static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 {
 	if (bytes == 3) {
-		// 24 bit data: Read sample as 32 bits, discard last 8 bits and shift to 16 bit value (double shift preserves negative bit)
-		//return (*(uint32_t*)(address) << 8) >> 16;
-		return *(uint32_t*)(address) << 8;
+		return *(uint32_t*)(address) << 8;		// 24 bit data: Read in 32 bits and shift up 8 bits to make 32 bit value with lower byte zeroed
 	} else {
 		return *(uint16_t*)(address) << 16;		// assume 16 bit data
 	}
@@ -40,15 +38,16 @@ void Samples::CalcSamples()
 
 		if (sampleList[sampleIndex].channels == 2) {
 			currentSamples[1] = readBytes(sampleAddress + bytes, bytes);
-//			sampleAddress += bytes;
 		} else {
-
-			currentSamples[1] = currentSamples[0];
+			currentSamples[1] = currentSamples[0];		// Duplicate left channel to right for mono signal
 		}
+
+		// Get sample speed from ADC - want range 0.5 - 1.5
+		float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;
 
 		// Split the next position into an integer jump and fractional position
 		float addressJump;
-		fractionalPosition = std::modf(fractionalPosition + playbackSpeed, &addressJump);
+		fractionalPosition = std::modf(fractionalPosition + (adjSpeed * playbackSpeed), &addressJump);
 		sampleAddress += (sampleList[sampleIndex].channels * bytes * (uint32_t)addressJump);
 
 		if ((uint8_t*)sampleAddress > sampleList[sampleIndex].endAddr) {
