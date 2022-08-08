@@ -107,9 +107,6 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 							EPStartXfer(Direction::out, epnum, classes[epnum]->outBuffCount);
 						}
 						classes[epnum]->DataOut();
-//						if (epnum == MIDI_Out) {
-//							midiDataHandler((uint8_t*)endPoints[epnum]->outBuff, endPoints[epnum]->outBuffCount);
-//						}
 					}
 				}
 
@@ -401,7 +398,7 @@ void USB::Init()
 	//HAL_Delay(50U);
 
 	// Clear all transmit FIFO address and data lengths - these will be set to correct values below for endpoints 0,1 and 2
-	for (uint8_t i = 0U; i < 15U; i++) {
+	for (uint8_t i = 0; i < 15; ++i) {
 		USB_OTG_FS->DIEPTXF[i] = 0U;
 	}
 
@@ -427,12 +424,13 @@ void USB::Init()
 			USB_OTG_GINTMSK_SRQIM | USB_OTG_GINTMSK_OTGINT;								// Session request/new session detected; OTG interrupt [both used for VBUS sensing]
 
 
-	// NB - FIFO Sizes are in words NOT bytes. There is a total size of 320 (320x4 = 1280 bytes) available which is divided up thus:
+	// NB - FIFO Sizes are in words NOT bytes. There is a total size of 1024 (1024x4 = 4096 bytes) available which is divided up thus:
 	// FIFO		Start		Size
 	// RX 		0			128
 	// EP0 TX	128			64
 	// EP1 TX	192			64
 	// EP2 TX 	256			64
+	// EP3 TX 	320			64
 
 	USB_OTG_FS->GRXFSIZ = 128;		 					// Rx FIFO depth
 
@@ -447,6 +445,10 @@ void USB::Init()
 	// Endpoint 2 FIFO size/address (address is offset from EP1 address+size above)
 	USB_OTG_FS->DIEPTXF[1] = (64 << USB_OTG_DIEPTXF_INEPTXFD_Pos) |		// IN endpoint 2 Tx FIFO depth
 			(256 << USB_OTG_DIEPTXF_INEPTXSA_Pos);  					// IN endpoint 2 FIFO transmit RAM start address
+
+	// Endpoint 2 FIFO size/address (address is offset from EP1 address+size above)
+	USB_OTG_FS->DIEPTXF[2] = (64 << USB_OTG_DIEPTXF_INEPTXFD_Pos) |		// IN endpoint 3 Tx FIFO depth
+			(320 << USB_OTG_DIEPTXF_INEPTXSA_Pos);  					// IN endpoint 3 FIFO transmit RAM start address
 
     USBx_DEVICE->DCTL &= ~USB_OTG_DCTL_SDIS;			// Activate USB
     USB_OTG_FS->GAHBCFG |= USB_OTG_GAHBCFG_GINT;		// Activate USB Interrupts
@@ -575,6 +577,11 @@ void USB::GetDescriptor()
 	    	return EP0In(USBD_StrDesc, strSize);
 			break;
 
+	    case USBD_IDX_MIDI_STR:				// 307
+	    	strSize = StringToUnicode((uint8_t*)USBD_MIDI_STRING, USBD_StrDesc);
+	    	return EP0In(USBD_StrDesc, strSize);
+			break;
+
 		default:
 			CtlError();
 			return;
@@ -659,8 +666,8 @@ void USB::StdDevReq()
 				ActivateEndpoint(CDC_In,   Direction::in,  Bulk);			// Activate CDC in endpoint
 				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
 				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
-//				ActivateEndpoint(MIDI_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
-//				ActivateEndpoint(MIDI_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
+				ActivateEndpoint(Midi_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
+				ActivateEndpoint(Midi_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
 
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
