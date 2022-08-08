@@ -32,7 +32,7 @@ void MidiHandler::DataOut()
 
 void MidiHandler::midiEvent(const uint32_t data)
 {
-	/*
+
 	auto midiData = MidiData(data);
 
 	// Note off - set envelope to release
@@ -76,7 +76,7 @@ void MidiHandler::midiEvent(const uint32_t data)
 	if (midiData.msg == PitchBend) {
 		pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
 	}
-*/
+
 /*
 	if (midiData.msg == NoteOff || midiData.msg == NoteOn) {
 		std::string out = "Note count: " + std::to_string(noteCount) + " [" +
@@ -152,13 +152,11 @@ void MidiHandler::RemoveNote(uint8_t note) {
 
 void MidiHandler::ClassSetup(usbRequest& req)
 {
-
 }
 
 
 void MidiHandler::ClassSetupData(usbRequest& req, const uint8_t* data)
 {
-
 }
 
 

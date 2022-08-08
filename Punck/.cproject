@@ -98,7 +98,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry excluding="FatFs/src/diskio.c|FatFs/src/ff_gen_drv.c|FatFs/doc/res" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry excluding="SerialHandler.cpp|USB_bu.cpp|sdram_diskio.cpp|test.s|uartHandler.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="SerialHandler.cpp|USB_bu.cpp|sdram_diskio.cpp|test.s" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -194,7 +194,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry excluding="FatFs/src/diskio.c|FatFs/src/ff_gen_drv.c|FatFs/doc/res" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry excluding="SerialHandler.cpp|USB_bu.cpp|sdram_diskio.cpp|test.s|uartHandler.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="SerialHandler.cpp|USB_bu.cpp|sdram_diskio.cpp|test.s" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

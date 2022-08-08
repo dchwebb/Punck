@@ -27,10 +27,23 @@ void USB::EP0In(const uint8_t* buff, uint32_t size)
 }
 
 
+USBHandler* USB::GetClassFromEP(uint8_t ep)
+{
+	// Locate class containing endpoint
+	for (auto c : classes) {
+		if (c->outEP == ep) {
+			return c;
+		}
+	}
+	return nullptr;
+}
+
+
 void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pcd.c
 {
 
 	int epnum, ep_intr, epint;
+	USBHandler* epClass;
 
 	// Handle spurious interrupt
 	if ((USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK) == 0) {
@@ -47,20 +60,23 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 
 		USBUpdateDbg(receiveStatus, {}, epnum, packetSize, {}, nullptr);
 
+		// Locate class containing endpoint
+		epClass = GetClassFromEP(epnum);
+
 		if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutDataReceived && packetSize != 0) {	// 2 = OUT data packet received
-			ReadPacket(classes[epnum]->outBuff, packetSize, classes[epnum]->outBuffOffset);
-			USBUpdateDbg({}, {}, {}, {}, {}, classes[epnum]->outBuff + classes[epnum]->outBuffOffset);
-			if (classes[epnum]->outBuffPackets > 1) {
-				classes[epnum]->outBuffOffset += (packetSize / 4);			// When receiving multiple packets increase buffer offset (packet size in bytes -> 32 bit ints)
+			ReadPacket(epClass->outBuff, packetSize, epClass->outBuffOffset);
+			USBUpdateDbg({}, {}, {}, {}, {}, epClass->outBuff + epClass->outBuffOffset);
+			if (epClass->outBuffPackets > 1) {
+				epClass->outBuffOffset += (packetSize / 4);			// When receiving multiple packets increase buffer offset (packet size in bytes -> 32 bit ints)
 			}
 		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == SetupDataReceived) {				// 6 = SETUP data packet received
-			ReadPacket(classes[epnum]->outBuff, 8U, 0);
-			USBUpdateDbg({}, {}, {}, {}, {}, classes[epnum]->outBuff);
+			ReadPacket(epClass->outBuff, 8U, 0);
+			USBUpdateDbg({}, {}, {}, {}, {}, epClass->outBuff);
 		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutTransferCompleted) {			// 3 = transfer completed
-			classes[epnum]->outBuffOffset = 0;
+			epClass->outBuffOffset = 0;
 		}
 		if (packetSize != 0) {
-			classes[epnum]->outBuffCount = packetSize;
+			epClass->outBuffCount = packetSize;
 		}
 		USB_OTG_FS->GINTMSK |= USB_OTG_GINTSTS_RXFLVL;
 	}
@@ -77,6 +93,7 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 		while (ep_intr != 0) {
 			if ((ep_intr & 1) != 0) {
 				epint = USBx_OUTEP(epnum)->DOEPINT & USBx_DEVICE->DOEPMSK;
+				epClass = GetClassFromEP(epnum);
 
 				USBUpdateDbg(epint, {}, epnum, {}, {}, nullptr);
 
@@ -103,16 +120,17 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 						USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_STALL;
 					} else {
 						// Call appropriate data handler depending on endpoint of data
-						if (classes[epnum]->outBuffPackets <= 1) {
-							EPStartXfer(Direction::out, epnum, classes[epnum]->outBuffCount);
+						if (epClass->outBuffPackets <= 1) {
+							EPStartXfer(Direction::out, epnum, epClass->outBuffCount);
 						}
-						classes[epnum]->DataOut();
+						epClass->DataOut();
 					}
 				}
 
 				if ((epint & USB_OTG_DOEPINT_STUP) == USB_OTG_DOEPINT_STUP) {		// SETUP phase done: the application can decode the received SETUP data packet.
 					// Parse Setup Request containing data in outBuff filled by RXFLVL interrupt
-					req.loadData((uint8_t*)classes[epnum]->outBuff);
+					epClass = GetClassFromEP(epnum);
+					req.loadData((uint8_t*)epClass->outBuff);
 
 					USBUpdateDbg({}, req, {}, {}, {}, nullptr);
 
@@ -179,6 +197,7 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 			if ((ep_intr & 1) != 0) {
 
 				epint = USBx_INEP(epnum)->DIEPINT & (USBx_DEVICE->DIEPMSK | (((USBx_DEVICE->DIEPEMPMSK >> (epnum & EP_ADDR_MASK)) & 0x1U) << 7));
+				epClass = GetClassFromEP(epnum);
 
 				USBUpdateDbg(epint, {}, epnum, {}, {}, nullptr);
 
@@ -201,17 +220,17 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 							EPStartXfer(Direction::in, 0, ep0.inBuffSize);
 						}
 					} else {
-						classes[epnum]->DataIn();
+						epClass->DataIn();
 						transmitting = false;
 					}
 				}
 
 				if ((epint & USB_OTG_DIEPINT_TXFE) == USB_OTG_DIEPINT_TXFE) {			// 0x80 Transmit FIFO empty
-					USBUpdateDbg({}, {}, {}, classes[epnum]->inBuffSize, {}, (uint32_t*)classes[epnum]->inBuff);
+					USBUpdateDbg({}, {}, {}, epClass->inBuffSize, {}, (uint32_t*)epClass->inBuff);
 
 					if (epnum == 0) {
 						if (ep0.inBuffSize > ep_maxPacket) {
-							ep0.inBuffRem = classes[epnum]->inBuffSize - ep_maxPacket;
+							ep0.inBuffRem = epClass->inBuffSize - ep_maxPacket;
 							ep0.inBuffSize = ep_maxPacket;
 						}
 
@@ -223,22 +242,22 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 					} else {
 
 						// For regular endpoints keep writing packets to the FIFO while space available [PCD_WriteEmptyTxFifo]
-						uint16_t len = std::min(classes[epnum]->inBuffSize - classes[epnum]->inBuffCount, (uint32_t)ep_maxPacket);
+						uint16_t len = std::min(epClass->inBuffSize - epClass->inBuffCount, (uint32_t)ep_maxPacket);
 						uint16_t len32b = (len + 3) / 4;			// FIFO size is in 4 byte words
 
 						// INEPTFSAV[15:0]: IN endpoint Tx FIFO space available: 0x0: Endpoint Tx FIFO is full; 0x1: 1 31-bit word available; 0xn: n words available
-						while (((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >= len32b) && (classes[epnum]->inBuffCount < classes[epnum]->inBuffSize) && (classes[epnum]->inBuffSize != 0)) {
+						while (((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >= len32b) && (epClass->inBuffCount < epClass->inBuffSize) && (epClass->inBuffSize != 0)) {
 
-							len = std::min(classes[epnum]->inBuffSize - classes[epnum]->inBuffCount, (uint32_t)ep_maxPacket);
+							len = std::min(epClass->inBuffSize - epClass->inBuffCount, (uint32_t)ep_maxPacket);
 							len32b = (len + 3) / 4;
 
-							WritePacket(classes[epnum]->inBuff, epnum, len);
+							WritePacket(epClass->inBuff, epnum, len);
 
-							classes[epnum]->inBuff += len;
-							classes[epnum]->inBuffCount += len;
+							epClass->inBuff += len;
+							epClass->inBuffCount += len;
 						}
 
-						if (classes[epnum]->inBuffSize <= classes[epnum]->inBuffCount) {
+						if (epClass->inBuffSize <= epClass->inBuffCount) {
 							uint32_t fifoemptymsk = (0x1UL << (epnum & EP_ADDR_MASK));
 							USBx_DEVICE->DIEPEMPMSK &= ~fifoemptymsk;
 						}
@@ -661,13 +680,14 @@ void USB::StdDevReq()
 			if (devState == DeviceState::Addressed) {
 				devState = DeviceState::Configured;
 
+				ActivateEndpoint(Midi_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
+				ActivateEndpoint(Midi_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
 				ActivateEndpoint(MSC_In,   Direction::in,  Bulk);			// Activate MSC in endpoint
 				ActivateEndpoint(MSC_Out,  Direction::out, Bulk);			// Activate MSC out endpoint
 				ActivateEndpoint(CDC_In,   Direction::in,  Bulk);			// Activate CDC in endpoint
 				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
 				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
-				ActivateEndpoint(Midi_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
-				ActivateEndpoint(Midi_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
+
 
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
@@ -828,6 +848,7 @@ size_t USB::SendString(const unsigned char* s, size_t len)
 	return SendData((uint8_t*)s, len, CDC_In);
 }
 
+enum PacketStatus {GlobalOutNAK = 1, OutDataReceived = 2, OutTransferCompleted = 3, SetupTransComplete = 4, SetupDataReceived = 6};
 
 #if (USB_DEBUG)
 
@@ -872,16 +893,16 @@ void USB::OutputDebug() {
 			interrupt = "RXFLVL";
 
 			switch ((usbDebug[evNo].IntData & USB_OTG_GRXSTSP_PKTSTS) >> 17) {
-			case STS_DATA_UPDT:			// 2 = OUT data packet received
+			case OutDataReceived:			// 2 = OUT data packet received
 				subtype = "Out packet rec";
 				break;
-			case STS_XFER_COMP:			// 3 = Transfer completed
+			case OutTransferCompleted:		// 3 = Transfer completed
 				subtype = "Transfer completed";
 				break;
-			case STS_SETUP_UPDT:		// 6 = SETUP data packet received
+			case SetupDataReceived:			// 6 = SETUP data packet received
 				subtype = "Setup packet rec";
 				break;
-			case STS_SETUP_COMP:		// 4 = SETUP comp
+			case SetupTransComplete:		// 4 = SETUP comp
 				subtype = "Setup comp";
 				break;
 			default:

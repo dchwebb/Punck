@@ -35,6 +35,7 @@ int main(void) {
 //	NVIC_SetPriorityGrouping(2);
 //	priGrp = NVIC_GetPriorityGrouping();
 
+	InitUART();
 	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
@@ -59,12 +60,11 @@ int main(void) {
 
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
 
-//#if (USB_DEBUG)
-//		if ((GPIOB->IDR & GPIO_IDR_ID4) == 0 && USBDebug) {
-//			USBDebug = false;
-//			usb.OutputDebug();
-//		}
-//#endif
+#if (USB_DEBUG)
+		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
+			usb.OutputDebug();
+		}
+#endif
 
 	}
 }
