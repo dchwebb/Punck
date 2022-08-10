@@ -1,7 +1,7 @@
 #include "initialisation.h"
 #include "USB.h"
 //#include "Filter.h"
-#include "SerialHandler.h"
+#include "NoteHandler.h"
 #include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
@@ -14,7 +14,7 @@ extern uint32_t SystemCoreClock;
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER_LENGTH];
 
 // TODO:
-// caching
+
 
 
 USB usb;

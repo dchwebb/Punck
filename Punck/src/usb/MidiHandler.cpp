@@ -1,5 +1,5 @@
-#include <MidiHandler.h>
-#include "USB.h"
+#include "MidiHandler.h"
+#include "NoteHandler.h"
 
 void MidiHandler::DataIn()
 {
@@ -35,58 +35,21 @@ void MidiHandler::midiEvent(const uint32_t data)
 
 	auto midiData = MidiData(data);
 
-	// Note off - set envelope to release
-	if (midiData.msg == NoteOff) {
-		for (uint8_t i = 0; i < noteCount; ++i) {
-			if (midiNotes[i].noteValue == midiData.db1 && midiNotes[i].envelope != R) {		// note found - set to release
-				midiNotes[i].envelope = R;
-			}
-		}
-	}
+	MidiNote midiNote(midiData.db1, midiData.db2);
 
-	if (midiData.msg == NoteOn) {
-		// Check if note is already sounding and reinitialise timing if so
-		for (uint8_t i = 0; i < noteCount; ++i) {
+	switch (midiData.msg) {
+	case NoteOff:
+		break;
 
-			if (midiNotes[i].noteValue == midiData.db1) {		// Note already playing - reinitialise to Attack
-				midiNotes[i].envelope = A;
-				midiNotes[i].pdEnvelope = pdEnv::A;
-				return;
-			}
-		}
+	case NoteOn:
+		noteHandler.NoteOn(midiNote);
+		break;
 
-		// Set next note to be received midi note
-		midiNotes[noteCount].origNote = midiData.db1;
-		midiNotes[noteCount].noteValue = static_cast<float>(midiData.db1);
-		midiNotes[noteCount].envelope = A;						// Initialise VCA envelope to attack
-		midiNotes[noteCount].pdEnvelope = pdEnv::A;				// Initialise PD envelope to attack
-		midiNotes[noteCount].vcaLevel = 0.0f;
-		midiNotes[noteCount].pdLevel = 0.0f;
-		midiNotes[noteCount].samplePos1 = 0;
-		midiNotes[noteCount].samplePos2 = 0;
-
-		++noteCount;
-
-		if (noteCount > polyCount) {							// Polyphony exceeded
-			midiNotes[0].envelope = FR;							// Fast release envelope
-			//RemoveNote(0);
-		}
-	}
-
-	if (midiData.msg == PitchBend) {
+	case PitchBend:
 		pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
+		break;
 	}
 
-/*
-	if (midiData.msg == NoteOff || midiData.msg == NoteOn) {
-		std::string out = "Note count: " + std::to_string(noteCount) + " [" +
-				std::to_string(midiNotes[0].noteValue) + " " + std::to_string(midiNotes[0].timeOn) + ", " +
-				std::to_string(midiNotes[1].noteValue) + " " + std::to_string(midiNotes[1].timeOn) + ", " +
-				std::to_string(midiNotes[2].noteValue) + " " + std::to_string(midiNotes[2].timeOn) + ", " +
-				std::to_string(midiNotes[3].noteValue) + " " + std::to_string(midiNotes[3].timeOn) + "]\r";
-		usb->SendString(out.c_str());
-	}
-	*/
 }
 
 
@@ -141,13 +104,7 @@ inline void MidiHandler::QueueInc() {
 	QueueRead = (QueueRead + 1) % MIDIQUEUESIZE;
 }
 
-// Called when the release phase of a note has ended to remove from polyphony array
-void MidiHandler::RemoveNote(uint8_t note) {
-	for (uint8_t i = note; i < noteCount; ++i) {
-		midiNotes[i] = midiNotes[i + 1];
-	}
-	--noteCount;
-}
+
 
 
 void MidiHandler::ClassSetup(usbRequest& req)

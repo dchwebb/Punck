@@ -616,6 +616,13 @@ void InitIO()
 	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
 	GPIOB->MODER &= ~GPIO_MODER_MODE0_1;			// PB0: Green LED nucleo
 	GPIOE->MODER &= ~GPIO_MODER_MODE1_1;			// PE1: Yellow LED nucleo
+
+	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Sample 1 button
+	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// PC6 pull down
+
+	GPIOB->MODER &= ~GPIO_MODER_MODE3;				// PB3: Button mode select switch
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD3_1;				// PB3 pull down
+
 }
 
 

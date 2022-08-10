@@ -7,12 +7,10 @@ void OTG_FS_IRQHandler(void) {
 
 }
 
-void __attribute__((optimize("O0"))) TinyDelay() {
-	for (int x = 0; x < 2; ++x);
-}
+//void __attribute__((optimize("O0"))) TinyDelay() {
+//	for (int x = 0; x < 2; ++x);
+//}
 
-
-bool LR = false;
 
 void SPI2_IRQHandler()
 {
@@ -26,24 +24,13 @@ void SPI2_IRQHandler()
 		GPIOG->ODR &= ~GPIO_ODR_OD11;
 	}
 
-	LR = !LR;
 	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
 
-/*	int16_t outputSample;
-	if (LR) {
-		samples.CalcSamples();
-		outputSample = samples.currentSamples[0];
-	} else {
-		outputSample = samples.currentSamples[1];
-	}
-	SPI2->TXDR = outputSample;
-*/
+	noteHandler.CheckButtons();
 	samples.CalcSamples();
 	SPI2->TXDR = (uint32_t)(samples.currentSamples[0]);
 	SPI2->TXDR = (uint32_t)(samples.currentSamples[1]);
 
-	// NB It appears we need something here to add a slight delay or the interrupt sometimes fires twice
-	//TinyDelay();
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 
