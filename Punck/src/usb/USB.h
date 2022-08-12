@@ -102,6 +102,7 @@ private:
 	USBHandler* GetClassFromEP(uint8_t ep);
 
 	std::array<USBHandler*, 4>classes = {&ep0, &msc, &midi, &cdc};
+	std::array<USBHandler*, 4>classesByInterface;
 	std::array<USBHandler*, 4>classbyEP;
 
 	const uint8_t ep_maxPacket = 0x40;

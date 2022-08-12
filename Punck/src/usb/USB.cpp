@@ -27,23 +27,22 @@ void USB::EP0In(const uint8_t* buff, uint32_t size)
 }
 
 
-USBHandler* USB::GetClassFromEP(uint8_t ep)
-{
-	// Locate class containing endpoint
-	for (auto c : classes) {
-		if (c->outEP == ep) {
-			return c;
-		}
-	}
-	return nullptr;
-}
+//USBHandler* USB::GetClassFromEP(uint8_t ep)
+//{
+//	// Locate class containing endpoint
+//	for (auto c : classes) {
+//		if (c->outEP == ep) {
+//			return c;
+//		}
+//	}
+//	return nullptr;
+//}
 
 
 void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pcd.c
 {
 
 	int epnum, ep_intr, epint;
-	USBHandler* epClass;
 
 	// Handle spurious interrupt
 	if ((USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK) == 0) {
@@ -60,28 +59,20 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 
 		USBUpdateDbg(receiveStatus, {}, epnum, packetSize, {}, nullptr);
 
-		// Locate class containing endpoint
-		epClass = GetClassFromEP(epnum);
-
-		if (packetSize == 64) {
-			volatile int susp = 1;
-			susp++;
-		}
-
 		if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutDataReceived && packetSize != 0) {	// 2 = OUT data packet received
-			ReadPacket(epClass->outBuff, packetSize, epClass->outBuffOffset);
-			USBUpdateDbg({}, {}, {}, {}, {}, epClass->outBuff + epClass->outBuffOffset);
-			if (epClass->outBuffPackets > 1) {
-				epClass->outBuffOffset += (packetSize / 4);			// When receiving multiple packets increase buffer offset (packet size in bytes -> 32 bit ints)
+			ReadPacket(classbyEP[epnum]->outBuff, packetSize, classbyEP[epnum]->outBuffOffset);
+			USBUpdateDbg({}, {}, {}, {}, {}, classbyEP[epnum]->outBuff + classbyEP[epnum]->outBuffOffset);
+			if (classbyEP[epnum]->outBuffPackets > 1) {
+				classbyEP[epnum]->outBuffOffset += (packetSize / 4);			// When receiving multiple packets increase buffer offset (packet size in bytes -> 32 bit ints)
 			}
 		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == SetupDataReceived) {				// 6 = SETUP data packet received
-			ReadPacket(epClass->outBuff, 8U, 0);
-			USBUpdateDbg({}, {}, {}, {}, {}, epClass->outBuff);
+			ReadPacket(classbyEP[epnum]->outBuff, 8U, 0);
+			USBUpdateDbg({}, {}, {}, {}, {}, classbyEP[epnum]->outBuff);
 		} else if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutTransferCompleted) {			// 3 = transfer completed
-			epClass->outBuffOffset = 0;
+			classbyEP[epnum]->outBuffOffset = 0;
 		}
 		if (packetSize != 0) {
-			epClass->outBuffCount = packetSize;
+			classbyEP[epnum]->outBuffCount = packetSize;
 		}
 		USB_OTG_FS->GINTMSK |= USB_OTG_GINTSTS_RXFLVL;
 	}
@@ -98,7 +89,6 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 		while (ep_intr != 0) {
 			if ((ep_intr & 1) != 0) {
 				epint = USBx_OUTEP(epnum)->DOEPINT & USBx_DEVICE->DOEPMSK;
-				epClass = GetClassFromEP(epnum);
 
 				USBUpdateDbg(epint, {}, epnum, {}, {}, nullptr);
 
@@ -111,11 +101,12 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 						if (devState == DeviceState::Configured && classPendingData) {
 							if ((req.RequestType & USB_REQ_TYPE_MASK) == RequestTypeClass) {
 								// Previous OUT interrupt contains instruction (eg host sending CDC LineCoding); next command sends data (Eg LineCoding data)
-								for (auto c : classes) {
-									if (c->interface == req.Index) {
-										c->ClassSetupData(req, (uint8_t*)ep0.outBuff);
-									}
-								}
+								classesByInterface[req.Index]->ClassSetupData(req, (uint8_t*)ep0.outBuff);
+//								for (auto c : classes) {
+//									if (c->interface == req.Index) {
+//										c->ClassSetupData(req, (uint8_t*)ep0.outBuff);
+//									}
+//								}
 							}
 							classPendingData = false;
 							EPStartXfer(Direction::in, 0, 0);
@@ -125,17 +116,16 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 						USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_STALL;
 					} else {
 						// Call appropriate data handler depending on endpoint of data
-						if (epClass->outBuffPackets <= 1) {
-							EPStartXfer(Direction::out, epnum, epClass->outBuffCount);
+						if (classbyEP[epnum]->outBuffPackets <= 1) {
+							EPStartXfer(Direction::out, epnum, classbyEP[epnum]->outBuffCount);
 						}
-						epClass->DataOut();
+						classbyEP[epnum]->DataOut();
 					}
 				}
 
 				if ((epint & USB_OTG_DOEPINT_STUP) == USB_OTG_DOEPINT_STUP) {		// SETUP phase done: the application can decode the received SETUP data packet.
 					// Parse Setup Request containing data in outBuff filled by RXFLVL interrupt
-					epClass = GetClassFromEP(epnum);
-					req.loadData((uint8_t*)epClass->outBuff);
+					req.loadData((uint8_t*)classbyEP[epnum]->outBuff);
 
 					USBUpdateDbg({}, req, {}, {}, {}, nullptr);
 
@@ -151,11 +141,13 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 
 							// req.Index holds interface - locate which handler this relates to
 							if (req.Length > 0) {
-								for (auto c : classes) {
-									if (c->interface == req.Index) {
-										c->ClassSetup(req);
-									}
-								}
+								classesByInterface[req.Index]->ClassSetup(req);
+
+//								for (auto c : classes) {
+//									if (c->interface == req.Index) {
+//										c->ClassSetup(req);
+//									}
+//								}
 							} else {
 								EPStartXfer(Direction::in, 0, 0);
 							}
@@ -202,7 +194,6 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 			if ((ep_intr & 1) != 0) {
 
 				epint = USBx_INEP(epnum)->DIEPINT & (USBx_DEVICE->DIEPMSK | (((USBx_DEVICE->DIEPEMPMSK >> (epnum & EP_ADDR_MASK)) & 0x1U) << 7));
-				epClass = GetClassFromEP(epnum);
 
 				USBUpdateDbg(epint, {}, epnum, {}, {}, nullptr);
 
@@ -225,17 +216,17 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 							EPStartXfer(Direction::in, 0, ep0.inBuffSize);
 						}
 					} else {
-						epClass->DataIn();
+						classbyEP[epnum]->DataIn();
 						transmitting = false;
 					}
 				}
 
 				if ((epint & USB_OTG_DIEPINT_TXFE) == USB_OTG_DIEPINT_TXFE) {			// 0x80 Transmit FIFO empty
-					USBUpdateDbg({}, {}, {}, epClass->inBuffSize, {}, (uint32_t*)epClass->inBuff);
+					USBUpdateDbg({}, {}, {}, classbyEP[epnum]->inBuffSize, {}, (uint32_t*)classbyEP[epnum]->inBuff);
 
 					if (epnum == 0) {
 						if (ep0.inBuffSize > ep_maxPacket) {
-							ep0.inBuffRem = epClass->inBuffSize - ep_maxPacket;
+							ep0.inBuffRem = classbyEP[epnum]->inBuffSize - ep_maxPacket;
 							ep0.inBuffSize = ep_maxPacket;
 						}
 
@@ -247,22 +238,22 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 					} else {
 
 						// For regular endpoints keep writing packets to the FIFO while space available [PCD_WriteEmptyTxFifo]
-						uint16_t len = std::min(epClass->inBuffSize - epClass->inBuffCount, (uint32_t)ep_maxPacket);
+						uint16_t len = std::min(classbyEP[epnum]->inBuffSize - classbyEP[epnum]->inBuffCount, (uint32_t)ep_maxPacket);
 						uint16_t len32b = (len + 3) / 4;			// FIFO size is in 4 byte words
 
 						// INEPTFSAV[15:0]: IN endpoint Tx FIFO space available: 0x0: Endpoint Tx FIFO is full; 0x1: 1 31-bit word available; 0xn: n words available
-						while (((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >= len32b) && (epClass->inBuffCount < epClass->inBuffSize) && (epClass->inBuffSize != 0)) {
+						while (((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >= len32b) && (classbyEP[epnum]->inBuffCount < classbyEP[epnum]->inBuffSize) && (classbyEP[epnum]->inBuffSize != 0)) {
 
-							len = std::min(epClass->inBuffSize - epClass->inBuffCount, (uint32_t)ep_maxPacket);
+							len = std::min(classbyEP[epnum]->inBuffSize - classbyEP[epnum]->inBuffCount, (uint32_t)ep_maxPacket);
 							len32b = (len + 3) / 4;
 
-							WritePacket(epClass->inBuff, epnum, len);
+							WritePacket(classbyEP[epnum]->inBuff, epnum, len);
 
-							epClass->inBuff += len;
-							epClass->inBuffCount += len;
+							classbyEP[epnum]->inBuff += len;
+							classbyEP[epnum]->inBuffCount += len;
 						}
 
-						if (epClass->inBuffSize <= epClass->inBuffCount) {
+						if (classbyEP[epnum]->inBuffSize <= classbyEP[epnum]->inBuffCount) {
 							uint32_t fifoemptymsk = (0x1UL << (epnum & EP_ADDR_MASK));
 							USBx_DEVICE->DIEPEMPMSK &= ~fifoemptymsk;
 						}
@@ -756,20 +747,18 @@ void USB::EPStartXfer(Direction direction, uint8_t endpoint, uint32_t xfer_len) 
 		}
 	} else { 		// OUT endpoint
 
-		USBHandler* epClass = GetClassFromEP(endpoint);
-
-		epClass->outBuffPackets = 1;
-		epClass->outBuffOffset = 0;
+		classbyEP[endpoint]->outBuffPackets = 1;
+		classbyEP[endpoint]->outBuffOffset = 0;
 
 		// If the transfer is larger than the maximum packet size send the total size and number of packets calculated from the end point maximum packet size
 		if (xfer_len > ep_maxPacket) {
-			epClass->outBuffPackets = (xfer_len + ep_maxPacket - 1U) / ep_maxPacket;
+			classbyEP[endpoint]->outBuffPackets = (xfer_len + ep_maxPacket - 1U) / ep_maxPacket;
 		}
 
 		USBx_OUTEP(endpoint)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ);
 		USBx_OUTEP(endpoint)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_PKTCNT);
 
-		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (epClass->outBuffPackets << 19));
+		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (classbyEP[endpoint]->outBuffPackets << 19));
 		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & xfer_len);
 
 		USBx_OUTEP(endpoint)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);		// EP enable
@@ -821,9 +810,9 @@ size_t USB::SendData(const uint8_t* data, uint16_t len, uint8_t endpoint)
 	endpoint &= EP_ADDR_MASK;
 	if (devState == DeviceState::Configured && !transmitting) {
 		transmitting = true;
-		classes[endpoint]->inBuff = data;
-		classes[endpoint]->inBuffSize = len;
-		classes[endpoint]->inBuffCount = 0;
+		classbyEP[endpoint]->inBuff = data;
+		classbyEP[endpoint]->inBuffSize = len;
+		classbyEP[endpoint]->inBuffCount = 0;
 		ep0State = EP0State::DataIn;
 		EPStartXfer(Direction::in, endpoint, len);
 		return len;

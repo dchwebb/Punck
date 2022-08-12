@@ -366,8 +366,8 @@ void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char*
 
 	memcpy(writeAddress, dirEntries, 96);
 
-	clusterChain[cluster] = 0xFFFF;					// Create cluster chain entry
-
+	uint16_t* clusters = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
+	clusters[cluster] = 0xFFFF;					// Create cluster chain entry
 }
 
 
