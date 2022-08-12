@@ -25,7 +25,10 @@ struct usbRequest {
 class USBHandler {
 public:
 	USB* usb;
-	USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : usb(usb), inEP(inEP), outEP(outEP), interface(interface) {}
+	USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface);
+//	USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : usb(usb), inEP(inEP), outEP(outEP), interface(interface) {
+//		usb->classbyEP[outEP] = this;
+//	}
 
 	uint8_t inEP;
 	uint8_t outEP;

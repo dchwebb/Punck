@@ -6,11 +6,12 @@
 
 FatTools fatTools;
 
+bool fatSetupDone = false;
 
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
+	//memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
 	FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
@@ -39,6 +40,7 @@ void FatTools::InitFatFS()
 	rootDirectory = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
 
 	samples.UpdateSampleList();								// Updated list of samples on flash
+	fatSetupDone = true;
 }
 
 
@@ -58,6 +60,11 @@ void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorC
 
 void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
+//	if (fatSetupDone) {
+//		usb.OutputDebug();
+//		fatSetupDone = false;
+//		volatile uint32_t susp = 1;
+//	}
 	if (writeSector < fatCacheSectors) {
 		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
 		dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
@@ -92,7 +99,7 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 
 void FatTools::CheckCache()
 {
-	// If there are dirty buffers and sufficient time has elapsed since the cache updated flag was been set flush the cache to Flash
+	// If dirty buffers and sufficient time has elapsed since cache updated flush the cache to Flash
 	if ((dirtyCacheBlocks || writeCacheDirty) && cacheUpdated > 0 && ((int32_t)SysTickVal - (int32_t)cacheUpdated) > 100)	{
 
 		// Update the sample list to check if any meaningful data has changed (ignores Windows disk spam, assuming this occurs in the header cache)

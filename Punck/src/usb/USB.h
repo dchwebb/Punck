@@ -12,7 +12,7 @@
 #define USB_DEBUG true
 #if (USB_DEBUG)
 #include "uartHandler.h"
-#define USB_DEBUG_COUNT 400
+#define USB_DEBUG_COUNT 1500
 #endif
 
 
@@ -102,6 +102,7 @@ private:
 	USBHandler* GetClassFromEP(uint8_t ep);
 
 	std::array<USBHandler*, 4>classes = {&ep0, &msc, &midi, &cdc};
+	std::array<USBHandler*, 4>classbyEP;
 
 	const uint8_t ep_maxPacket = 0x40;
 	EP0State ep0State;

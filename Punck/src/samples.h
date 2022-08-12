@@ -27,10 +27,11 @@ public:
 	const uint8_t* sampleAddress;
 	float playbackSpeed;				// Multiplier to allow faster or slow playback (and compensate for non 48k samples)
 	float fractionalPosition;			// When playing sample at varying rate store how far through the current sample playback is
+	uint32_t sampleVoice;
 
 	int32_t currentSamples[2] = {};
 
-	void Play(uint32_t sampleNo);
+	void Play(uint32_t sampleNo, uint32_t noteOffset = 0, uint32_t noteRange = 0);
 	void CalcSamples();
 	bool UpdateSampleList();
 	bool GetSampleInfo(SampleInfo* sample);

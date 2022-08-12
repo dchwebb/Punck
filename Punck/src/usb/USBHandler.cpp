@@ -1,6 +1,11 @@
 #include <USBHandler.h>
 #include "USB.h"
 
+USBHandler::USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : usb(usb), inEP(inEP), outEP(outEP), interface(interface) {
+	usb->classbyEP[outEP] = this;
+}
+
+
 void USBHandler::EndPointTransfer(Direction d, uint8_t ep, uint32_t len)
 {
    usb->EPStartXfer(d, ep, len);

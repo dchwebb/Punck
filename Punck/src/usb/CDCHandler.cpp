@@ -3,6 +3,7 @@
 #include "ExtFlash.h"
 #include "FatTools.h"
 #include "Samples.h"
+#include "NoteHandler.h"
 #include "ff.h"
 
 uint32_t flashBuff[1024];
@@ -82,19 +83,45 @@ void CDCHandler::ProcessCommand()
 				"samplelist  -  Show details of all samples found in flash\r\n"
 				"play:NN     -  Play the sample numbered NN\r\n"
 				"clusterchain   List chain of clusters\r\n"
+				"midimap     -  Display MIDI note mapping\r\n"
 				"\r\n"
-#if (USB_DEBUG)
-				"usbdebug    -  Start USB debugging\r\n"
-				"\r\n"
-#endif
+
 		);
 
 
-#if (USB_DEBUG)
-	} else if (cmd.compare("usbdebug\n") == 0) {				// Activate USB Debug
-		//USBDebug = true;
-		usb->SendString("Press link button to dump output\r\n");
-#endif
+	} else if (cmd.compare("midimap\n") == 0) {					// Display MIDI note mapping
+		for (auto note : noteHandler.noteMapper) {
+			switch (note.voice) {
+			case NoteHandler::kick:
+				printf("Kick");
+				break;
+			case NoteHandler::snare:
+				printf("Snare");
+				break;
+			case NoteHandler::hatClosed:
+				printf("Close HH");
+				break;
+			case NoteHandler::hatOpen:
+				printf("Open HH");
+				break;
+			case NoteHandler::tomHigh:
+				printf("High Tom");
+				break;
+			case NoteHandler::tomMedium:
+				printf("Mid Tom");
+				break;
+			case NoteHandler::tomLow:
+				printf("Low Tom");
+				break;
+			case NoteHandler::sampler1:
+				printf("Sample 1");
+				break;
+			case NoteHandler::sampler2:
+				printf("Sample 2");
+				break;
+			}
+			printf(": %d, %d\r\n", note.midiLow, note.midiHigh);
+		}
 
 
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
@@ -139,13 +166,11 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("clusterchain\n") == 0) {			// Print used clusters with links from FAT area
 		printf("Cluster | Link\r\n");
-		//uint16_t* clusterChain = (uint16_t*)(fatTools.headerCache + (fatTools.fatFs.fatbase * fatSectorSize));
 		uint32_t cluster = 0;
 		while (fatTools.clusterChain[cluster]) {
 			printf("%7lu   0x%04x\r\n", cluster, fatTools.clusterChain[cluster]);
 			++cluster;
 		}
-
 
 
 	} else if (cmd.compare("cacheinfo\n") == 0) {				// Basic counts of differences between cache and Flash

@@ -63,6 +63,11 @@ void USB::InterruptHandler()						// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4
 		// Locate class containing endpoint
 		epClass = GetClassFromEP(epnum);
 
+		if (packetSize == 64) {
+			volatile int susp = 1;
+			susp++;
+		}
+
 		if (((receiveStatus & USB_OTG_GRXSTSP_PKTSTS) >> 17) == OutDataReceived && packetSize != 0) {	// 2 = OUT data packet received
 			ReadPacket(epClass->outBuff, packetSize, epClass->outBuffOffset);
 			USBUpdateDbg({}, {}, {}, {}, {}, epClass->outBuff + epClass->outBuffOffset);
@@ -751,18 +756,20 @@ void USB::EPStartXfer(Direction direction, uint8_t endpoint, uint32_t xfer_len) 
 		}
 	} else { 		// OUT endpoint
 
-		classes[endpoint]->outBuffPackets = 1;
-		classes[endpoint]->outBuffOffset = 0;
+		USBHandler* epClass = GetClassFromEP(endpoint);
+
+		epClass->outBuffPackets = 1;
+		epClass->outBuffOffset = 0;
 
 		// If the transfer is larger than the maximum packet size send the total size and number of packets calculated from the end point maximum packet size
 		if (xfer_len > ep_maxPacket) {
-			classes[endpoint]->outBuffPackets = (xfer_len + ep_maxPacket - 1U) / ep_maxPacket;
+			epClass->outBuffPackets = (xfer_len + ep_maxPacket - 1U) / ep_maxPacket;
 		}
 
 		USBx_OUTEP(endpoint)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ);
 		USBx_OUTEP(endpoint)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_PKTCNT);
 
-		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (classes[endpoint]->outBuffPackets << 19));
+		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (epClass->outBuffPackets << 19));
 		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & xfer_len);
 
 		USBx_OUTEP(endpoint)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);		// EP enable

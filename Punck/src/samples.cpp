@@ -7,7 +7,7 @@ Samples samples;
 
 uint32_t startTime;		// Debug
 
-void Samples::Play(uint32_t index)
+void Samples::Play(uint32_t index, uint32_t noteOffset, uint32_t noteRange)
 {
 	startTime = SysTickVal;
 
@@ -15,7 +15,9 @@ void Samples::Play(uint32_t index)
 	sampleIndex = index;
 	sampleAddress = sampleList[index].startAddr;
 	playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
-	GPIOB->ODR |= GPIO_ODR_OD0;				// PB0: Green LED nucleo
+	sampleVoice = noteOffset;
+
+	GPIOE->ODR |= GPIO_ODR_OD1;				// PE1: Yellow LED nucleo
 }
 
 
@@ -57,7 +59,7 @@ void Samples::CalcSamples()
 
 			printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
 
-			GPIOB->ODR &= ~GPIO_ODR_OD0;			// PB0: Green LED nucleo
+			GPIOE->ODR &= ~GPIO_ODR_OD1;			// PE1: Yellow LED nucleo
 		}
 	}
 }
