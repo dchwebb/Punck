@@ -2,8 +2,10 @@
 #include "USB.h"
 
 USBHandler::USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : usb(usb), inEP(inEP), outEP(outEP), interface(interface) {
-	usb->classesByInterface[interface] = this;
-	usb->classbyEP[outEP] = this;
+	if (interface >= 0) {
+		usb->classesByInterface[interface] = this;
+	}
+	usb->classByEP[outEP] = this;
 }
 
 

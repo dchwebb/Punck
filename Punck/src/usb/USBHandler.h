@@ -26,9 +26,6 @@ class USBHandler {
 public:
 	USB* usb;
 	USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface);
-//	USBHandler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : usb(usb), inEP(inEP), outEP(outEP), interface(interface) {
-//		usb->classbyEP[outEP] = this;
-//	}
 
 	uint8_t inEP;
 	uint8_t outEP;
@@ -65,7 +62,6 @@ public:
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
 
-	//uint32_t* outBuff = ep0OutBuff;
 private:
 	uint32_t ep0OutBuff[64];		// EP0 OUT Data filled in RxLevel Interrupt
 };

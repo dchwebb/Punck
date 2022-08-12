@@ -35,7 +35,7 @@ int main(void) {
 //	NVIC_SetPriorityGrouping(2);
 //	priGrp = NVIC_GetPriorityGrouping();
 
-	InitUART();
+	//InitUART();					// Used on Nucleo for debugging USB
 	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside

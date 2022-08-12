@@ -9,10 +9,10 @@
 #include <cstring>
 
 // Enables capturing of debug data for output over STLink UART on dev boards
-#define USB_DEBUG true
+#define USB_DEBUG false
 #if (USB_DEBUG)
 #include "uartHandler.h"
-#define USB_DEBUG_COUNT 1500
+#define USB_DEBUG_COUNT 1000
 #endif
 
 
@@ -82,8 +82,8 @@ public:
 
 	EP0Handler  ep0  = EP0Handler(this, 0, 0, NoInterface);
 	MidiHandler midi = MidiHandler(this, USB::Midi_In, USB::Midi_Out, MidiInterface);
-	MSCHandler  msc  = MSCHandler(this, USB::MSC_In, USB::MSC_Out, MSCInterface);
-	CDCHandler  cdc  = CDCHandler(this, USB::CDC_In, USB::CDC_Out, CDCCmdInterface);
+	MSCHandler  msc  = MSCHandler(this,  USB::MSC_In,  USB::MSC_Out,  MSCInterface);
+	CDCHandler  cdc  = CDCHandler(this,  USB::CDC_In,  USB::CDC_Out,  CDCCmdInterface);
 	bool classPendingData= false;			// Set when class setup command received and data pending
 	DeviceState devState;
 private:
@@ -99,11 +99,9 @@ private:
 	void CtlError();
 	bool ReadInterrupts(uint32_t interrupt);
 	void IntToUnicode(uint32_t value, uint8_t* pbuf, uint8_t len);
-	USBHandler* GetClassFromEP(uint8_t ep);
 
-	std::array<USBHandler*, 4>classes = {&ep0, &msc, &midi, &cdc};
-	std::array<USBHandler*, 4>classesByInterface;
-	std::array<USBHandler*, 4>classbyEP;
+	std::array<USBHandler*, 4>classesByInterface;		// Lookup tables to get appropriate class handlers
+	std::array<USBHandler*, 4>classByEP;
 
 	const uint8_t ep_maxPacket = 0x40;
 	EP0State ep0State;
@@ -430,16 +428,18 @@ public:
 	// Update the current debug record
 	void USBUpdateDbg(uint32_t IntData, usbRequest request, uint8_t endpoint, uint16_t PacketSize, uint32_t scsiOpCode, uint32_t* xferBuff)
 	{
-		if (IntData) usbDebug[usbDebugNo].IntData = IntData;
-		if (((uint32_t*)&request)[0]) usbDebug[usbDebugNo].Request = request;
-		if (endpoint) usbDebug[usbDebugNo].endpoint = endpoint;
-		if (PacketSize) usbDebug[usbDebugNo].PacketSize = PacketSize;
-		if (scsiOpCode) usbDebug[usbDebugNo].scsiOpCode = scsiOpCode;
-		if (xferBuff != nullptr) {
-			usbDebug[usbDebugNo].xferBuff[0] = xferBuff[0];
-			usbDebug[usbDebugNo].xferBuff[1] = xferBuff[1];
-			usbDebug[usbDebugNo].xferBuff[2] = xferBuff[2];
-			usbDebug[usbDebugNo].xferBuff[3] = xferBuff[3];
+		if (usbDebugNo < USB_DEBUG_COUNT - 1) {
+			if (IntData) usbDebug[usbDebugNo].IntData = IntData;
+			if (((uint32_t*)&request)[0]) usbDebug[usbDebugNo].Request = request;
+			if (endpoint) usbDebug[usbDebugNo].endpoint = endpoint;
+			if (PacketSize) usbDebug[usbDebugNo].PacketSize = PacketSize;
+			if (scsiOpCode) usbDebug[usbDebugNo].scsiOpCode = scsiOpCode;
+			if (xferBuff != nullptr) {
+				usbDebug[usbDebugNo].xferBuff[0] = xferBuff[0];
+				usbDebug[usbDebugNo].xferBuff[1] = xferBuff[1];
+				usbDebug[usbDebugNo].xferBuff[2] = xferBuff[2];
+				usbDebug[usbDebugNo].xferBuff[3] = xferBuff[3];
+			}
 		}
 	}
 #else

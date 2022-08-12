@@ -11,7 +11,7 @@ bool fatSetupDone = false;
 void FatTools::InitFatFS()
 {
 	// Set up cache area for header data
-	//memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
+	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
 	FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
@@ -60,11 +60,6 @@ void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorC
 
 void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
 {
-//	if (fatSetupDone) {
-//		usb.OutputDebug();
-//		fatSetupDone = false;
-//		volatile uint32_t susp = 1;
-//	}
 	if (writeSector < fatCacheSectors) {
 		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
 		dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
@@ -367,7 +362,7 @@ void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char*
 	memcpy(writeAddress, dirEntries, 96);
 
 	uint16_t* clusters = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));
-	clusters[cluster] = 0xFFFF;					// Create cluster chain entry
+	clusters[cluster] = 0xFFFF;						// Create cluster chain entry (do not use clusterChain as not yet initialised)
 }
 
 
@@ -376,7 +371,7 @@ void FatTools::MakeDummyFiles()
 	// Kludgy code to create Windows spam folders/files to stop OS doing it where we don't want
 
 	// create block of memory to hold three directory entries holding the 'System Volume Information' folder
-	uint8_t* writeAddress = &(headerCache[fatFs.dirbase * fatSectorSize]);
+	uint8_t* writeAddress = &(headerCache[fatFs.dirbase * fatSectorSize]);		// do not use rootDirectory member as not yet initialised
 	LFNDirEntries(writeAddress, "SYSTEM~1   ", " Information", "System Volume", 0x72, (AM_HID | AM_SYS | AM_DIR), 2, 0);
 
 	// Blank out directory in cluster 2
