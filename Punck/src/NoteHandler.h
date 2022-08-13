@@ -17,6 +17,14 @@ private:
 	Voice midiLearnVoice;
 	MidiLearnState midiLearnState;
 
+	struct LED {
+		GPIO_TypeDef* gpioBank;
+		uint8_t gpioPin;
+
+		void On()  { gpioBank->ODR |= (1 << gpioPin); }
+		void Off() { gpioBank->ODR &= ~(1 << gpioPin); }
+	};
+
 	struct NoteMapper {
 		Voice voice;
 		uint8_t midiLow;
@@ -26,8 +34,10 @@ private:
 		GPIO_TypeDef* gpioBankBtn;
 		uint8_t gpioPinBtn;
 
-		GPIO_TypeDef* gpioBankLED;
-		uint8_t gpioPinLED;
+
+		LED led;
+//		GPIO_TypeDef* gpioBankLED;
+//		uint8_t gpioPinLED;
 	} noteMapper[9];
 
 

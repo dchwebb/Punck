@@ -3,6 +3,7 @@
 
 NoteHandler noteHandler;
 
+
 NoteHandler::NoteHandler()
 {
 	for (uint8_t i = 0; i < 9; ++i) {
@@ -11,8 +12,9 @@ NoteHandler::NoteHandler()
 
 	noteMapper[sampler1].gpioPinBtn = 6;
 	noteMapper[sampler1].gpioBankBtn = GPIOC;
-	noteMapper[sampler1].gpioPinLED = 0;			// PB0: Green LED nucleo
-	noteMapper[sampler1].gpioBankLED = GPIOB;
+	noteMapper[sampler1].led = {GPIOB, 0};
+//	noteMapper[sampler1].gpioPinLED = 0;			// PB0: Green LED nucleo
+//	noteMapper[sampler1].gpioBankLED = GPIOB;
 }
 
 void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
@@ -28,6 +30,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 			if (n.midiLow > n.midiHigh) {
 				std::swap(n.midiLow, n.midiHigh);
 			}
+			n.led.Off();		// FIXME - logic to jump to next voice for midi lear
 		}
 	} else {
 		// Locate voice
@@ -35,7 +38,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 			if (midiNote.noteValue >= note.midiLow && midiNote.noteValue <= note.midiHigh) {
 				uint32_t noteOffset = midiNote.noteValue - note.midiLow;
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
-				samples.Play(1, noteOffset, noteRange);
+				samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
 			}
 		}
 	}
@@ -49,6 +52,14 @@ void NoteHandler::CheckButtons()
 	if (GPIOB->IDR & GPIO_IDR_ID3) {			// MIDI learn mode
 		buttonMode = ButtonMode::midiLearn;
 	} else {
+		if (buttonMode == ButtonMode::midiLearn) {
+			// Switch off all LEDs
+			for (auto note : noteMapper) {
+				if (note.led.gpioBank) {
+					note.led.Off();
+				}
+			}
+		}
 		buttonMode = ButtonMode::playNote;
 	}
 
@@ -59,10 +70,10 @@ void NoteHandler::CheckButtons()
 					note.buttonOn = true;
 					switch (buttonMode) {
 					case ButtonMode::playNote:
-						samples.Play(0);
+						samples.Play(samples.SamplePlayer::playerA, 0);
 						break;
 					case ButtonMode::midiLearn:
-						note.gpioBankLED->ODR |= (1 << note.gpioPinLED);
+						note.led.On();
 						midiLearnState = MidiLearnState::lowNote;
 						midiLearnVoice = note.voice;
 						break;

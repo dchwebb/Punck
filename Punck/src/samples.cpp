@@ -7,15 +7,37 @@ Samples samples;
 
 uint32_t startTime;		// Debug
 
-void Samples::Play(uint32_t index, uint32_t noteOffset, uint32_t noteRange)
+void Samples::Play(SamplePlayer sp, uint32_t noteOffset, uint32_t noteRange)
 {
 	startTime = SysTickVal;
 
-	playing = true;
-	sampleIndex = index;
-	sampleAddress = sampleList[index].startAddr;
-	playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
-	sampleVoice = noteOffset;
+	// Get sample from sorted bank list based on player and note offset
+	sampler[sp].sample = nullptr;
+	if (sp == playerA) {
+		if (noteOffset < bankLenA) {
+			sampler[sp].sample = bankA[noteOffset].s;
+		} else {
+			sampler[sp].sample = bankA[0].s;
+		}
+	}
+
+	sampler[sp].playing = true;
+	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
+	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
+	sampler[sp].sampleVoice = noteOffset;
+
+	GPIOE->ODR |= GPIO_ODR_OD1;				// PE1: Yellow LED nucleo
+}
+
+
+void Samples::Play(SamplePlayer s, uint32_t index)
+{
+	startTime = SysTickVal;
+
+	sampler[s].playing = true;
+	sampler[s].sample = &sampleList[index];
+	sampler[s].sampleAddress = sampleList[index].startAddr;
+	sampler[s].playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
 
 	GPIOE->ODR |= GPIO_ODR_OD1;				// PE1: Yellow LED nucleo
 }
@@ -33,39 +55,41 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 
 void Samples::CalcSamples()
 {
-	if (playing) {
-		auto& bytes = sampleList[sampleIndex].byteDepth;
+	for (auto& s : sampler) {
+		if (s.playing) {
+			auto& bytes = s.sample->byteDepth;
 
-		currentSamples[0] = readBytes(sampleAddress, bytes);
+			currentSamples[0] = readBytes(s.sampleAddress, bytes);
 
-		if (sampleList[sampleIndex].channels == 2) {
-			currentSamples[1] = readBytes(sampleAddress + bytes, bytes);
-		} else {
-			currentSamples[1] = currentSamples[0];		// Duplicate left channel to right for mono signal
-		}
+			if (s.sample->channels == 2) {
+				currentSamples[1] = readBytes(s.sampleAddress + bytes, bytes);
+			} else {
+				currentSamples[1] = currentSamples[0];		// Duplicate left channel to right for mono signal
+			}
 
-		// Get sample speed from ADC - want range 0.5 - 1.5
-		float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;
+			// Get sample speed from ADC - want range 0.5 - 1.5
+			float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;
 
-		// Split the next position into an integer jump and fractional position
-		float addressJump;
-		fractionalPosition = std::modf(fractionalPosition + (adjSpeed * playbackSpeed), &addressJump);
-		sampleAddress += (sampleList[sampleIndex].channels * bytes * (uint32_t)addressJump);
+			// Split the next position into an integer jump and fractional position
+			float addressJump;
+			s.fractionalPosition = std::modf(s.fractionalPosition + (adjSpeed * s.playbackSpeed), &addressJump);
+			s.sampleAddress += (s.sample->channels * bytes * (uint32_t)addressJump);
 
-		if ((uint8_t*)sampleAddress > sampleList[sampleIndex].endAddr) {
-			currentSamples[0] = 0;
-			currentSamples[1] = 0;
-			playing = false;
+			if ((uint8_t*)s.sampleAddress > s.sample->endAddr) {
+				currentSamples[0] = 0;
+				currentSamples[1] = 0;
+				s.playing = false;
 
-			printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
+				printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
 
-			GPIOE->ODR &= ~GPIO_ODR_OD1;			// PE1: Yellow LED nucleo
+				GPIOE->ODR &= ~GPIO_ODR_OD1;			// PE1: Yellow LED nucleo
+			}
 		}
 	}
 }
 
 
-bool Samples::GetSampleInfo(SampleInfo* sample)
+bool Samples::GetSampleInfo(Sample* sample)
 {
 	// populate the sample object with sample rate, number of channels etc
 	// Parsing the .wav format is a pain because the header is split into a variable number of chunks and sections are not word aligned
@@ -128,7 +152,7 @@ bool Samples::UpdateSampleList()
 	while (dirEntry->name[0] != 0) {
 		// Check not LFN, not deleted, not directory, extension = WAV
 		if (dirEntry->attr != 0xF && dirEntry->name[0] != 0xE5 && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
-			SampleInfo* sample = &(sampleList[pos++]);
+			Sample* sample = &(sampleList[pos++]);
 
 			// Check if any fields have changed
 			if (sample->cluster != dirEntry->firstClusterLow || sample->size != dirEntry->fileSize || strncmp(sample->name, dirEntry->name, 11) != 0) {
@@ -136,7 +160,8 @@ bool Samples::UpdateSampleList()
 				strncpy(sample->name, dirEntry->name, 11);
 				sample->cluster = dirEntry->firstClusterLow;
 				sample->size = dirEntry->fileSize;
-
+				sample->bank = (sample->name[0] == 'A') ? playerA : (sample->name[0] == 'B') ? playerB : noPlayer;
+				sample->bankIndex = std::strtol(&(sample->name[1]), nullptr, 10);
 				sample->valid = GetSampleInfo(sample);
 			}
 		}
@@ -144,8 +169,36 @@ bool Samples::UpdateSampleList()
 	}
 
 	// Blank next sample (if exists) to show end of list
-	SampleInfo* sample = &(sampleList[pos++]);
+	Sample* sample = &(sampleList[pos++]);
 	sample->name[0] = 0;
+
+	// Update sorted lists of pointers
+	Bank blank = {nullptr, std::numeric_limits<uint32_t>::max()};		// Fill bank arrays with dummy values to enable sorting
+	std::fill(bankA.begin(), bankA.end(), blank);
+	std::fill(bankB.begin(), bankB.end(), blank);
+
+	bankLenA = 0;
+	bankLenB = 0;
+
+	for (Sample& s : sampleList) {
+		if (s.name[0] == 0) {
+			break;
+		}
+		if (s.valid) {
+			if (s.bank == playerA && bankLenA < bankA.size()) {
+				bankA[bankLenA].s = &s;
+				bankA[bankLenA++].index = s.bankIndex;
+			}
+			if (s.bank == playerB && bankLenB < bankB.size()) {
+				bankB[bankLenB].s = &s;
+				bankB[bankLenB++].index = s.bankIndex;
+			}
+		}
+	}
+
+	auto sorter = [](const Bank &a, const Bank &b){return a.index < b.index;};
+	std::sort(bankA.begin(), bankA.end(), sorter);
+	std::sort(bankB.begin(), bankB.end(), sorter);
 
 	return changed;
 }

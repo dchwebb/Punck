@@ -93,25 +93,25 @@ void CDCHandler::ProcessCommand()
 		for (auto note : noteHandler.noteMapper) {
 			switch (note.voice) {
 			case NoteHandler::kick:
-				printf("Kick");
+				printf("Kick   ");
 				break;
 			case NoteHandler::snare:
-				printf("Snare");
+				printf("Snare   ");
 				break;
 			case NoteHandler::hatClosed:
 				printf("Close HH");
 				break;
 			case NoteHandler::hatOpen:
-				printf("Open HH");
+				printf("Open HH ");
 				break;
 			case NoteHandler::tomHigh:
 				printf("High Tom");
 				break;
 			case NoteHandler::tomMedium:
-				printf("Mid Tom");
+				printf("Mid Tom ");
 				break;
 			case NoteHandler::tomLow:
-				printf("Low Tom");
+				printf("Low Tom ");
 				break;
 			case NoteHandler::sampler1:
 				printf("Sample 1");
@@ -120,7 +120,7 @@ void CDCHandler::ProcessCommand()
 				printf("Sample 2");
 				break;
 			}
-			printf(": %d, %d\r\n", note.midiLow, note.midiHigh);
+			printf(" : %d, %d\r\n", note.midiLow, note.midiHigh);
 		}
 
 
@@ -149,7 +149,7 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		printf("%s\r\n", samples.sampleList[sn].name);
-		samples.Play(sn);
+		samples.Play(samples.SamplePlayer::playerA, sn);
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
