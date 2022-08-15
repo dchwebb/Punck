@@ -24,6 +24,11 @@ public:
 		bool valid;							// false if header cannot be processed
 	} sampleList[128];
 
+	struct Bank {
+		Sample* s;
+		uint32_t index;
+	};
+
 	struct Sampler {
 		bool playing = false;
 		Sample* sample;
@@ -31,18 +36,16 @@ public:
 		float playbackSpeed;				// Multiplier to allow faster or slow playback (and compensate for non 48k samples)
 		float fractionalPosition;			// When playing sample at varying rate store how far through the current sample playback is
 		uint32_t sampleVoice;
+		int32_t currentSamples[2] = {};		// Left/right sample levels for mixing
+		uint32_t bankLen;
+		std::array<Bank, 10> bank;			// Store pointer to Bank samples sorted by index
 	} sampler[2];
 
-	struct Bank {
-		Sample* s;
-		uint32_t index;
-	};
-
 	uint32_t bankLenA, bankLenB;
-	std::array<Bank, 10> bankA;						// Store pointer to Bank A/B samples sorted by index
+	std::array<Bank, 10> bankA;				// Store pointer to Bank A/B samples sorted by index
 	std::array<Bank, 10> bankB;
 
-	int32_t currentSamples[2] = {};
+	int32_t mixedSamples[2] = {};			// Left/right samples mixed and ready to output to DAC
 
 	void Play(SamplePlayer s, uint32_t noteOffset, uint32_t noteRange);
 	void Play(SamplePlayer s, uint32_t sampleNo);

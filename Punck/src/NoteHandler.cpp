@@ -12,9 +12,14 @@ NoteHandler::NoteHandler()
 
 	noteMapper[sampler1].gpioPinBtn = 6;
 	noteMapper[sampler1].gpioBankBtn = GPIOC;
-	noteMapper[sampler1].led = {GPIOB, 0};
-//	noteMapper[sampler1].gpioPinLED = 0;			// PB0: Green LED nucleo
-//	noteMapper[sampler1].gpioBankLED = GPIOB;
+	noteMapper[sampler1].led = {GPIOB, 0};				// PB0: Green
+	noteMapper[sampler1].midiLow = 72;
+	noteMapper[sampler1].midiHigh = 79;
+
+	noteMapper[sampler2].led = {GPIOE, 1};				// PE1: Yellow LED nucleo
+	noteMapper[sampler2].midiLow = 60;
+	noteMapper[sampler2].midiHigh = 67;
+
 }
 
 void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
@@ -30,7 +35,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 			if (n.midiLow > n.midiHigh) {
 				std::swap(n.midiLow, n.midiHigh);
 			}
-			n.led.Off();		// FIXME - logic to jump to next voice for midi lear
+			n.led.Off();		// FIXME - logic to jump to next voice for midi learn
 		}
 	} else {
 		// Locate voice
@@ -38,7 +43,11 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 			if (midiNote.noteValue >= note.midiLow && midiNote.noteValue <= note.midiHigh) {
 				uint32_t noteOffset = midiNote.noteValue - note.midiLow;
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
-				samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
+				if (note.voice == sampler1) {
+					samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
+				} else if (note.voice == sampler2) {
+					samples.Play(samples.SamplePlayer::playerB, noteOffset, noteRange);
+				}
 			}
 		}
 	}

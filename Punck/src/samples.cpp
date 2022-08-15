@@ -20,7 +20,13 @@ void Samples::Play(SamplePlayer sp, uint32_t noteOffset, uint32_t noteRange)
 			sampler[sp].sample = bankA[0].s;
 		}
 	}
-
+	if (sp == playerB) {
+		if (noteOffset < bankLenB) {
+			sampler[sp].sample = bankB[noteOffset].s;
+		} else {
+			sampler[sp].sample = bankB[0].s;
+		}
+	}
 	sampler[sp].playing = true;
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
@@ -59,12 +65,12 @@ void Samples::CalcSamples()
 		if (s.playing) {
 			auto& bytes = s.sample->byteDepth;
 
-			currentSamples[0] = readBytes(s.sampleAddress, bytes);
+			s.currentSamples[0] = readBytes(s.sampleAddress, bytes);
 
 			if (s.sample->channels == 2) {
-				currentSamples[1] = readBytes(s.sampleAddress + bytes, bytes);
+				s.currentSamples[1] = readBytes(s.sampleAddress + bytes, bytes);
 			} else {
-				currentSamples[1] = currentSamples[0];		// Duplicate left channel to right for mono signal
+				s.currentSamples[1] = s.currentSamples[0];		// Duplicate left channel to right for mono signal
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
@@ -76,16 +82,23 @@ void Samples::CalcSamples()
 			s.sampleAddress += (s.sample->channels * bytes * (uint32_t)addressJump);
 
 			if ((uint8_t*)s.sampleAddress > s.sample->endAddr) {
-				currentSamples[0] = 0;
-				currentSamples[1] = 0;
+				s.currentSamples[0] = 0;
+				s.currentSamples[1] = 0;
 				s.playing = false;
 
-				printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
+				//printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
 
 				GPIOE->ODR &= ~GPIO_ODR_OD1;			// PE1: Yellow LED nucleo
 			}
+		} else {
+			s.currentSamples[0] = 0;
+			s.currentSamples[1] = 0;
 		}
 	}
+
+	// Mix sample for final output to DAC FIXME - handle overflow (use floats for further sub mixing at output stage)
+	mixedSamples[0] = sampler[0].currentSamples[0] + sampler[1].currentSamples[0];
+	mixedSamples[1] = sampler[0].currentSamples[1] + sampler[1].currentSamples[1];
 }
 
 

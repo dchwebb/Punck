@@ -34,10 +34,8 @@ private:
 		GPIO_TypeDef* gpioBankBtn;
 		uint8_t gpioPinBtn;
 
-
 		LED led;
-//		GPIO_TypeDef* gpioBankLED;
-//		uint8_t gpioPinLED;
+
 	} noteMapper[9];
 
 

@@ -686,3 +686,29 @@ void InitQSPI()
 	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 16 = ~12.5MHz
 	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 }
+
+
+void InitMidiUART() {
+	// PE0 (USART8 RX)
+
+	RCC->APB1LENR |= RCC_APB1LENR_UART8EN;			// UART8 clock enable
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E
+
+	GPIOE->MODER &= ~GPIO_MODER_MODE0_0;			// Set alternate function on PE0
+	GPIOE->AFR[0] |= 8 << GPIO_AFRL_AFSEL0_Pos;		// Alternate function on PD9 for USART8_RX is AF8
+
+	// By default clock source is muxed to peripheral clock 1 which is system clock / 4 (change clock source in RCC->D2CCIP2R)
+	// Calculations depended on oversampling mode set in CR1 OVER8. Default = 0: Oversampling by 16
+	int USARTDIV = (SystemCoreClock / 4) / 31250;	//clk / desired_baud
+
+	UART8->BRR |= USARTDIV & USART_BRR_DIV_MANTISSA_Msk;
+	UART8->CR1 &= ~USART_CR1_M;					// 0: 1 Start bit, 8 Data bits, n Stop bit; 	1: 1 Start bit, 9 Data bits, n Stop bit
+	UART8->CR1 |= USART_CR1_RE;					// Receive enable
+
+	// Set up interrupts
+	UART8->CR1 |= USART_CR1_RXNEIE;
+	NVIC_SetPriority(UART8_IRQn, 3);				// Lower is higher priority
+	NVIC_EnableIRQ(UART8_IRQn);
+
+	UART8->CR1 |= USART_CR1_UE;						// UART Enable
+}

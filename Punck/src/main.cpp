@@ -35,6 +35,7 @@ int main(void) {
 	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
+	InitMidiUART();
 	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside

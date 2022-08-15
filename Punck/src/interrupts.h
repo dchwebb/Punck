@@ -28,8 +28,8 @@ void SPI2_IRQHandler()
 
 	noteHandler.CheckButtons();
 	samples.CalcSamples();
-	SPI2->TXDR = (uint32_t)(samples.currentSamples[0]);
-	SPI2->TXDR = (uint32_t)(samples.currentSamples[1]);
+	SPI2->TXDR = (uint32_t)(samples.mixedSamples[0]);
+	SPI2->TXDR = (uint32_t)(samples.mixedSamples[1]);
 
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
@@ -44,6 +44,13 @@ void MDMA_IRQHandler()
 	}
 }
 
+
+void UART8_IRQHandler(void) {
+	// MIDI Decoder
+	if (UART8->ISR | USART_ISR_RXNE_RXFNE) {
+		usb.midi.serialHandler(UART8->RDR); 				// accessing DR automatically resets the receive flag
+	}
+}
 
 // System interrupts
 void NMI_Handler(void) {}
