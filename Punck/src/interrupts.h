@@ -1,4 +1,5 @@
-void OTG_FS_IRQHandler(void) {
+void OTG_FS_IRQHandler(void)
+{
 	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
 
 	usb.InterruptHandler();
@@ -7,11 +8,7 @@ void OTG_FS_IRQHandler(void) {
 
 }
 
-//void __attribute__((optimize("O0"))) TinyDelay() {
-//	for (int x = 0; x < 2; ++x);
-//}
-
-
+uint32_t spiUnderrun = 0;
 void SPI2_IRQHandler()
 {
 	// I2S Interrupt
@@ -19,6 +16,7 @@ void SPI2_IRQHandler()
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
+		++spiUnderrun;
 		return;
 	} else {
 		GPIOG->ODR &= ~GPIO_ODR_OD11;
@@ -44,11 +42,15 @@ void MDMA_IRQHandler()
 	}
 }
 
-
+uint32_t debugUartOR = 0;
 void UART8_IRQHandler(void) {
 	// MIDI Decoder
-	if (UART8->ISR | USART_ISR_RXNE_RXFNE) {
-		usb.midi.serialHandler(UART8->RDR); 				// accessing DR automatically resets the receive flag
+	if (UART8->ISR & USART_ISR_RXNE_RXFNE) {
+		usb.midi.serialHandler(UART8->RDR); 			// accessing DR automatically resets the receive flag
+	} else {
+		// Overrun
+		UART8->ICR |= USART_ICR_ORECF;					// The ORE bit is reset by setting the ORECF bit in the USART_ICR register
+		++debugUartOR;
 	}
 }
 

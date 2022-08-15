@@ -113,10 +113,10 @@ void CDCHandler::ProcessCommand()
 			case NoteHandler::tomLow:
 				printf("Low Tom ");
 				break;
-			case NoteHandler::sampler1:
+			case NoteHandler::samplerA:
 				printf("Sample 1");
 				break;
-			case NoteHandler::sampler2:
+			case NoteHandler::samplerB:
 				printf("Sample 2");
 				break;
 			}

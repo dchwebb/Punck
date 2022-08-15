@@ -1,7 +1,7 @@
 #pragma once
 
 #include "initialisation.h"
-
+#include "NoteHandler.h"
 
 class Samples {
 public:
@@ -39,14 +39,16 @@ public:
 		int32_t currentSamples[2] = {};		// Left/right sample levels for mixing
 		uint32_t bankLen;
 		std::array<Bank, 10> bank;			// Store pointer to Bank samples sorted by index
+		NoteHandler::Voice noteHandlerVoice;
 	} sampler[2];
 
-	uint32_t bankLenA, bankLenB;
-	std::array<Bank, 10> bankA;				// Store pointer to Bank A/B samples sorted by index
-	std::array<Bank, 10> bankB;
+//	uint32_t bankLenA, bankLenB;
+//	std::array<Bank, 10> bankA;				// Store pointer to Bank A/B samples sorted by index
+//	std::array<Bank, 10> bankB;
 
 	int32_t mixedSamples[2] = {};			// Left/right samples mixed and ready to output to DAC
 
+	Samples();
 	void Play(SamplePlayer s, uint32_t noteOffset, uint32_t noteRange);
 	void Play(SamplePlayer s, uint32_t sampleNo);
 	void CalcSamples();

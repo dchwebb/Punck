@@ -683,7 +683,7 @@ void InitQSPI()
 	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
 	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
 
-	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 16 = ~12.5MHz
+	QUADSPI->CR |= 7 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
 	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 }
 
@@ -702,8 +702,8 @@ void InitMidiUART() {
 	int USARTDIV = (SystemCoreClock / 4) / 31250;	//clk / desired_baud
 
 	UART8->BRR |= USARTDIV & USART_BRR_DIV_MANTISSA_Msk;
-	UART8->CR1 &= ~USART_CR1_M;					// 0: 1 Start bit, 8 Data bits, n Stop bit; 	1: 1 Start bit, 9 Data bits, n Stop bit
-	UART8->CR1 |= USART_CR1_RE;					// Receive enable
+	UART8->CR1 &= ~USART_CR1_M;						// 0: 1 Start bit, 8 Data bits, n Stop bit; 	1: 1 Start bit, 9 Data bits, n Stop bit
+	UART8->CR1 |= USART_CR1_RE;						// Receive enable
 
 	// Set up interrupts
 	UART8->CR1 |= USART_CR1_RXNEIE;

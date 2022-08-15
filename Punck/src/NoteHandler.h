@@ -6,11 +6,13 @@
 class NoteHandler {
 	friend class CDCHandler;
 public:
+	enum Voice {kick, snare, hatClosed, hatOpen, tomHigh, tomMedium, tomLow, samplerA, samplerB};
+
 	NoteHandler();
+	void VoiceLED(Voice v, bool on);
 	void NoteOn(MidiHandler::MidiNote midiNote);
 	void CheckButtons();
 private:
-	enum Voice {kick, snare, hatClosed, hatOpen, tomHigh, tomMedium, tomLow, sampler1, sampler2};
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};
 	ButtonMode buttonMode;

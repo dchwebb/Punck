@@ -1,5 +1,6 @@
 #include <samples.h>
 #include "FatTools.h"
+#include "NoteHandler.h"
 #include <cstring>
 #include <cmath>
 
@@ -7,45 +8,45 @@ Samples samples;
 
 uint32_t startTime;		// Debug
 
+
+Samples::Samples()
+{
+	// Store note handler voice for managing LEDs etc
+	sampler[playerA].noteHandlerVoice = NoteHandler::samplerA;
+	sampler[playerB].noteHandlerVoice = NoteHandler::samplerB;
+}
+
+
 void Samples::Play(SamplePlayer sp, uint32_t noteOffset, uint32_t noteRange)
 {
 	startTime = SysTickVal;
 
 	// Get sample from sorted bank list based on player and note offset
-	sampler[sp].sample = nullptr;
-	if (sp == playerA) {
-		if (noteOffset < bankLenA) {
-			sampler[sp].sample = bankA[noteOffset].s;
-		} else {
-			sampler[sp].sample = bankA[0].s;
-		}
+	if (noteOffset < sampler[sp].bankLen) {
+		sampler[sp].sample = sampler[sp].bank[noteOffset].s;
+	} else {
+		sampler[sp].sample = sampler[sp].bank[0].s;
 	}
-	if (sp == playerB) {
-		if (noteOffset < bankLenB) {
-			sampler[sp].sample = bankB[noteOffset].s;
-		} else {
-			sampler[sp].sample = bankB[0].s;
-		}
-	}
+
 	sampler[sp].playing = true;
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 	sampler[sp].sampleVoice = noteOffset;
 
-	GPIOE->ODR |= GPIO_ODR_OD1;				// PE1: Yellow LED nucleo
+	noteHandler.VoiceLED(sampler[sp].noteHandlerVoice, true);
 }
 
 
-void Samples::Play(SamplePlayer s, uint32_t index)
+void Samples::Play(SamplePlayer sp, uint32_t index)
 {
 	startTime = SysTickVal;
 
-	sampler[s].playing = true;
-	sampler[s].sample = &sampleList[index];
-	sampler[s].sampleAddress = sampleList[index].startAddr;
-	sampler[s].playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
+	sampler[sp].playing = true;
+	sampler[sp].sample = &sampleList[index];
+	sampler[sp].sampleAddress = sampleList[index].startAddr;
+	sampler[sp].playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
 
-	GPIOE->ODR |= GPIO_ODR_OD1;				// PE1: Yellow LED nucleo
+	noteHandler.VoiceLED(sampler[sp].noteHandlerVoice, true);
 }
 
 
@@ -61,44 +62,45 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 
 void Samples::CalcSamples()
 {
-	for (auto& s : sampler) {
-		if (s.playing) {
-			auto& bytes = s.sample->byteDepth;
+	for (auto& sp : sampler) {
+		if (sp.playing) {
+			auto& bytes = sp.sample->byteDepth;
 
-			s.currentSamples[0] = readBytes(s.sampleAddress, bytes);
+			sp.currentSamples[0] = readBytes(sp.sampleAddress, bytes);
 
-			if (s.sample->channels == 2) {
-				s.currentSamples[1] = readBytes(s.sampleAddress + bytes, bytes);
+			if (sp.sample->channels == 2) {
+				sp.currentSamples[1] = readBytes(sp.sampleAddress + bytes, bytes);
 			} else {
-				s.currentSamples[1] = s.currentSamples[0];		// Duplicate left channel to right for mono signal
+				sp.currentSamples[1] = sp.currentSamples[0];		// Duplicate left channel to right for mono signal
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
-			float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;
+			//float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;		// FIXME - separate ADCs for each sample
+			float adjSpeed = 1.0f;
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;
-			s.fractionalPosition = std::modf(s.fractionalPosition + (adjSpeed * s.playbackSpeed), &addressJump);
-			s.sampleAddress += (s.sample->channels * bytes * (uint32_t)addressJump);
+			sp.fractionalPosition = std::modf(sp.fractionalPosition + (adjSpeed * sp.playbackSpeed), &addressJump);
+			sp.sampleAddress += (sp.sample->channels * bytes * (uint32_t)addressJump);
 
-			if ((uint8_t*)s.sampleAddress > s.sample->endAddr) {
-				s.currentSamples[0] = 0;
-				s.currentSamples[1] = 0;
-				s.playing = false;
+			if ((uint8_t*)sp.sampleAddress > sp.sample->endAddr) {
+				sp.currentSamples[0] = 0;
+				sp.currentSamples[1] = 0;
+				sp.playing = false;
+
+				noteHandler.VoiceLED(sp.noteHandlerVoice, false);		// Turn off LED
 
 				//printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
-
-				GPIOE->ODR &= ~GPIO_ODR_OD1;			// PE1: Yellow LED nucleo
 			}
 		} else {
-			s.currentSamples[0] = 0;
-			s.currentSamples[1] = 0;
+			sp.currentSamples[0] = 0;
+			sp.currentSamples[1] = 0;
 		}
 	}
 
 	// Mix sample for final output to DAC FIXME - handle overflow (use floats for further sub mixing at output stage)
-	mixedSamples[0] = sampler[0].currentSamples[0] + sampler[1].currentSamples[0];
-	mixedSamples[1] = sampler[0].currentSamples[1] + sampler[1].currentSamples[1];
+	mixedSamples[0] = sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0];
+	mixedSamples[1] = sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1];
 }
 
 
@@ -187,31 +189,29 @@ bool Samples::UpdateSampleList()
 
 	// Update sorted lists of pointers
 	Bank blank = {nullptr, std::numeric_limits<uint32_t>::max()};		// Fill bank arrays with dummy values to enable sorting
-	std::fill(bankA.begin(), bankA.end(), blank);
-	std::fill(bankB.begin(), bankB.end(), blank);
+	std::fill(sampler[playerA].bank.begin(), sampler[playerA].bank.end(), blank);
+	std::fill(sampler[playerB].bank.begin(), sampler[playerB].bank.end(), blank);
 
-	bankLenA = 0;
-	bankLenB = 0;
+	sampler[playerA].bankLen = 0;
+	sampler[playerB].bankLen = 0;
 
 	for (Sample& s : sampleList) {
 		if (s.name[0] == 0) {
 			break;
 		}
-		if (s.valid) {
-			if (s.bank == playerA && bankLenA < bankA.size()) {
-				bankA[bankLenA].s = &s;
-				bankA[bankLenA++].index = s.bankIndex;
-			}
-			if (s.bank == playerB && bankLenB < bankB.size()) {
-				bankB[bankLenB].s = &s;
-				bankB[bankLenB++].index = s.bankIndex;
+		// Identify which sample bank the sample is associated with and add to respective array for sorting
+		if (s.valid && s.bank < noPlayer) {
+			Sampler& sp = sampler[s.bank];
+			if (sp.bankLen < sp.bank.size()) {
+				sp.bank[sp.bankLen].s = &s;
+				sp.bank[sp.bankLen++].index = s.bankIndex;
 			}
 		}
 	}
 
 	auto sorter = [](const Bank &a, const Bank &b){return a.index < b.index;};
-	std::sort(bankA.begin(), bankA.end(), sorter);
-	std::sort(bankB.begin(), bankB.end(), sorter);
+	std::sort(sampler[playerA].bank.begin(), sampler[playerA].bank.end(), sorter);
+	std::sort(sampler[playerB].bank.begin(), sampler[playerB].bank.end(), sorter);
 
 	return changed;
 }
