@@ -75,8 +75,8 @@ void Samples::CalcSamples()
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
-			//float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;		// FIXME - separate ADCs for each sample
-			float adjSpeed = 1.0f;
+			float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;		// FIXME - separate ADCs for each sampler
+			//float adjSpeed = 1.0f;
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;

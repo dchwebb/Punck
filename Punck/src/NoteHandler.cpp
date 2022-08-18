@@ -1,5 +1,6 @@
 #include <NoteHandler.h>
 #include "samples.h"
+#include "Kick.h"
 
 NoteHandler noteHandler;
 
@@ -20,6 +21,9 @@ NoteHandler::NoteHandler()
 	noteMapper[samplerB].midiLow = 60;
 	noteMapper[samplerB].midiHigh = 67;
 
+	noteMapper[Voice::kick].led = {GPIOB, 14};			// PB14: Red LED nucleo
+	noteMapper[Voice::kick].midiLow = 84;
+	noteMapper[Voice::kick].midiHigh = 84;
 }
 
 
@@ -58,6 +62,8 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 					samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
 				} else if (note.voice == samplerB) {
 					samples.Play(samples.SamplePlayer::playerB, noteOffset, noteRange);
+				} else if (note.voice == Voice::kick) {
+					kickPlayer.Play(noteOffset, noteRange);
 				}
 			}
 		}

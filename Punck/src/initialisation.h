@@ -12,7 +12,7 @@ extern volatile uint32_t SysTickVal;
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
-
+constexpr double pi = 3.14159265358979323846;
 
 static constexpr uint32_t systemSampleRate = 48000;
 
