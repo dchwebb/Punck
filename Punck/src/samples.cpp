@@ -99,8 +99,8 @@ void Samples::CalcSamples()
 	}
 
 	// Mix sample for final output to DAC FIXME - handle overflow (use floats for further sub mixing at output stage)
-	mixedSamples[0] = sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0];
-	mixedSamples[1] = sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1];
+	mixedSamples[0] = ((float)sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0]) / 2147483648.0f;
+	mixedSamples[1] = ((float)sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1]) / 2147483648.0f;
 }
 
 

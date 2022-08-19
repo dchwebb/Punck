@@ -22,7 +22,7 @@ extern int32_t adcZeroOffset[2];
 // Define ADC array positions of various controls
 enum ADC_Controls {
 	ADC_SampleSpeed = 0,
-	ADC_TBA			= 1,
+	ADC_KickDecay	= 1,
 };
 enum channel {left = 0, right = 1};
 

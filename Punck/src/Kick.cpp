@@ -29,6 +29,7 @@ void Kick::CalcSamples()
 
 		if (currentLevel > target * 0.6) {
 			phase = Phase::Ramp2;
+			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		}
 	}
 		break;
@@ -40,20 +41,24 @@ void Kick::CalcSamples()
 
 		if (currentLevel > target * 0.85) {
 			phase = Phase::Ramp3;
+			GPIOG->ODR &= ~GPIO_ODR_OD11;
+
 		}
 	}
 
 		break;
 
 	case Phase::Ramp3: {
+
 		float target = 0.7f;
-		float inc = 0.2f;
+		float inc = 0.3f;
 		currentLevel = currentLevel + (inc * (target - currentLevel));
 
 		if (currentLevel > target * 0.93) {
-			fastSinInc = 0.018f;
+			fastSinInc = 0.017f;
 			position = 2.0f;
 			phase = Phase::FastSine;
+
 		}
 	}
 		break;
@@ -63,16 +68,18 @@ void Kick::CalcSamples()
 		currentLevel = std::sin(position) * 0.85f;
 
 		if (position >= 1.5f * pi) {
-			slowSinInc = 0.0075f;
+			slowSinInc = 0.0065f;
 			slowSinLevel = 0.85f;
 			phase = Phase::SlowSine;
 		}
 		break;
 
 	case Phase::SlowSine: {
+		slowSinInc *= 0.999992;
 		position += slowSinInc;
-		float inc = 0.9999f;
-		slowSinLevel = slowSinLevel * inc;
+		float decaySpeed = 0.9994 + 0.00055f * (float)ADC_array[ADC_KickDecay] / 65536.0f;
+		//float inc = 0.9999f;
+		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
 
 		if (slowSinLevel <= 0.001f) {

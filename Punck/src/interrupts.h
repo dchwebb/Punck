@@ -12,7 +12,7 @@ uint32_t spiUnderrun = 0;
 void SPI2_IRQHandler()
 {
 	// I2S Interrupt
-	GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
+//	GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
@@ -27,14 +27,14 @@ void SPI2_IRQHandler()
 	kickPlayer.CalcSamples();
 	samples.CalcSamples();
 
-	int32_t kickVal = (int32_t)(kickPlayer.currentLevel * 2147483647.0f);
-	SPI2->TXDR = (uint32_t)kickVal;
-	SPI2->TXDR = (uint32_t)kickVal;
+	int32_t leftOut =  (int32_t)((samples.mixedSamples[0] + kickPlayer.currentLevel) * 2147483647.0f);
+	int32_t rightOut = (int32_t)((samples.mixedSamples[1] + kickPlayer.currentLevel) * 2147483647.0f);
 
-//	SPI2->TXDR = (uint32_t)(samples.mixedSamples[0]);
-//	SPI2->TXDR = (uint32_t)(samples.mixedSamples[1]);
+	SPI2->TXDR = (uint32_t)(leftOut);
+	SPI2->TXDR = (uint32_t)(rightOut);
 
-	GPIOG->ODR &= ~GPIO_ODR_OD11;
+
+//	GPIOG->ODR &= ~GPIO_ODR_OD11;
 
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
