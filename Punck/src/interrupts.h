@@ -27,8 +27,8 @@ void SPI2_IRQHandler()
 	kickPlayer.CalcSamples();
 	samples.CalcSamples();
 
-	int32_t leftOut =  (int32_t)((samples.mixedSamples[0] + kickPlayer.currentLevel) * 2147483647.0f);
-	int32_t rightOut = (int32_t)((samples.mixedSamples[1] + kickPlayer.currentLevel) * 2147483647.0f);
+	int32_t leftOut =  (int32_t)((samples.mixedSamples[0] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
+	int32_t rightOut = (int32_t)((samples.mixedSamples[1] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
 
 	SPI2->TXDR = (uint32_t)(leftOut);
 	SPI2->TXDR = (uint32_t)(rightOut);

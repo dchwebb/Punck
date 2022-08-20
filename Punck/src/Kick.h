@@ -9,13 +9,15 @@ public:
 	float fastSinInc;
 	float slowSinInc;
 	float slowSinLevel;
-	float currentLevel;
+	float ouputLevel;			// After filter applied
 	NoteHandler::Voice noteHandlerVoice;
 
 	Kick();
 	void Play(uint32_t noteOffset, uint32_t noteRange);
 	void CalcSamples();
 
+private:
+	float currentLevel;
 };
 
 extern Kick kickPlayer;

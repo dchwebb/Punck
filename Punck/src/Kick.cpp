@@ -1,5 +1,6 @@
 #include <Kick.h>
 #include <cmath>
+#include "Filter.h"
 
 Kick kickPlayer;
 
@@ -23,11 +24,10 @@ void Kick::CalcSamples()
 {
 	switch (phase) {
 	case Phase::Ramp1: {
-		float target = 0.7f;
 		float inc = 0.22f;
-		currentLevel = currentLevel + (inc * (target - currentLevel));
+		currentLevel = currentLevel + (inc * (1.0f - currentLevel));
 
-		if (currentLevel > target * 0.6) {
+		if (currentLevel > 0.6) {
 			phase = Phase::Ramp2;
 			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		}
@@ -35,11 +35,11 @@ void Kick::CalcSamples()
 		break;
 
 	case Phase::Ramp2: {
-		float target = 0.7f;
-		float inc = 0.017f;
-		currentLevel = currentLevel + (inc * (target - currentLevel));
 
-		if (currentLevel > target * 0.85) {
+		float inc = 0.015f;
+		currentLevel = currentLevel + (inc * (1.0f - currentLevel));
+
+		if (currentLevel > 0.82) {
 			phase = Phase::Ramp3;
 			GPIOG->ODR &= ~GPIO_ODR_OD11;
 
@@ -50,11 +50,10 @@ void Kick::CalcSamples()
 
 	case Phase::Ramp3: {
 
-		float target = 0.7f;
 		float inc = 0.3f;
-		currentLevel = currentLevel + (inc * (target - currentLevel));
+		currentLevel = currentLevel + (inc * (1.0f - currentLevel));
 
-		if (currentLevel > target * 0.93) {
+		if (currentLevel > 0.93) {
 			fastSinInc = 0.017f;
 			position = 2.0f;
 			phase = Phase::FastSine;
@@ -65,26 +64,25 @@ void Kick::CalcSamples()
 
 	case Phase::FastSine:
 		position += fastSinInc;
-		currentLevel = std::sin(position) * 0.85f;
+		currentLevel = std::sin(position);
 
 		if (position >= 1.5f * pi) {
 			slowSinInc = 0.0065f;
-			slowSinLevel = 0.85f;
+			slowSinLevel = 1.0f;
 			phase = Phase::SlowSine;
 		}
 		break;
 
 	case Phase::SlowSine: {
-		slowSinInc *= 0.999992;
-		position += slowSinInc;
+		slowSinInc *= 0.999992;			// Sine wave slowly decreases in frequency
+		position += slowSinInc;			// Set current poition in sine wave
 		float decaySpeed = 0.9994 + 0.00055f * (float)ADC_array[ADC_KickDecay] / 65536.0f;
-		//float inc = 0.9999f;
 		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
 
-		if (slowSinLevel <= 0.001f) {
+		if (slowSinLevel <= 0.00001f) {
 			phase = Phase::Off;
-			currentLevel = 0.0f;
+			//currentLevel = 0.0f;
 			noteHandler.VoiceLED(noteHandlerVoice, false);		// Turn off LED
 		}
 	}
@@ -93,6 +91,9 @@ void Kick::CalcSamples()
 	default:
 		break;
 	}
+
+	ouputLevel = filter.CalcFilter(currentLevel, left);
+
 }
 
 
