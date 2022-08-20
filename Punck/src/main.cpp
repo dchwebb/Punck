@@ -19,7 +19,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER
 
 
 USB usb;
-Filter filter;
+Filter filter(2, LowPass);
 //Config config;
 
 extern "C" {
@@ -45,7 +45,6 @@ int main(void) {
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise switches and LEDs
 //	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
-//	filter.Init();					// Initialise filter coefficients, windows etc
 
 	usb.Init();
 	InitI2S();						// Initialise I2S which will start main sample interrupts

@@ -3,11 +3,6 @@
 
 bool calculatingFilter = false;			// Debug
 
-void Filter::Init()
-{
-	filter.Update(true);
-}
-
 
 void Filter::Update(bool reset)
 {
@@ -21,12 +16,9 @@ void Filter::Update(bool reset)
 		InitIIRFilter(dampedADC);
 		calculatingFilter = false;
 
-		// If not changing filter type switch active filter
-		activeFilter = !activeFilter;
-
+		activeFilter = !activeFilter;		// Switch active filter
 	}
 }
-
 
 
 void Filter::InitIIRFilter(iirdouble_t tone)
@@ -39,10 +31,10 @@ void Filter::InitIIRFilter(iirdouble_t tone)
 
 	if (passType == HighPass) {				// Want a sweep from 0.03 to 0.99 with most travel at low end
 		cutoff = pow((tone / 100000.0), 3.0) + HPMin;
-		iirHPFilter[inactiveFilter].CalcCoeff(cutoff);
+		iirFilter[inactiveFilter].CalcCoeff(cutoff);
 	} else {		// Want a sweep from 0.001 to 0.2-0.3
-		cutoff = std::min(0.03 + pow(tone / 65536.0, 2.0), LPMax);
-		iirLPFilter[inactiveFilter].CalcCoeff(cutoff);
+		cutoff = std::min(0.03f + std::pow(tone / 65536.0f, 2.0f), LPMax);
+		iirFilter[inactiveFilter].CalcCoeff(cutoff);
 	}
 
 	currentCutoff = cutoff;
@@ -52,12 +44,7 @@ void Filter::InitIIRFilter(iirdouble_t tone)
 //	Take a new sample and return filtered value
 float Filter::CalcFilter(iirdouble_t sample, channel c)
 {
-	if (passType == HighPass) {
-		return static_cast<float>(iirHPFilter[activeFilter].FilterSample(sample, iirHPReg[c]));
-	} else {
-		return static_cast<float>(iirLPFilter[activeFilter].FilterSample(sample, iirLPReg[c]));
-	}
-
+	return iirFilter[activeFilter].FilterSample(sample, iirReg[c]);
 }
 
 
@@ -136,9 +123,9 @@ void IIRFilter::CalcCoeff(iirdouble_t omega)
 
 	// Calc the IIR coefficients. SPlaneCoeff.NumSections is the number of 1st and 2nd order s plane factors.
 	for (j = 0; j < numSections; j++) {
-		A = iirProto.Coeff.D2[j];				// Always one
-		B = iirProto.Coeff.D1[j];
-		C = iirProto.Coeff.D0[j];				// Always one
+		A = iirProto.coeff.D2[j];				// Always one
+		B = iirProto.coeff.D1[j];
+		C = iirProto.coeff.D0[j];				// Always one
 
 		// b's are the numerator, a's are the denominator
 		if (passType == LowPass) {
@@ -199,9 +186,9 @@ void IIRPrototype::DefaultProtoCoeff()
 
 	// A one pole filter is simply 1/(s+1)
 	if (numPoles == 1) {
-		Coeff.D0[0] = 1.0;
-		Coeff.D1[0] = 1.0;
-		Coeff.D2[0] = 0.0;
+		coeff.D0[0] = 1.0;
+		coeff.D1[0] = 1.0;
+		coeff.D2[0] = 0.0;
 	} else {
 		Poles[0] = complex_t(0.0, 0.0);
 		ButterworthPoly(Poles);
@@ -247,20 +234,20 @@ void IIRPrototype::GetFilterCoeff(std::array<complex_t, MAX_POLES> &Roots)
 			continue;							// At the origin.  This should never happen.
 
 		if (Roots[j].real() == 0.0) {			// Imag Root (A poly zero)
-			Coeff.D2[polyCount] = 1.0;
-			Coeff.D1[polyCount] = 0.0;
-			Coeff.D0[polyCount] = Roots[j].imag() * Roots[j].imag();
+			coeff.D2[polyCount] = 1.0;
+			coeff.D1[polyCount] = 0.0;
+			coeff.D0[polyCount] = Roots[j].imag() * Roots[j].imag();
 			j++;
 			polyCount++;
 		} else if (Roots[j].imag() == 0.0) {	// Real Pole
-			Coeff.D2[polyCount] = 0.0;
-			Coeff.D1[polyCount] = 1.0;
-			Coeff.D0[polyCount] = -Roots[j].real();
+			coeff.D2[polyCount] = 0.0;
+			coeff.D1[polyCount] = 1.0;
+			coeff.D0[polyCount] = -Roots[j].real();
 			polyCount++;
 		} else { 								// Complex Pole
-			Coeff.D2[polyCount] = 1.0;
-			Coeff.D1[polyCount] = -2.0 * Roots[j].real();
-			Coeff.D0[polyCount] = Roots[j].real() * Roots[j].real() + Roots[j].imag() * Roots[j].imag();
+			coeff.D2[polyCount] = 1.0;
+			coeff.D1[polyCount] = -2.0 * Roots[j].real();
+			coeff.D0[polyCount] = Roots[j].real() * Roots[j].real() + Roots[j].imag() * Roots[j].imag();
 			j++;
 			polyCount++;
 		}
@@ -272,3 +259,4 @@ iirdouble_t FixedFilter::FilterSample(iirdouble_t sample)
 {
 	return filter.FilterSample(sample, iirReg);
 }
+

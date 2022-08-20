@@ -19,13 +19,10 @@
 // For debugging
 extern bool calculatingFilter;
 
-enum FilterControl {LP, HP};
 enum PassType {FilterOff, LowPass, HighPass};
-enum IIRType {Butterworth, Custom};
 
-
-typedef double iirdouble_t;			// to allow easy testing with floats or doubles
-typedef std::complex<double> complex_t;
+typedef float iirdouble_t;			// to allow easy testing with floats or doubles
+typedef std::complex<float> complex_t;
 
 
 
@@ -71,19 +68,26 @@ public:
 		iirdouble_t D2[MAX_POLES];
 		iirdouble_t D1[MAX_POLES];
 		iirdouble_t D0[MAX_POLES];
-	} Coeff;
+	} coeff;
 	uint8_t numPoles = 0;
 
 	void DefaultProtoCoeff();
 private:
-	void ButterworthPoly(std::array<std::complex<double>, MAX_POLES> &Roots);
-	void GetFilterCoeff(std::array<std::complex<double>, MAX_POLES> &Roots);
+	void ButterworthPoly(std::array<complex_t, MAX_POLES> &Roots);
+	void GetFilterCoeff(std::array<complex_t, MAX_POLES> &Roots);
 };
 
 
 class IIRFilter {
-	friend class SerialHandler;									// Allow the serial handler access to private data for debug printing
-	friend class Config;										// Allow access to config to store values
+public:
+	// constructors
+	IIRFilter(uint8_t poles, PassType pass) : numPoles{poles}, passType{pass}, iirProto(IIRPrototype(poles)) {};
+	IIRFilter() {};
+
+	void CalcCoeff(iirdouble_t omega);
+	void CalcCustomLowPass(iirdouble_t omega);
+	iirdouble_t FilterSample(iirdouble_t sample, IIRRegisters& registers);
+
 private:
 	uint8_t numPoles = 1;
 	uint8_t numSections = 0;
@@ -93,39 +97,31 @@ private:
 	IIRCoeff iirCoeff;
 
 	iirdouble_t CalcSection(int k, iirdouble_t x, IIRRegisters& registers);
-
-public:
-	// constructors
-	IIRFilter(uint8_t poles, PassType pass) : numPoles{poles}, passType{pass}, iirProto(IIRPrototype(poles)) {};
-	IIRFilter() {};
-
-	void CalcCoeff(iirdouble_t omega);
-	void CalcCustomLowPass(iirdouble_t omega);
-	iirdouble_t FilterSample(iirdouble_t sample, IIRRegisters& registers);
 };
 
 
 // Filter with fixed cut off (eg control smoothing)
 class FixedFilter {
-private:
-	IIRFilter filter;
-	IIRRegisters iirReg;
 public:
 	FixedFilter(uint8_t poles, PassType pass, iirdouble_t frequency) : filter{poles, pass} {
 		filter.CalcCoeff(frequency);
 	}
 	iirdouble_t FilterSample(iirdouble_t sample);
+
+private:
+	IIRFilter filter;
+	IIRRegisters iirReg;
 };
 
 
-
-
+// 2 channel LP or HP filter with dual sets of coefficients to allow clean recalculation and switching
 struct Filter {
-	friend class SerialHandler;				// Allow the serial handler access to private data for debug printing
-	friend class Config;					// Allow access to config to store values
 public:
-	void Init();
-	void Update(bool reset = false);
+	Filter(uint8_t poles, PassType pass) : iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)} {
+		Update(true);						// Force calculation of coefficients
+	}
+
+	void Update(bool reset = false);		// Recalculate coefficients if required
 	float CalcFilter(iirdouble_t sample, channel c);
 private:
 	float potCentre = 29000;				// Configurable in calibration
@@ -134,13 +130,8 @@ private:
 	bool activeFilter = 0;					// choose which set of coefficients to use (so coefficients can be calculated without interfering with current filtering)
 	float currentCutoff;
 
-	// IIR settings
-	bool customDamping = false;				// Set to true if using custom damping coefficients (otherwise will default to Butterworth)
-	const uint8_t defaultPoles = 4;
-	IIRFilter iirLPFilter[2] = {IIRFilter(defaultPoles, LowPass), IIRFilter(defaultPoles, LowPass)};			// Two filters for active and inactive
-	IIRFilter iirHPFilter[2] = {IIRFilter(defaultPoles, HighPass), IIRFilter(defaultPoles, HighPass)};
-	IIRRegisters iirLPReg[2];				// Two channels (left and right)
-	IIRRegisters iirHPReg[2];				// Store separate shift registers for high and low pass to allow smooth transition
+	IIRFilter iirFilter[2];					// Two filters for active and inactive
+	IIRRegisters iirReg[2];					// Two channels (left and right)
 
 	float dampedADC, previousADC;			// ADC readings governing damped cut off level (and previous for hysteresis)
 	FixedFilter filterADC = FixedFilter(2, LowPass, 0.002f);
