@@ -42,9 +42,9 @@ void Samples::Play(SamplePlayer sp, uint32_t index)
 	startTime = SysTickVal;
 
 	sampler[sp].playing = true;
-	sampler[sp].sample = &sampleList[index];
-	sampler[sp].sampleAddress = sampleList[index].startAddr;
-	sampler[sp].playbackSpeed = (float)sampleList[index].sampleRate / systemSampleRate;
+	sampler[sp].sample = sampler[sp].bank[index].s;		//&sampleList[index];
+	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
+	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 
 	noteHandler.VoiceLED(sampler[sp].noteHandlerVoice, true);
 }
@@ -60,7 +60,7 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 }
 
 
-void Samples::CalcSamples()
+void Samples::CalcOutput()
 {
 	for (auto& sp : sampler) {
 		if (sp.playing) {

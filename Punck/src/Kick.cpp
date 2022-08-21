@@ -20,7 +20,7 @@ void Kick::Play(uint32_t noteOffset, uint32_t noteRange)
 }
 
 
-void Kick::CalcSamples()
+void Kick::CalcOutput()
 {
 	switch (phase) {
 	case Phase::Ramp1:

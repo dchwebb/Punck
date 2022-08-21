@@ -11,8 +11,7 @@ NoteHandler::NoteHandler()
 		noteMapper[i].voice = (Voice)i;
 	}
 
-	noteMapper[samplerA].gpioPinBtn = 6;
-	noteMapper[samplerA].gpioBankBtn = GPIOC;
+	noteMapper[samplerA].btn = {GPIOC, 6};
 	noteMapper[samplerA].led = {GPIOB, 0};				// PB0: Green
 	noteMapper[samplerA].midiLow = 72;
 	noteMapper[samplerA].midiHigh = 79;
@@ -24,6 +23,27 @@ NoteHandler::NoteHandler()
 	noteMapper[Voice::kick].led = {GPIOB, 14};			// PB14: Red LED nucleo
 	noteMapper[Voice::kick].midiLow = 84;
 	noteMapper[Voice::kick].midiHigh = 84;
+}
+
+
+uint32_t leftOverflow = 0, rightOverflow = 0;	// Debug
+void NoteHandler::Output()
+{
+	CheckButtons();										// Handle buttons playing note or activating MIDI learn
+
+	float leftOutput =  samples.mixedSamples[0] +
+						kickPlayer.ouputLevel * 1.0f;
+	float rightOutput = samples.mixedSamples[1] +
+						kickPlayer.ouputLevel * 1.0f;
+
+	if (std::abs(leftOutput) > 1.0f)  { ++leftOverflow; }		// Debug
+	if (std::abs(rightOutput) > 1.0f) { ++rightOverflow; }
+
+	SPI2->TXDR = (int32_t)(leftOutput * 2147483648.0f);
+	SPI2->TXDR = (int32_t)(rightOutput * 2147483648.0f);
+
+	kickPlayer.CalcOutput();
+	samples.CalcOutput();
 }
 
 
@@ -54,17 +74,25 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 		}
 	} else {
 		// Locate voice
-		for (auto note : noteMapper) {
+		for (auto& note : noteMapper) {
 			if (midiNote.noteValue >= note.midiLow && midiNote.noteValue <= note.midiHigh) {
 				uint32_t noteOffset = midiNote.noteValue - note.midiLow;
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
-				if (note.voice == samplerA) {
+
+				switch (note.voice) {
+				case Voice::samplerA:
 					samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
-				} else if (note.voice == samplerB) {
+					break;
+				case Voice::samplerB:
 					samples.Play(samples.SamplePlayer::playerB, noteOffset, noteRange);
-				} else if (note.voice == Voice::kick) {
+					break;
+				case Voice::kick:
 					kickPlayer.Play(noteOffset, noteRange);
+					break;
+				default:
+					break;
 				}
+
 			}
 		}
 	}
@@ -80,7 +108,7 @@ void NoteHandler::CheckButtons()
 	} else {
 		if (buttonMode == ButtonMode::midiLearn) {
 			// Switch off all LEDs
-			for (auto note : noteMapper) {
+			for (auto& note : noteMapper) {
 				if (note.led.gpioBank) {
 					note.led.Off();
 				}
@@ -89,27 +117,26 @@ void NoteHandler::CheckButtons()
 		buttonMode = ButtonMode::playNote;
 	}
 
-	for (auto note : noteMapper) {
-		if (note.gpioBankBtn != nullptr) {
-			if ((note.gpioBankBtn->IDR & (1 << note.gpioPinBtn)) == 0) {
-				if (!note.buttonOn) {
-					note.buttonOn = true;
-					switch (buttonMode) {
-					case ButtonMode::playNote:
-						samples.Play(samples.SamplePlayer::playerA, 0);
-						break;
-					case ButtonMode::midiLearn:
-						note.led.On();
-						midiLearnState = MidiLearnState::lowNote;
-						midiLearnVoice = note.voice;
-						break;
-					case ButtonMode::drumPattern:
-						break;
-					}
+	for (auto& note : noteMapper) {
+		if (note.btn.IsOn()) {
+			if (!note.btn.buttonOn) {
+				note.btn.buttonOn = true;
+
+				switch (buttonMode) {
+				case ButtonMode::playNote:
+					samples.Play(samples.SamplePlayer::playerA, 0);
+					break;
+				case ButtonMode::midiLearn:
+					note.led.On();
+					midiLearnState = MidiLearnState::lowNote;
+					midiLearnVoice = note.voice;
+					break;
+				case ButtonMode::drumPattern:
+					break;
 				}
-			} else {
-				note.buttonOn = false;
 			}
+		} else {
+			note.btn.buttonOn = false;
 		}
 	}
 }

@@ -93,7 +93,7 @@ void CDCHandler::ProcessCommand()
 		for (auto note : noteHandler.noteMapper) {
 			switch (note.voice) {
 			case NoteHandler::kick:
-				printf("Kick   ");
+				printf("Kick    ");
 				break;
 			case NoteHandler::snare:
 				printf("Snare   ");
@@ -120,7 +120,7 @@ void CDCHandler::ProcessCommand()
 				printf("Sample 2");
 				break;
 			}
-			printf(" : %d, %d\r\n", note.midiLow, note.midiHigh);
+			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);
 		}
 
 

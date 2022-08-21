@@ -42,16 +42,12 @@ public:
 		NoteHandler::Voice noteHandlerVoice;
 	} sampler[2];
 
-//	uint32_t bankLenA, bankLenB;
-//	std::array<Bank, 10> bankA;				// Store pointer to Bank A/B samples sorted by index
-//	std::array<Bank, 10> bankB;
-
 	float mixedSamples[2] = {};				// Left/right samples mixed and ready to output to DAC
 
 	Samples();
 	void Play(SamplePlayer s, uint32_t noteOffset, uint32_t noteRange);
 	void Play(SamplePlayer s, uint32_t sampleNo);
-	void CalcSamples();
+	void CalcOutput();
 	bool UpdateSampleList();
 	bool GetSampleInfo(Sample* sample);
 };

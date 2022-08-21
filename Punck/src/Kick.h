@@ -7,7 +7,7 @@ class Kick {
 public:
 	Kick();
 	void Play(uint32_t noteOffset, uint32_t noteRange);
-	void CalcSamples();
+	void CalcOutput();
 	void UpdateFilter();
 
 	float ouputLevel;					// After filter applied

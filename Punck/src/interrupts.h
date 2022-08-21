@@ -1,10 +1,10 @@
 void OTG_FS_IRQHandler(void)
 {
-	GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
+	GPIOD->ODR |= GPIO_ODR_OD2;							// PD2: debug pin
 
 	usb.InterruptHandler();
 
-	GPIOD->ODR &= ~GPIO_ODR_OD2;		// debug
+	GPIOD->ODR &= ~GPIO_ODR_OD2;
 
 }
 
@@ -12,29 +12,16 @@ uint32_t spiUnderrun = 0;
 void SPI2_IRQHandler()
 {
 	// I2S Interrupt
-//	GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
-		SPI2->IFCR |= SPI_IFCR_UDRC;		// Clear underrun condition
+		SPI2->IFCR |= SPI_IFCR_UDRC;					// Clear underrun condition
 		++spiUnderrun;
 		return;
-	} else {
 	}
 
-	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
+	GPIOC->ODR |= GPIO_ODR_OD11;						// PC11: debug pin
 
-
-	int32_t leftOut =  (int32_t)((samples.mixedSamples[0] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
-	int32_t rightOut = (int32_t)((samples.mixedSamples[1] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
-
-	SPI2->TXDR = (uint32_t)(leftOut);
-	SPI2->TXDR = (uint32_t)(rightOut);
-
-	noteHandler.CheckButtons();
-	kickPlayer.CalcSamples();
-	samples.CalcSamples();
-
-//	GPIOG->ODR &= ~GPIO_ODR_OD11;
+	noteHandler.Output();
 
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
