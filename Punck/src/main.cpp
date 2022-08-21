@@ -19,7 +19,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER
 
 
 USB usb;
-Filter filter(2, LowPass);
 //Config config;
 
 extern "C" {
@@ -52,7 +51,7 @@ int main(void) {
 	while (1) {
 		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
-		filter.Update();			// Check if filter coefficients need to be updated
+		kickPlayer.UpdateFilter();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
 		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {

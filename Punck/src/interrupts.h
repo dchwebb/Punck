@@ -23,9 +23,6 @@ void SPI2_IRQHandler()
 
 	GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin blue
 
-	noteHandler.CheckButtons();
-	kickPlayer.CalcSamples();
-	samples.CalcSamples();
 
 	int32_t leftOut =  (int32_t)((samples.mixedSamples[0] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
 	int32_t rightOut = (int32_t)((samples.mixedSamples[1] + kickPlayer.ouputLevel * 0.9f) * 2147483648.0f);
@@ -33,6 +30,9 @@ void SPI2_IRQHandler()
 	SPI2->TXDR = (uint32_t)(leftOut);
 	SPI2->TXDR = (uint32_t)(rightOut);
 
+	noteHandler.CheckButtons();
+	kickPlayer.CalcSamples();
+	samples.CalcSamples();
 
 //	GPIOG->ODR &= ~GPIO_ODR_OD11;
 

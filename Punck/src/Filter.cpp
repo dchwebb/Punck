@@ -7,7 +7,7 @@ bool calculatingFilter = false;			// Debug
 void Filter::Update(bool reset)
 {
 	// get filter values from pot and CV and smooth through fixed IIR filter
-	dampedADC = filterADC.FilterSample(ADC_array[ADC_Filter_Pot]);
+	dampedADC = filterADC.FilterSample(*adcControl);
 
 	if (reset || std::abs(dampedADC - previousADC) > hysteresis) {
 		calculatingFilter = true;
@@ -16,12 +16,12 @@ void Filter::Update(bool reset)
 		InitIIRFilter(dampedADC);
 		calculatingFilter = false;
 
-		activeFilter = !activeFilter;		// Switch active filter
+		activeFilter = !activeFilter;			// Switch active filter
 	}
 }
 
 
-void Filter::InitIIRFilter(iirdouble_t tone)
+void Filter::InitIIRFilter(iirdouble_t tone)	// tone is a 0-65535 number representing cutoff generally from ADC input
 {
 	iirdouble_t cutoff;
 	constexpr iirdouble_t LPMax = 0.995;
@@ -29,15 +29,14 @@ void Filter::InitIIRFilter(iirdouble_t tone)
 
 	bool inactiveFilter = !activeFilter;
 
-	if (passType == HighPass) {				// Want a sweep from 0.03 to 0.99 with most travel at low end
+	if (passType == HighPass) {					// Want a sweep from 0.03 to 0.99 with most travel at low end
 		cutoff = pow((tone / 100000.0), 3.0) + HPMin;
-		iirFilter[inactiveFilter].CalcCoeff(cutoff);
-	} else {		// Want a sweep from 0.001 to 0.2-0.3
+	} else {									// Want a sweep from 0.001 to 0.2-0.3
 		cutoff = std::min(0.03f + std::pow(tone / 65536.0f, 2.0f), LPMax);
-		iirFilter[inactiveFilter].CalcCoeff(cutoff);
 	}
+	iirFilter[inactiveFilter].CalcCoeff(cutoff);
 
-	currentCutoff = cutoff;
+	currentCutoff = cutoff;						// Debug
 }
 
 
@@ -211,7 +210,6 @@ void IIRPrototype::ButterworthPoly(std::array<complex_t, MAX_POLES> &Roots)
 	if (numPoles % 2 == 1) {
 		Roots[n++] = complex_t(-1.0, 0.0);		// The real root for odd pole counts
 	}
-
 }
 
 

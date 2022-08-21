@@ -87,3 +87,7 @@ void Kick::CalcSamples()
 }
 
 
+void Kick::UpdateFilter()
+{
+	filter.Update();
+}

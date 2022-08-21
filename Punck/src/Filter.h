@@ -25,18 +25,6 @@ typedef float iirdouble_t;			// to allow easy testing with floats or doubles
 typedef std::complex<float> complex_t;
 
 
-
-struct IIRCoeff {
-	iirdouble_t a0[MAX_SECTIONS];
-	iirdouble_t a1[MAX_SECTIONS];
-	iirdouble_t a2[MAX_SECTIONS];
-	iirdouble_t b0[MAX_SECTIONS];
-	iirdouble_t b1[MAX_SECTIONS];
-	iirdouble_t b2[MAX_SECTIONS];
-};
-
-
-
 struct IIRRegisters {
 	iirdouble_t X1[MAX_SECTIONS];
 	iirdouble_t X2[MAX_SECTIONS];
@@ -61,7 +49,6 @@ public:
 		numPoles = poles;
 		DefaultProtoCoeff();
 	}
-	IIRPrototype() {};
 
 	// These coeff form H(s) = 1 / (D2*s^2 + D1*s + D0)
 	struct SPlaneCoeff {
@@ -82,7 +69,6 @@ class IIRFilter {
 public:
 	// constructors
 	IIRFilter(uint8_t poles, PassType pass) : numPoles{poles}, passType{pass}, iirProto(IIRPrototype(poles)) {};
-	IIRFilter() {};
 
 	void CalcCoeff(iirdouble_t omega);
 	void CalcCustomLowPass(iirdouble_t omega);
@@ -93,8 +79,16 @@ private:
 	uint8_t numSections = 0;
 	PassType passType = LowPass;
 	iirdouble_t cutoffFreq = 0.0f;
-	IIRPrototype iirProto;										// Standard Butterworth is default
-	IIRCoeff iirCoeff;
+	IIRPrototype iirProto;						// Standard Butterworth is default
+
+	struct IIRCoeff {
+		iirdouble_t a0[MAX_SECTIONS];
+		iirdouble_t a1[MAX_SECTIONS];
+		iirdouble_t a2[MAX_SECTIONS];
+		iirdouble_t b0[MAX_SECTIONS];
+		iirdouble_t b1[MAX_SECTIONS];
+		iirdouble_t b2[MAX_SECTIONS];
+	} iirCoeff;
 
 	iirdouble_t CalcSection(int k, iirdouble_t x, IIRRegisters& registers);
 };
@@ -117,7 +111,9 @@ private:
 // 2 channel LP or HP filter with dual sets of coefficients to allow clean recalculation and switching
 struct Filter {
 public:
-	Filter(uint8_t poles, PassType pass) : iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)} {
+	Filter(uint8_t poles, PassType pass, volatile uint16_t* adc) :
+		iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)}, adcControl{adc}
+	{
 		Update(true);						// Force calculation of coefficients
 	}
 
@@ -133,6 +129,7 @@ private:
 	IIRFilter iirFilter[2];					// Two filters for active and inactive
 	IIRRegisters iirReg[2];					// Two channels (left and right)
 
+	volatile uint16_t* adcControl;
 	float dampedADC, previousADC;			// ADC readings governing damped cut off level (and previous for hysteresis)
 	FixedFilter filterADC = FixedFilter(2, LowPass, 0.002f);
 	static constexpr uint16_t hysteresis = 30;
@@ -141,7 +138,5 @@ private:
 	float Bessel(float x);
 };
 
-
-extern Filter filter;
 
 

@@ -104,13 +104,9 @@ void FatTools::CheckCache()
 		}
 
 		if (sampleChanged || writeCacheDirty) {
-			//GPIOC->ODR |= GPIO_ODR_OD11;			// PC11: debug pin
-
 			usb.PauseEndpoint(usb.msc);				// Sends NAKs from the msc endpoint whilst the Flash device is unavailable
 			FlushCache();
 			usb.ResumeEndpoint(usb.msc);
-
-			//GPIOC->ODR &= ~GPIO_ODR_OD11;
 		}
 		cacheUpdated = 0;
 
