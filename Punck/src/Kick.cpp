@@ -1,22 +1,26 @@
 #include <Kick.h>
 #include <cmath>
 #include "Filter.h"
+#include "NoteHandler.h"
 
-Kick kickPlayer;
 
-Kick::Kick()
+void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange)
 {
-	// Store note handler voice for managing LEDs etc
-	noteHandlerVoice = NoteHandler::kick;
-}
-
-void Kick::Play(uint32_t noteOffset, uint32_t noteRange)
-{
+	// Called when accessed from MIDI (different note offsets for different tuning?)
 	phase = Phase::Ramp1;
 	position = 0.0f;
 	currentLevel = 0.0f;
+	noteMapper->led.On();
+}
 
-	noteHandler.VoiceLED(noteHandlerVoice, true);
+
+void Kick::Play(uint8_t voice, uint32_t index)
+{
+	// Called when button is pressed
+	phase = Phase::Ramp1;
+	position = 0.0f;
+	currentLevel = 0.0f;
+	noteMapper->led.On();
 }
 
 
@@ -36,7 +40,7 @@ void Kick::CalcOutput()
 		currentLevel = currentLevel + (ramp2Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.82f) {
-			currentLevel = 0.78f;			// discontinuity sharply falls at first
+			currentLevel = 0.78f;				// discontinuity sharply falls at first
 			phase = Phase::Ramp3;
 			GPIOG->ODR &= ~GPIO_ODR_OD11;
 		}
@@ -66,14 +70,15 @@ void Kick::CalcOutput()
 	case Phase::SlowSine: {
 		slowSinInc *= sineSlowDownRate;			// Sine wave slowly decreases in frequency
 		position += slowSinInc;					// Set current poition in sine wave
-		float decaySpeed = 0.9994 + 0.00055f * (float)ADC_array[ADC_KickDecay] / 65536.0f;
+		float decaySpeed = 0.9994 + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
 		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
 
 		if (slowSinLevel <= 0.00001f) {
 			phase = Phase::Off;
-			//currentLevel = 0.0f;
-			noteHandler.VoiceLED(noteHandlerVoice, false);		// Turn off LED
+			//currentLevel = 0.0f;			// FIXME somthing is causing a discontuinity where output has a non-zero offset
+
+			noteMapper->led.Off();
 		}
 	}
 		break;
@@ -82,7 +87,7 @@ void Kick::CalcOutput()
 		break;
 	}
 
-	ouputLevel = filter.CalcFilter(currentLevel, left);
+	outputLevel[0] = filter.CalcFilter(currentLevel, left);
 
 }
 

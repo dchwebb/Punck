@@ -4,23 +4,9 @@
 #include <cstring>
 #include <cmath>
 
-Samples samples;
 
-uint32_t startTime;		// Debug
-
-
-Samples::Samples()
+void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange)
 {
-	// Store note handler voice for managing LEDs etc
-	sampler[playerA].noteHandlerVoice = NoteHandler::samplerA;
-	sampler[playerB].noteHandlerVoice = NoteHandler::samplerB;
-}
-
-
-void Samples::Play(SamplePlayer sp, uint32_t noteOffset, uint32_t noteRange)
-{
-	startTime = SysTickVal;
-
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset < sampler[sp].bankLen) {
 		sampler[sp].sample = sampler[sp].bank[noteOffset].s;
@@ -33,20 +19,20 @@ void Samples::Play(SamplePlayer sp, uint32_t noteOffset, uint32_t noteRange)
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 	sampler[sp].sampleVoice = noteOffset;
 
-	noteHandler.VoiceLED(sampler[sp].noteHandlerVoice, true);
+	sampler[sp].noteMapper->led.On();
+
 }
 
 
-void Samples::Play(SamplePlayer sp, uint32_t index)
+void Samples::Play(uint8_t sp, uint32_t index)
 {
-	startTime = SysTickVal;
-
 	sampler[sp].playing = true;
 	sampler[sp].sample = sampler[sp].bank[index].s;		//&sampleList[index];
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 
-	noteHandler.VoiceLED(sampler[sp].noteHandlerVoice, true);
+	sampler[sp].noteMapper->led.On();
+
 }
 
 
@@ -87,8 +73,7 @@ void Samples::CalcOutput()
 				sp.currentSamples[0] = 0;
 				sp.currentSamples[1] = 0;
 				sp.playing = false;
-
-				noteHandler.VoiceLED(sp.noteHandlerVoice, false);		// Turn off LED
+				sp.noteMapper->led.Off();
 
 				//printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
 			}
@@ -99,8 +84,8 @@ void Samples::CalcOutput()
 	}
 
 	// Mix sample for final output to DAC FIXME - handle overflow (use floats for further sub mixing at output stage)
-	mixedSamples[0] = ((float)sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0]) / 2147483648.0f;
-	mixedSamples[1] = ((float)sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1]) / 2147483648.0f;
+	outputLevel[0] = ((float)sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0]) / 2147483648.0f;
+	outputLevel[1] = ((float)sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1]) / 2147483648.0f;
 }
 
 
@@ -126,8 +111,8 @@ bool Samples::GetSampleInfo(Sample* sample)
 	}
 
 	sample->sampleRate = *(uint32_t*)&(wavHeader[pos + 12]);
-	sample->channels = *(uint16_t*)&(wavHeader[pos + 10]);
-	sample->byteDepth = *(uint16_t*)&(wavHeader[pos + 22]) / 8;
+	sample->channels   = *(uint16_t*)&(wavHeader[pos + 10]);
+	sample->byteDepth  = *(uint16_t*)&(wavHeader[pos + 22]) / 8;
 
 	// Navigate forward to find the start of the data area
 	while (*(uint32_t*)&(wavHeader[pos]) != 0x61746164) {		// Look for string 'data'

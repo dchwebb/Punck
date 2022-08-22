@@ -8,21 +8,33 @@ NoteHandler noteHandler;
 NoteHandler::NoteHandler()
 {
 	for (uint8_t i = 0; i < 9; ++i) {
-		noteMapper[i].voice = (Voice)i;
+		noteMapper[i].voice = i;
 	}
 
-	noteMapper[samplerA].btn = {GPIOC, 6};
-	noteMapper[samplerA].led = {GPIOB, 0};				// PB0: Green
-	noteMapper[samplerA].midiLow = 72;
-	noteMapper[samplerA].midiHigh = 79;
+	NoteMapper& sa = noteMapper[samplerA];
+	samples.sampler[0].noteMapper = &sa;
+	sa.drumVoice = &samples;
+	sa.voiceIndex = 0;
+//	sa.btn = {GPIOC, 6};
+	sa.led = {GPIOB, 0};				// PB0: Green
+	sa.midiLow = 72;
+	sa.midiHigh = 79;
 
-	noteMapper[samplerB].led = {GPIOE, 1};				// PE1: Yellow LED nucleo
-	noteMapper[samplerB].midiLow = 60;
-	noteMapper[samplerB].midiHigh = 67;
+	NoteMapper& sb = noteMapper[samplerB];
+	samples.sampler[1].noteMapper = &sb;
+	sb.drumVoice = &samples;
+	sb.voiceIndex = 1;
+	sb.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
+	sb.midiLow = 60;
+	sb.midiHigh = 67;
 
-	noteMapper[Voice::kick].led = {GPIOB, 14};			// PB14: Red LED nucleo
-	noteMapper[Voice::kick].midiLow = 84;
-	noteMapper[Voice::kick].midiHigh = 84;
+	NoteMapper& k = noteMapper[Voice::kick];
+	kickPlayer.noteMapper = &k;
+	k.drumVoice = &kickPlayer;
+	k.btn = {GPIOC, 6};
+	k.led = {GPIOB, 14};				// PB14: Red LED nucleo
+	k.midiLow = 84;
+	k.midiHigh = 84;
 }
 
 
@@ -31,10 +43,10 @@ void NoteHandler::Output()
 {
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn
 
-	float leftOutput =  samples.mixedSamples[0] +
-						kickPlayer.ouputLevel * 1.0f;
-	float rightOutput = samples.mixedSamples[1] +
-						kickPlayer.ouputLevel * 1.0f;
+	float leftOutput =  samples.outputLevel[0] +
+						kickPlayer.outputLevel[0] * 1.0f;
+	float rightOutput = samples.outputLevel[1] +
+						kickPlayer.outputLevel[0] * 1.0f;
 
 	if (std::abs(leftOutput) > 1.0f)  { ++leftOverflow; }		// Debug
 	if (std::abs(rightOutput) > 1.0f) { ++rightOverflow; }
@@ -42,17 +54,10 @@ void NoteHandler::Output()
 	SPI2->TXDR = (int32_t)(leftOutput * 2147483648.0f);
 	SPI2->TXDR = (int32_t)(rightOutput * 2147483648.0f);
 
-	kickPlayer.CalcOutput();
-	samples.CalcOutput();
-}
-
-
-void NoteHandler::VoiceLED(Voice v, bool on)
-{
-	if (on) {
-		noteMapper[v].led.On();
-	} else {
-		noteMapper[v].led.Off();
+	for (auto& nm : noteMapper) {
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+			nm.drumVoice->CalcOutput();
+		}
 	}
 }
 
@@ -60,7 +65,7 @@ void NoteHandler::VoiceLED(Voice v, bool on)
 void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 {
 	if (buttonMode == ButtonMode::midiLearn) {
-		NoteMapper& n = noteMapper[(uint8_t)midiLearnVoice];
+		NoteMapper& n = noteMapper[midiLearnVoice];
 		if (midiLearnState == MidiLearnState::lowNote) {
 			n.midiLow = midiNote.noteValue;
 			n.midiHigh = midiNote.noteValue;
@@ -79,20 +84,9 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 				uint32_t noteOffset = midiNote.noteValue - note.midiLow;
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
 
-				switch (note.voice) {
-				case Voice::samplerA:
-					samples.Play(samples.SamplePlayer::playerA, noteOffset, noteRange);
-					break;
-				case Voice::samplerB:
-					samples.Play(samples.SamplePlayer::playerB, noteOffset, noteRange);
-					break;
-				case Voice::kick:
-					kickPlayer.Play(noteOffset, noteRange);
-					break;
-				default:
-					break;
+				if (note.drumVoice) {
+					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange);
 				}
-
 			}
 		}
 	}
@@ -101,7 +95,6 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 
 void NoteHandler::CheckButtons()
 {
-
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
 	if (GPIOB->IDR & GPIO_IDR_ID3) {			// MIDI learn mode
 		buttonMode = ButtonMode::midiLearn;
@@ -124,7 +117,9 @@ void NoteHandler::CheckButtons()
 
 				switch (buttonMode) {
 				case ButtonMode::playNote:
-					samples.Play(samples.SamplePlayer::playerA, 0);
+					if (note.drumVoice) {
+						note.drumVoice->Play(note.voiceIndex, 0);
+					}
 					break;
 				case ButtonMode::midiLearn:
 					note.led.On();

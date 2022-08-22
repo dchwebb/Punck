@@ -129,17 +129,17 @@ void CDCHandler::ProcessCommand()
 
 		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
 
-		while (samples.sampleList[pos].name[0] != 0) {
+		while (noteHandler.samples.sampleList[pos].name[0] != 0) {
 			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x %.3f\r\n",
 					pos,
-					samples.sampleList[pos].name,
-					samples.sampleList[pos].size,
-					samples.sampleList[pos].sampleRate,
-					samples.sampleList[pos].byteDepth * 8,
-					samples.sampleList[pos].channels,
-					samples.sampleList[pos].valid ? "Y" : " ",
-					(unsigned int)samples.sampleList[pos].startAddr,
-					(float)samples.sampleList[pos].sampleCount / samples.sampleList[pos].sampleRate
+					noteHandler.samples.sampleList[pos].name,
+					noteHandler.samples.sampleList[pos].size,
+					noteHandler.samples.sampleList[pos].sampleRate,
+					noteHandler.samples.sampleList[pos].byteDepth * 8,
+					noteHandler.samples.sampleList[pos].channels,
+					noteHandler.samples.sampleList[pos].valid ? "Y" : " ",
+					(unsigned int)noteHandler.samples.sampleList[pos].startAddr,
+					(float)noteHandler.samples.sampleList[pos].sampleCount / noteHandler.samples.sampleList[pos].sampleRate
 					);
 			++pos;
 		}
@@ -148,8 +148,8 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		printf("%s\r\n", samples.sampleList[sn].name);
-		samples.Play(samples.SamplePlayer::playerA, sn);
+		printf("%s\r\n", noteHandler.samples.sampleList[sn].name);
+		noteHandler.samples.Play(noteHandler.samples.SamplePlayer::playerA, sn);
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list

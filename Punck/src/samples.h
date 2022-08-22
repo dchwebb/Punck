@@ -1,9 +1,11 @@
 #pragma once
 
 #include "initialisation.h"
-#include "NoteHandler.h"
+#include "DrumVoice.h"
 
-class Samples {
+class NoteMapper;
+
+class Samples : public DrumVoice {
 public:
 	enum SamplePlayer {playerA, playerB, noPlayer};
 
@@ -39,17 +41,14 @@ public:
 		int32_t currentSamples[2] = {};		// Left/right sample levels for mixing
 		uint32_t bankLen;
 		std::array<Bank, 10> bank;			// Store pointer to Bank samples sorted by index
-		NoteHandler::Voice noteHandlerVoice;
+		NoteMapper* noteMapper;
 	} sampler[2];
 
-	float mixedSamples[2] = {};				// Left/right samples mixed and ready to output to DAC
 
-	Samples();
-	void Play(SamplePlayer s, uint32_t noteOffset, uint32_t noteRange);
-	void Play(SamplePlayer s, uint32_t sampleNo);
+	void Play(uint8_t player, uint32_t noteOffset, uint32_t noteRange);
+	void Play(uint8_t player, uint32_t sampleNo);
 	void CalcOutput();
 	bool UpdateSampleList();
 	bool GetSampleInfo(Sample* sample);
 };
 
-extern Samples samples;
