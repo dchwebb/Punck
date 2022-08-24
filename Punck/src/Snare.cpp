@@ -1,18 +1,18 @@
 #include <Snare.h>
 #include "NoteHandler.h"
 
-void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange)
+void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
-	partial1Inc = FrequencyToIncrement(partial1Freq);		// First Mode 0,1 frequency
-	partial2Inc = FrequencyToIncrement(partial1Freq * 1.833f);		// Second Mode 0,1 frequency
+	partialInc[0] = FreqToInc(baseFreq);		// First Mode 0,1 frequency
+	partialpos[0] = 0.3f;
+	partialpos[1] = 0.0f;
 
-	partial1pos = 0.3f;
-	partial2pos = 0.0f;
-	currentLevel = 0.0f;
-	partial1Level = partial1InitLevel;
-	partial2Level = partial2InitLevel;
-	randLevel = randInitLevel;
+	for (uint8_t i = 0; i < partialCount; ++i) {
+		partialLevel[i] = partialInitLevel[i];
+		partialInc[i] = FreqToInc(baseFreq * partialFreqOffset[i]);
+	}
+	noiseLevel = noiseInitLevel;
 	playing = true;
 	noteMapper->led.On();
 }
@@ -21,43 +21,44 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange)
 void Snare::Play(uint8_t voice, uint32_t index)
 {
 	// Called when button is pressed
-	Play(0, 0, 0);
+	Play(0, 0, 0, 255);
 }
 
 
 void Snare::CalcOutput()
 {
 	if (playing) {
-		float rand1 = intToFloatMult * (int32_t)RNG->DR;
+		float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
+		float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;		// FIXME - use dedicated ADC
 
-		partial1pos += partial1Inc;					// Set current poition in sine wave
-		partial2pos += partial2Inc;					// Set current poition in sine wave
-		float decaySpeed = 0.9991 + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
-		partial1Level = partial1Level * decaySpeed;
-		partial2Level = partial2Level * decaySpeed;
-		randLevel *= randDecay;
+		float partialOutput = 0.0f;
+		bool partialsInaudible = true;
+		for (uint8_t i = 0; i < partialCount; ++i) {
+			partialInc[i] *= partialPitchDrop;
+			partialpos[i] += partialInc[i];						// Set current poition in sine wave
+			partialLevel[i] *= partialDecay + adcDecay;
+			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
-		// Fixme should decrement at different rates
-		float sharedOutput = (std::sin(partial1pos) * partial1Level) + (std::sin(partial2pos) * partial2Level);
+			if (partialLevel[i] > 0.00001f) {
+				partialsInaudible = false;
+			}
+		}
+		noiseLevel *= noiseDecay + adcDecay;
 
-		float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel random number here to give time to update
+		float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
 
 		if (rand1 == rand2) {
 			volatile int susp = 1;
 		}
 
-		outputLevel[left] = sharedOutput +	(rand1 * randLevel);
-		outputLevel[right] = sharedOutput +	(rand2 * randLevel);
+		outputLevel[left]  = filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
+		outputLevel[right] = filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);
 
-		//currentLevel = std::sin(partial1pos);
-
-		if (partial1Level <= 0.00001f && std::abs(partial1Level) < 0.00001f) {
+		if (partialsInaudible) {
 			playing = false;
 			noteMapper->led.Off();
 		}
 	}
-	outputLevel[left] = filter.CalcFilter(outputLevel[0], left);
-	outputLevel[right] = filter.CalcFilter(outputLevel[1], right);
 
 }
 

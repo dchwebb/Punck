@@ -7,7 +7,7 @@ class NoteMapper;
 
 class Kick : public DrumVoice {
 public:
-	void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange);
+	void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity);
 	void Play(uint8_t voice, uint32_t index);
 	void CalcOutput();
 	void UpdateFilter();

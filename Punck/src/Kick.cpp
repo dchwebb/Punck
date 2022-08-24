@@ -4,7 +4,7 @@
 #include "NoteHandler.h"
 
 
-void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange)
+void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	phase = Phase::Ramp1;

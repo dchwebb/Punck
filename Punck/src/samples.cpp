@@ -5,7 +5,7 @@
 #include <cmath>
 
 
-void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange)
+void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
 {
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset < sampler[sp].bankLen) {

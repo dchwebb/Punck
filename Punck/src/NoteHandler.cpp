@@ -58,6 +58,7 @@ void NoteHandler::Output()
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn
 
 /*
+	// Test code for calculating offsets and maximum levels before ADC distorts
 	leftOutput += outInc;
 	if (std::abs(leftOutput) > 1.0f) {
 		leftOutput = (leftOutput > 0.0f) ? 1.0f : -1.0f;
@@ -71,29 +72,21 @@ void NoteHandler::Output()
 	rightOutput = leftOutput;
 */
 
-	float leftOutput = 0.0f, rightOutput = 0.0f;
+	float combinedOutput[2] = {0.0f, 0.0f};
 	for (auto& nm : noteMapper) {
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
-			leftOutput += nm.drumVoice->outputLevel[left];
-			rightOutput += nm.drumVoice->outputLevel[right];
+			combinedOutput[left]  += nm.drumVoice->outputLevel[left];
+			combinedOutput[right] += nm.drumVoice->outputLevel[right];
 		}
 	}
 
 
-//	float leftOutput =  samples.outputLevel[0] +
-//						snarePlayer.outputLevel[0] * 1.0f +
-//						kickPlayer.outputLevel[0] * 1.0f;
-//	float rightOutput = samples.outputLevel[1] +
-//						snarePlayer.outputLevel[0] * 1.0f +
-//						kickPlayer.outputLevel[0] * 1.0f;
+	if (std::abs(combinedOutput[left])  > 1.0f) { ++leftOverflow; }		// Debug
+	if (std::abs(combinedOutput[right]) > 1.0f) { ++rightOverflow; }
 
-	if (std::abs(leftOutput) > 1.0f)  { ++leftOverflow; }		// Debug
-	if (std::abs(rightOutput) > 1.0f) { ++rightOverflow; }
-
-	//float outputScale = 1940000000.0f;
 	float outputScale = 2147483648.0f * adjOutputScale;
-	SPI2->TXDR = (int32_t)((leftOutput + adjOffset) *  outputScale);		// 1073741824
-	SPI2->TXDR = (int32_t)((rightOutput + adjOffset) * outputScale);		// 2147483648
+	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);
+	SPI2->TXDR = (int32_t)((combinedOutput[right] + adjOffset) * outputScale);
 
 	for (auto& nm : noteMapper) {
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
@@ -126,7 +119,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
 
 				if (note.drumVoice) {
-					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange);
+					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange, midiNote.velocity);
 				}
 			}
 		}
