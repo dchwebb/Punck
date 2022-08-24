@@ -4,6 +4,7 @@
 #include "MidiHandler.h"
 #include "samples.h"
 #include "Kick.h"
+#include "Snare.h"
 
 
 struct NoteMapper {
@@ -42,8 +43,10 @@ public:
 	void NoteOn(MidiHandler::MidiNote midiNote);
 	void Output();
 	void CheckButtons();
+	void IdleTasks();
 
 	Kick kickPlayer;
+	Snare snarePlayer;
 	Samples samples;
 
 private:

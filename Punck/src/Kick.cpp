@@ -88,7 +88,7 @@ void Kick::CalcOutput()
 	}
 
 	outputLevel[0] = filter.CalcFilter(currentLevel, left);
-
+	outputLevel[1] = outputLevel[0];
 }
 
 

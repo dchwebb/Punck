@@ -5,8 +5,8 @@
 #include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
-#include "Samples.h"
-#include "Kick.h"
+//#include "Samples.h"
+//#include "Kick.h"
 
 volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
@@ -35,6 +35,7 @@ int main(void) {
 	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
+	InitRNG();						// Init random number generator
 	InitMidiUART();
 	InitADC();
 //	InitDAC();						// DAC used to output Wet/Dry mix levels
@@ -51,7 +52,7 @@ int main(void) {
 	while (1) {
 		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
-		//kickPlayer.UpdateFilter();	// Check if filter coefficients need to be updated
+		noteHandler.IdleTasks();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
 		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {

@@ -716,3 +716,10 @@ void InitMidiUART() {
 
 	UART8->CR1 |= USART_CR1_UE;						// UART Enable
 }
+
+
+void InitRNG()
+{
+	RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;				// Enable clock
+	RNG->CR |= RNG_CR_RNGEN;						// Enable random number generator
+}

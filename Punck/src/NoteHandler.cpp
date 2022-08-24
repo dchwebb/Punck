@@ -31,28 +31,69 @@ NoteHandler::NoteHandler()
 	NoteMapper& k = noteMapper[Voice::kick];
 	kickPlayer.noteMapper = &k;
 	k.drumVoice = &kickPlayer;
-	k.btn = {GPIOC, 6};
+	//k.btn = {GPIOC, 6};
 	k.led = {GPIOB, 14};				// PB14: Red LED nucleo
 	k.midiLow = 84;
 	k.midiHigh = 84;
+
+	NoteMapper& s = noteMapper[Voice::snare];
+	snarePlayer.noteMapper = &s;
+	s.drumVoice = &snarePlayer;
+	s.btn = {GPIOC, 6};
+	s.led = {GPIOB, 14};				// PB14: Red LED nucleo
+	s.midiLow = 83;
+	s.midiHigh = 83;
+
 }
 
 
 uint32_t leftOverflow = 0, rightOverflow = 0;	// Debug
+//float leftOutput = 0.0f, rightOutput = 0.0f;
+//float outInc = 0.005;
+//uint32_t waitCrossing = 0;
+float adjOffset = -0.03f;
+float adjOutputScale = 0.92f;
 void NoteHandler::Output()
 {
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn
 
-	float leftOutput =  samples.outputLevel[0] +
-						kickPlayer.outputLevel[0] * 1.0f;
-	float rightOutput = samples.outputLevel[1] +
-						kickPlayer.outputLevel[0] * 1.0f;
+/*
+	leftOutput += outInc;
+	if (std::abs(leftOutput) > 1.0f) {
+		leftOutput = (leftOutput > 0.0f) ? 1.0f : -1.0f;
+		outInc *= -1.0f;
+		waitCrossing = 0;
+	}
+	if (leftOutput <= 0.0f && outInc < 0.0f && waitCrossing < 10000) {
+		leftOutput = 0.0f;
+		waitCrossing++;
+	}
+	rightOutput = leftOutput;
+*/
+
+	float leftOutput = 0.0f, rightOutput = 0.0f;
+	for (auto& nm : noteMapper) {
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+			leftOutput += nm.drumVoice->outputLevel[left];
+			rightOutput += nm.drumVoice->outputLevel[right];
+		}
+	}
+
+
+//	float leftOutput =  samples.outputLevel[0] +
+//						snarePlayer.outputLevel[0] * 1.0f +
+//						kickPlayer.outputLevel[0] * 1.0f;
+//	float rightOutput = samples.outputLevel[1] +
+//						snarePlayer.outputLevel[0] * 1.0f +
+//						kickPlayer.outputLevel[0] * 1.0f;
 
 	if (std::abs(leftOutput) > 1.0f)  { ++leftOverflow; }		// Debug
 	if (std::abs(rightOutput) > 1.0f) { ++rightOverflow; }
 
-	SPI2->TXDR = (int32_t)(leftOutput * 2147483648.0f);
-	SPI2->TXDR = (int32_t)(rightOutput * 2147483648.0f);
+	//float outputScale = 1940000000.0f;
+	float outputScale = 2147483648.0f * adjOutputScale;
+	SPI2->TXDR = (int32_t)((leftOutput + adjOffset) *  outputScale);		// 1073741824
+	SPI2->TXDR = (int32_t)((rightOutput + adjOffset) * outputScale);		// 2147483648
 
 	for (auto& nm : noteMapper) {
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
@@ -134,4 +175,11 @@ void NoteHandler::CheckButtons()
 			note.btn.buttonOn = false;
 		}
 	}
+}
+
+
+void NoteHandler::IdleTasks()
+{
+	kickPlayer.UpdateFilter();					// Check if filter coefficients need to be updated
+	snarePlayer.UpdateFilter();					// Check if filter coefficients need to be updated
 }
