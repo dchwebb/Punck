@@ -8,16 +8,17 @@ void MidiHandler::DataIn()
 
 void MidiHandler::DataOut()
 {
+	uint8_t* outBuffBytes = reinterpret_cast<uint8_t*>(outBuff);
 	// Handle incoming midi command here
 	if (outBuffCount == 4) {
 		midiEvent(*outBuff);
 
-	} else if (outBuff[1] == 0xF0 && outBuffCount > 3) {		// Sysex
+	} else if (outBuffBytes[1] == 0xF0 && outBuffCount > 3) {		// Sysex
 		// sysEx will be padded when supplied by usb - add only actual sysEx message bytes to array
 		uint8_t sysExCnt = 2, i = 0;
 		for (i = 0; i < 32; ++i) {
-			if (outBuff[sysExCnt] == 0xF7) break;
-			sysEx[i] = outBuff[sysExCnt++];
+			if (outBuffBytes[sysExCnt] == 0xF7) break;
+			sysEx[i] = outBuffBytes[sysExCnt++];
 
 			// remove 1 byte padding at the beginning of each 32bit word
 			if (sysExCnt % 4 == 0) {
@@ -47,6 +48,11 @@ void MidiHandler::midiEvent(const uint32_t data)
 
 	case PitchBend:
 		pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
+		break;
+
+	case System:
+
+
 		break;
 	}
 

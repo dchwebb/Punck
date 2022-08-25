@@ -12,7 +12,7 @@ constexpr float FreqToInc(float frequency)
 
 class Snare : public DrumVoice {
 public:
-	void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity);
+	void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity);
 	void Play(uint8_t voice, uint32_t index);
 	void CalcOutput();
 	void UpdateFilter();
@@ -27,13 +27,17 @@ private:
 	float partialPitchDrop = 1.0f;			// FIXME - 1 = disabled not sure this really adds anything
 	float partialDecay = 0.9991f;			// Decay rate of partials (increased by decay adc amount)
 
-	// First and second mode 0,1 frequencies
-	float baseFreq = 150.0f;				// Relative frequency of partial 2 to partial 1
-	float partialInc[partialCount] = {FreqToInc(baseFreq), FreqToInc(baseFreq * 1.833f), FreqToInc(baseFreq * 1.588f)};
+	float baseFreq = 150.0f;				// Lowest frequency which partials will be non-integer multiples of
+	float partialInc[partialCount] = {
+			FreqToInc(baseFreq * partialFreqOffset[0]),
+			FreqToInc(baseFreq * partialFreqOffset[1]),
+			FreqToInc(baseFreq * partialFreqOffset[2])};
 
 	float noiseInitLevel = 1.0f;
 	float noiseLevel;
 	float noiseDecay = 0.999f;				// Decay rate of noise (increased by decay adc amount)
+
+	float velocityScale;
 
 	bool playing = false;
 	Filter filter{2, LowPass, &(ADC_array[ADC_Filter_Pot])};		// Filters combined partial and noise elements of sound

@@ -5,8 +5,7 @@
 #include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
-//#include "Samples.h"
-//#include "Kick.h"
+
 
 volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
@@ -15,7 +14,10 @@ extern uint32_t SystemCoreClock;
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER_LENGTH];
 
 // TODO:
-
+// Drum pattern editor/player
+// Sample panning (naming? web interface?)
+// Use web interface for parameter adjustment
+// Generically handle filter updates from NoteHandler::IdleTasks()
 
 
 USB usb;
@@ -38,7 +40,6 @@ int main(void) {
 	InitRNG();						// Init random number generator
 	InitMidiUART();
 	InitADC();
-//	InitDAC();						// DAC used to output Wet/Dry mix levels
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
 

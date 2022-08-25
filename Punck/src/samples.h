@@ -46,7 +46,7 @@ public:
 	} sampler[2];
 
 
-	void Play(uint8_t player, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity);
+	void Play(uint8_t player, uint32_t noteOffset, uint32_t noteRange, float velocity);
 	void Play(uint8_t player, uint32_t sampleNo);
 	void CalcOutput();
 	bool UpdateSampleList();

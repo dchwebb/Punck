@@ -4,13 +4,14 @@
 #include "NoteHandler.h"
 
 
-void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
+void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	phase = Phase::Ramp1;
 	position = 0.0f;
 	currentLevel = 0.0f;
 	noteMapper->led.On();
+	velocityScale = velocity;
 }
 
 
@@ -21,6 +22,7 @@ void Kick::Play(uint8_t voice, uint32_t index)
 	position = 0.0f;
 	currentLevel = 0.0f;
 	noteMapper->led.On();
+	velocityScale = 1.0f;
 }
 
 
@@ -87,7 +89,7 @@ void Kick::CalcOutput()
 		break;
 	}
 
-	outputLevel[0] = filter.CalcFilter(currentLevel, left);
+	outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
 	outputLevel[1] = outputLevel[0];
 }
 

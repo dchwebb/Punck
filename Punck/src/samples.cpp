@@ -5,7 +5,7 @@
 #include <cmath>
 
 
-void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
+void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset < sampler[sp].bankLen) {
@@ -18,7 +18,7 @@ void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, uint8_t 
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 	sampler[sp].sampleVoice = noteOffset;
-	sampler[sp].velocityScale = static_cast<float>(velocity) / 127.0f;
+	sampler[sp].velocityScale = velocity;
 
 	sampler[sp].noteMapper->led.On();
 }

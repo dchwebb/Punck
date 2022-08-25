@@ -1,11 +1,11 @@
 #include <Snare.h>
 #include "NoteHandler.h"
 
-void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t velocity)
+void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	partialInc[0] = FreqToInc(baseFreq);		// First Mode 0,1 frequency
-	partialpos[0] = 0.3f;
+	partialpos[0] = 0.3f;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
 
 	for (uint8_t i = 0; i < partialCount; ++i) {
@@ -13,6 +13,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t
 		partialInc[i] = FreqToInc(baseFreq * partialFreqOffset[i]);
 	}
 	noiseLevel = noiseInitLevel;
+	velocityScale = velocity;
 	playing = true;
 	noteMapper->led.On();
 }
@@ -21,7 +22,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t
 void Snare::Play(uint8_t voice, uint32_t index)
 {
 	// Called when button is pressed
-	Play(0, 0, 0, 127);
+	Play(0, 0, 0, 1.0f);
 }
 
 
@@ -32,7 +33,7 @@ void Snare::CalcOutput()
 		float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;		// FIXME - use dedicated ADC
 
 		float partialOutput = 0.0f;
-		bool partialsInaudible = true;
+		bool partialsInaudible = true;							// To calculate when to terminate note
 		for (uint8_t i = 0; i < partialCount; ++i) {
 			partialInc[i] *= partialPitchDrop;
 			partialpos[i] += partialInc[i];						// Set current poition in sine wave
@@ -51,8 +52,8 @@ void Snare::CalcOutput()
 			volatile int susp = 1;
 		}
 
-		outputLevel[left]  = filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
-		outputLevel[right] = filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);
+		outputLevel[left]  = velocityScale * filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
+		outputLevel[right] = velocityScale * filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);
 
 		if (partialsInaudible) {
 			playing = false;
@@ -61,6 +62,7 @@ void Snare::CalcOutput()
 	}
 
 }
+
 
 void Snare::UpdateFilter()
 {

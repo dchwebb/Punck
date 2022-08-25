@@ -119,7 +119,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
 
 				if (note.drumVoice) {
-					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange, midiNote.velocity);
+					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange, static_cast<float>(midiNote.velocity) / 127.0f);
 				}
 			}
 		}
