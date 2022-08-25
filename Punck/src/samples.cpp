@@ -18,9 +18,9 @@ void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, uint8_t 
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
 	sampler[sp].sampleVoice = noteOffset;
+	sampler[sp].velocityScale = static_cast<float>(velocity) / 127.0f;
 
 	sampler[sp].noteMapper->led.On();
-
 }
 
 
@@ -30,6 +30,7 @@ void Samples::Play(uint8_t sp, uint32_t index)
 	sampler[sp].sample = sampler[sp].bank[index].s;		//&sampleList[index];
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
+	sampler[sp].velocityScale = 1.0f;
 
 	sampler[sp].noteMapper->led.On();
 
@@ -52,17 +53,16 @@ void Samples::CalcOutput()
 		if (sp.playing) {
 			auto& bytes = sp.sample->byteDepth;
 
-			sp.currentSamples[0] = readBytes(sp.sampleAddress, bytes);
+			sp.currentSamples[left] = readBytes(sp.sampleAddress, bytes);
 
 			if (sp.sample->channels == 2) {
-				sp.currentSamples[1] = readBytes(sp.sampleAddress + bytes, bytes);
+				sp.currentSamples[right] = readBytes(sp.sampleAddress + bytes, bytes);
 			} else {
-				sp.currentSamples[1] = sp.currentSamples[0];		// Duplicate left channel to right for mono signal
+				sp.currentSamples[right] = sp.currentSamples[left];		// Duplicate left channel to right for mono signal
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
 			float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;		// FIXME - separate ADCs for each sampler
-			//float adjSpeed = 1.0f;
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;
@@ -70,22 +70,25 @@ void Samples::CalcOutput()
 			sp.sampleAddress += (sp.sample->channels * bytes * (uint32_t)addressJump);
 
 			if ((uint8_t*)sp.sampleAddress > sp.sample->endAddr) {
-				sp.currentSamples[0] = 0;
-				sp.currentSamples[1] = 0;
+				sp.currentSamples[left] = 0;
+				sp.currentSamples[right] = 0;
 				sp.playing = false;
 				sp.noteMapper->led.Off();
-
-				//printf("Time: %f\r\n", (float)(SysTickVal - startTime) / 1000.0f);
 			}
 		} else {
-			sp.currentSamples[0] = 0;
-			sp.currentSamples[1] = 0;
+			sp.currentSamples[left] = 0;
+			sp.currentSamples[right] = 0;
 		}
 	}
 
-	// Mix sample for final output to DAC FIXME - handle overflow (use floats for further sub mixing at output stage)
-	outputLevel[0] = ((float)sampler[playerA].currentSamples[0] + sampler[playerB].currentSamples[0]) / 2147483648.0f;
-	outputLevel[1] = ((float)sampler[playerA].currentSamples[1] + sampler[playerB].currentSamples[1]) / 2147483648.0f;
+	// Mix samples for final output to DAC
+	outputLevel[left] = intToFloatMult *
+			(sampler[playerA].velocityScale * sampler[playerA].currentSamples[left] +
+			 sampler[playerB].velocityScale * sampler[playerB].currentSamples[left]);
+
+	outputLevel[right] = intToFloatMult *
+			(sampler[playerA].velocityScale * sampler[playerA].currentSamples[right] +
+			 sampler[playerB].velocityScale * sampler[playerB].currentSamples[right]);
 }
 
 

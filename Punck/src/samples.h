@@ -42,6 +42,7 @@ public:
 		uint32_t bankLen;
 		std::array<Bank, 10> bank;			// Store pointer to Bank samples sorted by index
 		NoteMapper* noteMapper;
+		float velocityScale;
 	} sampler[2];
 
 

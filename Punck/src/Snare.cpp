@@ -21,7 +21,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, uint8_t
 void Snare::Play(uint8_t voice, uint32_t index)
 {
 	// Called when button is pressed
-	Play(0, 0, 0, 255);
+	Play(0, 0, 0, 127);
 }
 
 
