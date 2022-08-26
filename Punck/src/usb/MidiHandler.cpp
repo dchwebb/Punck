@@ -1,3 +1,4 @@
+#include "USB.h"
 #include "MidiHandler.h"
 #include "NoteHandler.h"
 
@@ -16,19 +17,89 @@ void MidiHandler::DataOut()
 	} else if (outBuffBytes[1] == 0xF0 && outBuffCount > 3) {		// Sysex
 		// sysEx will be padded when supplied by usb - add only actual sysEx message bytes to array
 		uint8_t sysExCnt = 2, i = 0;
-		for (i = 0; i < 32; ++i) {
+		for (i = 0; i < sysexMaxSize; ++i) {
 			if (outBuffBytes[sysExCnt] == 0xF7) break;
 			sysEx[i] = outBuffBytes[sysExCnt++];
 
-			// remove 1 byte padding at the beginning of each 32bit word
+			// remove 1 byte padding at the beginning of each 32 bit word
 			if (sysExCnt % 4 == 0) {
 				++sysExCnt;
 			}
 		}
 		sysExCount = i;
+		ProcessSysex();
 	}
 }
 
+
+uint32_t MidiHandler::ConstructSysex(uint8_t* buffer, uint32_t len)
+{
+	// Constructs a Sysex packet: data split into 4 byte words, each starting with appropriate sysex header byte
+	// Bytes in a sysEx commands must have upper nibble = 0 (ie only allowed 0-127 values) so double length and split bytes into nibbles
+	len *= 2;
+	sysExOut[0] = 0x04;								// 0x4	SysEx starts or continues
+	sysExOut[1] = 0xF0;
+	uint32_t sysExCnt = 2;
+	bool lowerNibble = true;
+	for (uint32_t i = 0; i < len; ++i) {
+		if (lowerNibble) {
+			sysExOut[sysExCnt++] = buffer[i / 2] & 0xF;
+		} else {
+			sysExOut[sysExCnt++] = buffer[i / 2] >> 4;
+		}
+		lowerNibble = !lowerNibble;
+
+		// add 1 byte padding at the beginning of each 32 bit word to indicate length of remaining message + 0xF7 termination byte
+		if (sysExCnt % 4 == 0) {
+			uint32_t rem = len - i;
+
+			if (rem == 3) {
+				sysExOut[sysExCnt++] = 0x07;		// 0x7	SysEx ends with following three bytes.
+			} else if (rem == 2) {
+				sysExOut[sysExCnt++] = 0x06;		// 0x6	SysEx ends with following two bytes.
+			} else if (rem == 1) {
+				sysExOut[sysExCnt++] = 0x05;		// 0x5	Single-byte System Common Message or SysEx ends with following single byte.
+			} else {
+				sysExOut[sysExCnt++] = 0x04;		// 0x4	SysEx starts or continues
+			}
+		}
+
+
+	}
+	sysExOut[sysExCnt++] = 0xF7;
+	return sysExCnt;
+}
+
+struct TestSysex {
+	uint8_t a = 0x11;
+	uint8_t b = 0x12;
+	uint8_t c = 0x13;
+	uint8_t d = 0x14;
+	uint8_t e = 0x15;
+	uint8_t f = 0x16;
+	uint8_t g = 0x17;
+	uint8_t h = 0x18;
+	uint8_t i = 0x19;
+} testSysEx;
+
+void MidiHandler::ProcessSysex()
+{
+
+//	tx.Code = 0x03;
+//	tx.db0 = 0xF0;
+//	tx.db1 = sysExCount;
+//	tx.db2 = 0xF7;
+//	usb->SendData((uint8_t*) &tx, 4, inEP);
+
+	// Store float into test variable
+	float testFloat = 1.234567f;
+	float* ptr = (float*)&testSysEx;
+	*ptr = testFloat;
+
+	uint32_t len = ConstructSysex((uint8_t*)&testSysEx, 6);
+	len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+	usb->SendData(sysExOut, len, inEP);
+}
 
 
 void MidiHandler::midiEvent(const uint32_t data)
@@ -48,11 +119,6 @@ void MidiHandler::midiEvent(const uint32_t data)
 
 	case PitchBend:
 		pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
-		break;
-
-	case System:
-
-
 		break;
 	}
 
@@ -123,7 +189,28 @@ void MidiHandler::ClassSetupData(usbRequest& req, const uint8_t* data)
 }
 
 
+/*
+Byte 1									|	Byte2		|	Byte 3		|	Byte 4
+Cable Number | Code Index Number (CIN)	|	MIDI_0		|	MIDI_1		|	MIDI_2
 
+CIN		MIDI_x Size Description
+0x0		1, 2 or 3	Miscellaneous function codes. Reserved for future extensions.
+0x1		1, 2 or 3	Cable events. Reserved for future expansion.
+0x2		2			Two-byte System Common messages like MTC, SongSelect, etc.
+0x3		3			Three-byte System Common messages like SPP, etc.
+0x4		3			SysEx starts or continues
+0x5		1			Single-byte System Common Message or SysEx ends with following single byte.
+0x6		2			SysEx ends with following two bytes.
+0x7		3			SysEx ends with following three bytes.
+0x8		3			Note-off
+0x9		3			Note-on
+0xA		3			Poly-KeyPress
+0xB		3			Control Change
+0xC		2			Program Change
+0xD		2			Channel Pressure
+0xE		3			PitchBend Change
+0xF		1			Single Byte
+*/
 
 
 

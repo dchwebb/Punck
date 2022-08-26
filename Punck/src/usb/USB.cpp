@@ -192,6 +192,10 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 							EPStartXfer(Direction::in, 0, ep0.inBuffSize);
 						}
 					} else {
+						if (epnum == 1) {
+							volatile int susp = 1;
+						}
+
 						classByEP[epnum]->DataIn();
 						transmitting = false;
 					}
@@ -212,6 +216,9 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 						uint32_t fifoemptymsk = 1;
 						USBx_DEVICE->DIEPEMPMSK &= ~fifoemptymsk;
 					} else {
+						if (epnum == 1) {
+							volatile int susp = 1;
+						}
 
 						// For regular endpoints keep writing packets to the FIFO while space available [PCD_WriteEmptyTxFifo]
 						uint16_t len = std::min(classByEP[epnum]->inBuffSize - classByEP[epnum]->inBuffCount, (uint32_t)ep_maxPacket);

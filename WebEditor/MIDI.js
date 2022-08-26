@@ -47,7 +47,7 @@ function onMIDISuccess(midiAccess) {
 
     // Update UI to show connection status
     if (checkConnection()) {
-        getOutputConfig(1);
+        //getOutputConfig(1);
         // get configuration for first port
     }
 }
@@ -55,6 +55,7 @@ function onMIDISuccess(midiAccess) {
 function onMIDIFailure() {
     console.log('Could not access your MIDI devices.');
 }
+
 
 //Receive MIDI message - mainly used to process configuration information returned from module
 function getMIDIMessage(midiMessage) {
@@ -83,11 +84,35 @@ function getMIDIMessage(midiMessage) {
         }
         recCount++;
     } else if (midiMessage.data[0] == 0xF0) {
-		  var response = document.getElementById("testResponse");    
-        response.innerHTML = "Received: " + midiMessage.data[1];
-	 }
+        // As upper bit cannot be set in a sysEx byte, data is sent a nibble at a time - reconstruct into byte array
+        var result = [];
+        for (i = 1; i < midiMessage.data.length - 1; ++i) {
+            if (i % 2 != 0) {
+                result[Math.trunc((i - 1) / 2)] = midiMessage.data[i];
+            } else {
+                result[Math.trunc((i - 1) / 2)] +=(midiMessage.data[i] << 4);
+            }
+        };
+        
+    	var response = document.getElementById("testResponse");    
+        var stringData = "";
+        for (i = 0; i < (midiMessage.data.length / 2) - 1; ++i) {
+            stringData += result[i] + " ";
+        }
+        stringData += "float: " + BytesToFloat(result.slice(0, 4));
+        response.innerHTML = "Received: " + stringData;
+
+
+	}
 
 }
+
+function BytesToFloat(buff) {
+    var val = new Float32Array(new Uint8Array(buff).buffer)[0];
+    console.log(val);
+    return val;
+}
+
 
 // Sends MIDI note to requested channel
 function sendNote(noteValue, channel) {
