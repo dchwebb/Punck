@@ -78,8 +78,6 @@ void Kick::CalcOutput()
 
 		if (slowSinLevel <= 0.00001f) {
 			phase = Phase::Off;
-			//currentLevel = 0.0f;			// FIXME somthing is causing a discontuinity where output has a non-zero offset
-
 			noteMapper->led.Off();
 		}
 	}
@@ -89,8 +87,10 @@ void Kick::CalcOutput()
 		break;
 	}
 
-	outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
-	outputLevel[1] = outputLevel[0];
+	if (phase != Phase::Off) {
+		outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
+		outputLevel[1] = outputLevel[0];
+	}
 }
 
 

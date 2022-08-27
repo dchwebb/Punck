@@ -5,7 +5,7 @@
 #include "Samples.h"
 #include "Kick.h"
 #include "Snare.h"
-
+#include "HiHat.h"
 
 struct NoteMapper {
 	uint8_t voice;
@@ -49,6 +49,7 @@ public:
 	Kick kickPlayer;
 	Snare snarePlayer;
 	Samples samples;
+	HiHat hihatPlayer;
 
 	NoteMapper noteMapper[voiceCount];
 private:

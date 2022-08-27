@@ -1,6 +1,4 @@
 #include "VoiceManager.h"
-#include "samples.h"
-#include "Kick.h"
 
 VoiceManager voiceManager;
 
@@ -39,10 +37,18 @@ VoiceManager::VoiceManager()
 	NoteMapper& s = noteMapper[Voice::snare];
 	snarePlayer.noteMapper = &s;
 	s.drumVoice = &snarePlayer;
-	s.btn = {GPIOC, 6};
+	//s.btn = {GPIOC, 6};
 	s.led = {GPIOB, 14};				// PB14: Red LED nucleo
 	s.midiLow = 83;
 	s.midiHigh = 83;
+
+	NoteMapper& hh = noteMapper[Voice::hatClosed];
+	hihatPlayer.noteMapper = &hh;
+	hh.drumVoice = &hihatPlayer;
+	hh.btn = {GPIOC, 6};
+	hh.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
+	hh.midiLow = 82;
+	hh.midiHigh = 82;
 
 }
 
