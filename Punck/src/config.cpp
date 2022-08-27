@@ -1,6 +1,8 @@
 #include <config.h>
 #include <cmath>
 
+Config config;
+
 // called whenever a config setting is changed to schedule a save after waiting to see if any more changes are being made
 void Config::ScheduleSave()
 {
@@ -33,8 +35,8 @@ bool Config::SaveConfig()
 
 void Config::SetConfig(configValues &cv)
 {
-	cv.audio_offset_left = adcZeroOffset[left];
-	cv.audio_offset_right = adcZeroOffset[right];
+//	cv.audio_offset_left = adcZeroOffset[left];
+//	cv.audio_offset_right = adcZeroOffset[right];
 }
 
 
@@ -46,13 +48,13 @@ void Config::RestoreConfig()
 	memcpy(reinterpret_cast<uint32_t*>(&cv), ADDR_FLASH_SECTOR_7, sizeof(cv));
 
 	if (strcmp(cv.StartMarker, "CFG") == 0 && strcmp(cv.EndMarker, "END") == 0 && cv.Version == CONFIG_VERSION) {
-		adcZeroOffset[left]  = cv.audio_offset_left;
-		adcZeroOffset[right] = cv.audio_offset_right;
+//		adcZeroOffset[left]  = cv.audio_offset_left;
+//		adcZeroOffset[right] = cv.audio_offset_right;
 	}
 
 	// Set up averaging values for ongoing ADC offset calibration
-	newOffset[0] = adcZeroOffset[0];
-	newOffset[1] = adcZeroOffset[1];
+//	newOffset[0] = adcZeroOffset[0];
+//	newOffset[1] = adcZeroOffset[1];
 }
 
 

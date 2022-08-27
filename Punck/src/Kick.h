@@ -11,6 +11,7 @@ public:
 	void Play(uint8_t voice, uint32_t index);
 	void CalcOutput();
 	void UpdateFilter();
+	uint32_t SerialiseConfig(uint8_t* buff);
 
 	NoteMapper* noteMapper;
 

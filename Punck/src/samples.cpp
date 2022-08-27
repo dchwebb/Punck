@@ -1,6 +1,6 @@
-#include <samples.h>
+#include "samples.h"
 #include "FatTools.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
 #include <cstring>
 #include <cmath>
 
@@ -202,4 +202,9 @@ bool Samples::UpdateSampleList()
 	std::sort(sampler[playerB].bank.begin(), sampler[playerB].bank.end(), sorter);
 
 	return changed;
+}
+
+uint32_t Samples::SerialiseConfig(uint8_t* buff)
+{
+	return 0;
 }

@@ -21,7 +21,7 @@ void SPI2_IRQHandler()
 
 	GPIOC->ODR |= GPIO_ODR_OD11;						// PC11: debug pin
 
-	noteHandler.Output();
+	voiceManager.Output();
 
 	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }

@@ -1,6 +1,6 @@
 #include "FatTools.h"
 #include "ExtFlash.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
 #include <cstring>
 #include "usb.h"
 
@@ -39,7 +39,7 @@ void FatTools::InitFatFS()
 	// Store pointer to start of root directoy
 	rootDirectory = (FATFileInfo*)(headerCache + fatFs.dirbase * fatSectorSize);
 
-	noteHandler.samples.UpdateSampleList();								// Updated list of samples on flash
+	voiceManager.samples.UpdateSampleList();								// Updated list of samples on flash
 	fatSetupDone = true;
 }
 
@@ -100,7 +100,7 @@ void FatTools::CheckCache()
 		// Update the sample list to check if any meaningful data has changed (ignores Windows disk spam, assuming this occurs in the header cache)
 		bool sampleChanged = false;
 		if (dirtyCacheBlocks) {
-			sampleChanged = noteHandler.samples.UpdateSampleList();
+			sampleChanged = voiceManager.samples.UpdateSampleList();
 		}
 
 		if (sampleChanged || writeCacheDirty) {

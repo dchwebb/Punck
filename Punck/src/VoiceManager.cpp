@@ -1,11 +1,11 @@
-#include <NoteHandler.h>
+#include "VoiceManager.h"
 #include "samples.h"
 #include "Kick.h"
 
-NoteHandler noteHandler;
+VoiceManager voiceManager;
 
 
-NoteHandler::NoteHandler()
+VoiceManager::VoiceManager()
 {
 	for (uint8_t i = 0; i < 9; ++i) {
 		noteMapper[i].voice = i;
@@ -53,7 +53,7 @@ uint32_t leftOverflow = 0, rightOverflow = 0;	// Debug
 //uint32_t waitCrossing = 0;
 float adjOffset = -0.03f;
 float adjOutputScale = 0.92f;
-void NoteHandler::Output()
+void VoiceManager::Output()
 {
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn
 
@@ -96,7 +96,7 @@ void NoteHandler::Output()
 }
 
 
-void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
+void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 {
 	if (buttonMode == ButtonMode::midiLearn) {
 		NoteMapper& n = noteMapper[midiLearnVoice];
@@ -127,7 +127,7 @@ void NoteHandler::NoteOn(MidiHandler::MidiNote midiNote)
 }
 
 
-void NoteHandler::CheckButtons()
+void VoiceManager::CheckButtons()
 {
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
 	if (GPIOB->IDR & GPIO_IDR_ID3) {			// MIDI learn mode
@@ -171,7 +171,7 @@ void NoteHandler::CheckButtons()
 }
 
 
-void NoteHandler::IdleTasks()
+void VoiceManager::IdleTasks()
 {
 	kickPlayer.UpdateFilter();					// Check if filter coefficients need to be updated
 	snarePlayer.UpdateFilter();					// Check if filter coefficients need to be updated

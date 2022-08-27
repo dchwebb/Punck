@@ -33,12 +33,13 @@ struct NoteMapper {
 };
 
 
-class NoteHandler {
+class VoiceManager {
 	friend class CDCHandler;
 public:
 	enum Voice {kick, snare, hatClosed, hatOpen, tomHigh, tomMedium, tomLow, samplerA, samplerB};
+	static constexpr uint8_t voiceCount = 9;
 
-	NoteHandler();
+	VoiceManager();
 	void VoiceLED(Voice v, bool on);
 	void NoteOn(MidiHandler::MidiNote midiNote);
 	void Output();
@@ -49,14 +50,13 @@ public:
 	Snare snarePlayer;
 	Samples samples;
 
+	NoteMapper noteMapper[voiceCount];
 private:
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};
 	ButtonMode buttonMode;
 	uint8_t midiLearnVoice;
 	MidiLearnState midiLearnState;
-
-	NoteMapper noteMapper[9];
 };
 
-extern NoteHandler noteHandler;
+extern VoiceManager voiceManager;

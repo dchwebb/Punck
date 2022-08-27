@@ -35,7 +35,7 @@ private:
 	void midiEvent(const uint32_t data);
 	void QueueInc();
 	void ProcessSysex();
-	uint32_t ConstructSysex(uint8_t* buffer, uint32_t len);
+	uint32_t ConstructSysEx(uint8_t* buffer, uint32_t len);
 
 	uint32_t xfer_buff[64];									// OUT Data filled in RxLevel Interrupt
 

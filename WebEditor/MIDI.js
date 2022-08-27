@@ -10,6 +10,9 @@ var output = null;
 var requestNo = 1;
 // stores number of control awaiting configuration information
 
+var voiceEnum = {
+    kick: 0, snare: 1, hatClosed: 2, hatOpen: 3, tomHigh: 4, tomMedium: 5, tomLow: 6, samplerA: 7, samplerB: 8
+};
 
 var controlEnum = {
     gate: 1,
@@ -19,14 +22,12 @@ var recCount = 0;
 
 window.onload = afterLoad;
 function afterLoad() {
-
-
-
     // sysex not currently working so no need request permission: requestMIDIAccess({ sysex: true })
     navigator.requestMIDIAccess({ sysex: true }).then(onMIDISuccess, onMIDIFailure);
 }
 
-//Check which MIDI interface is MIDI Monger and if found start requesting configuration from interface
+
+// Check which MIDI interface is Punck and if found start requesting configuration from interface
 function onMIDISuccess(midiAccess) {
     midi = midiAccess;
     // store in the global variable
@@ -97,15 +98,18 @@ function getMIDIMessage(midiMessage) {
     	var response = document.getElementById("testResponse");    
         var stringData = "";
         for (i = 0; i < (midiMessage.data.length / 2) - 1; ++i) {
-            stringData += result[i] + " ";
+            stringData += result[i].toString(16) + " ";
         }
-        stringData += "float: " + BytesToFloat(result.slice(0, 4));
+        //stringData += "float: " + BytesToFloat(result.slice(0, 4));
         response.innerHTML = "Received: " + stringData;
+        var freq = document.getElementById("baseFreq").value = BytesToFloat(result.slice(0, 4));
+        document.getElementById("partialDecay").value = BytesToFloat(result.slice(4, 8));
+        
 
 
 	}
-
 }
+
 
 function BytesToFloat(buff) {
     var val = new Float32Array(new Uint8Array(buff).buffer)[0];
@@ -299,6 +303,6 @@ function updateDisplay(controlType, ctlNo) {
 }
 
 function testSysex() {
-    var message = [0xF0, 0x01, 0x02, 0x03, 0x04, 0x0A, 0x0B, 0x0C, 0x0D, 0x11, 0x12, 0x13, 0x14, 0x1A, 0x1B, 0x1C, 0x1D, 0xF7];
+    var message = [0xF0, 0x1C, voiceEnum.snare, 0xF7];
     output.send(message);
 }

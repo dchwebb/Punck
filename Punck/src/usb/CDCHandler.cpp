@@ -3,7 +3,7 @@
 #include "ExtFlash.h"
 #include "FatTools.h"
 #include "Samples.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
 #include "ff.h"
 
 uint32_t flashBuff[1024];
@@ -90,33 +90,33 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("midimap\n") == 0) {					// Display MIDI note mapping
-		for (auto note : noteHandler.noteMapper) {
+		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
-			case NoteHandler::kick:
+			case VoiceManager::kick:
 				printf("Kick    ");
 				break;
-			case NoteHandler::snare:
+			case VoiceManager::snare:
 				printf("Snare   ");
 				break;
-			case NoteHandler::hatClosed:
+			case VoiceManager::hatClosed:
 				printf("Close HH");
 				break;
-			case NoteHandler::hatOpen:
+			case VoiceManager::hatOpen:
 				printf("Open HH ");
 				break;
-			case NoteHandler::tomHigh:
+			case VoiceManager::tomHigh:
 				printf("High Tom");
 				break;
-			case NoteHandler::tomMedium:
+			case VoiceManager::tomMedium:
 				printf("Mid Tom ");
 				break;
-			case NoteHandler::tomLow:
+			case VoiceManager::tomLow:
 				printf("Low Tom ");
 				break;
-			case NoteHandler::samplerA:
+			case VoiceManager::samplerA:
 				printf("Sample 1");
 				break;
-			case NoteHandler::samplerB:
+			case VoiceManager::samplerB:
 				printf("Sample 2");
 				break;
 			}
@@ -129,17 +129,17 @@ void CDCHandler::ProcessCommand()
 
 		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
 
-		while (noteHandler.samples.sampleList[pos].name[0] != 0) {
+		while (voiceManager.samples.sampleList[pos].name[0] != 0) {
 			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x %.3f\r\n",
 					pos,
-					noteHandler.samples.sampleList[pos].name,
-					noteHandler.samples.sampleList[pos].size,
-					noteHandler.samples.sampleList[pos].sampleRate,
-					noteHandler.samples.sampleList[pos].byteDepth * 8,
-					noteHandler.samples.sampleList[pos].channels,
-					noteHandler.samples.sampleList[pos].valid ? "Y" : " ",
-					(unsigned int)noteHandler.samples.sampleList[pos].startAddr,
-					(float)noteHandler.samples.sampleList[pos].sampleCount / noteHandler.samples.sampleList[pos].sampleRate
+					voiceManager.samples.sampleList[pos].name,
+					voiceManager.samples.sampleList[pos].size,
+					voiceManager.samples.sampleList[pos].sampleRate,
+					voiceManager.samples.sampleList[pos].byteDepth * 8,
+					voiceManager.samples.sampleList[pos].channels,
+					voiceManager.samples.sampleList[pos].valid ? "Y" : " ",
+					(unsigned int)voiceManager.samples.sampleList[pos].startAddr,
+					(float)voiceManager.samples.sampleList[pos].sampleCount / voiceManager.samples.sampleList[pos].sampleRate
 					);
 			++pos;
 		}
@@ -148,8 +148,8 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
 		int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		printf("%s\r\n", noteHandler.samples.sampleList[sn].name);
-		noteHandler.samples.Play(noteHandler.samples.SamplePlayer::playerA, sn);
+		printf("%s\r\n", voiceManager.samples.sampleList[sn].name);
+		voiceManager.samples.Play(voiceManager.samples.SamplePlayer::playerA, sn);
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list

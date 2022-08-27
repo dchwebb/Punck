@@ -1,7 +1,7 @@
 #include <Kick.h>
 #include <cmath>
 #include "Filter.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
 
 
 void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
@@ -97,4 +97,10 @@ void Kick::CalcOutput()
 void Kick::UpdateFilter()
 {
 	filter.Update();
+}
+
+
+uint32_t Kick::SerialiseConfig(uint8_t* buff)
+{
+	return 0;
 }

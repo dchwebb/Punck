@@ -1,6 +1,7 @@
 #include "USB.h"
 #include "MidiHandler.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
+#include "config.h"
 
 void MidiHandler::DataIn()
 {
@@ -32,7 +33,7 @@ void MidiHandler::DataOut()
 }
 
 
-uint32_t MidiHandler::ConstructSysex(uint8_t* buffer, uint32_t len)
+uint32_t MidiHandler::ConstructSysEx(uint8_t* buffer, uint32_t len)
 {
 	// Constructs a Sysex packet: data split into 4 byte words, each starting with appropriate sysex header byte
 	// Bytes in a sysEx commands must have upper nibble = 0 (ie only allowed 0-127 values) so double length and split bytes into nibbles
@@ -91,14 +92,26 @@ void MidiHandler::ProcessSysex()
 //	tx.db2 = 0xF7;
 //	usb->SendData((uint8_t*) &tx, 4, inEP);
 
+	enum sysExCommands {VoiceConfig = 0x1C};
+
+	// Check if SysEx contains read config command
+	if (sysEx[0] == VoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
+		uint32_t bytes = voiceManager.noteMapper[sysEx[1]].drumVoice->SerialiseConfig(config.configBuffer);
+		uint32_t len = ConstructSysEx(config.configBuffer, bytes);
+		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+		usb->SendData(sysExOut, len, inEP);
+
+	}
+/*
 	// Store float into test variable
 	float testFloat = 1.234567f;
 	float* ptr = (float*)&testSysEx;
 	*ptr = testFloat;
 
-	uint32_t len = ConstructSysex((uint8_t*)&testSysEx, 6);
+	uint32_t len = ConstructSysEx((uint8_t*)&testSysEx, 6);
 	len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 	usb->SendData(sysExOut, len, inEP);
+	*/
 }
 
 
@@ -114,7 +127,7 @@ void MidiHandler::midiEvent(const uint32_t data)
 		break;
 
 	case NoteOn:
-		noteHandler.NoteOn(midiNote);
+		voiceManager.NoteOn(midiNote);
 		break;
 
 	case PitchBend:

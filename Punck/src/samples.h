@@ -51,5 +51,6 @@ public:
 	void CalcOutput();
 	bool UpdateSampleList();
 	bool GetSampleInfo(Sample* sample);
+	uint32_t SerialiseConfig(uint8_t* buff);
 };
 

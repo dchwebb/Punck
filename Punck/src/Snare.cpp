@@ -1,5 +1,5 @@
 #include <Snare.h>
-#include "NoteHandler.h"
+#include <VoiceManager.h>
 
 void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
@@ -67,4 +67,13 @@ void Snare::CalcOutput()
 void Snare::UpdateFilter()
 {
 	filter.Update();
+}
+
+
+uint32_t Snare::SerialiseConfig(uint8_t* buff)
+{
+	float* ptr = (float*)buff;
+	ptr[0] = baseFreq;
+	ptr[1] = partialDecay;
+	return 8;		// Return size
 }

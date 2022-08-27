@@ -1,7 +1,7 @@
 #include "initialisation.h"
 #include "USB.h"
 #include "Filter.h"
-#include "NoteHandler.h"
+#include "VoiceManager.h"
 #include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
@@ -21,7 +21,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER
 
 
 USB usb;
-//Config config;
 
 extern "C" {
 #include "interrupts.h"
@@ -45,7 +44,7 @@ int main(void) {
 
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise switches and LEDs
-//	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
+	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 
 	usb.Init();
 	InitI2S();						// Initialise I2S which will start main sample interrupts
@@ -53,7 +52,7 @@ int main(void) {
 	while (1) {
 		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
-		noteHandler.IdleTasks();	// Check if filter coefficients need to be updated
+		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
 		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
