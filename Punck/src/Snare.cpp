@@ -77,3 +77,11 @@ uint32_t Snare::SerialiseConfig(uint8_t* buff)
 	ptr[1] = partialDecay;
 	return 8;		// Return size
 }
+
+
+void Snare::ReadConfig(uint8_t* buff, uint32_t len)
+{
+	float* ptr = (float*)buff;
+	baseFreq = ptr[0];
+	partialDecay = ptr[1];
+}

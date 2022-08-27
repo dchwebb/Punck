@@ -2,7 +2,7 @@
 
 #include "initialisation.h"
 #include "MidiHandler.h"
-#include "samples.h"
+#include "Samples.h"
 #include "Kick.h"
 #include "Snare.h"
 

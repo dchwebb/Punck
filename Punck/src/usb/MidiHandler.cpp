@@ -64,54 +64,46 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* buffer, uint32_t len)
 				sysExOut[sysExCnt++] = 0x04;		// 0x4	SysEx starts or continues
 			}
 		}
-
-
 	}
 	sysExOut[sysExCnt++] = 0xF7;
 	return sysExCnt;
 }
 
-struct TestSysex {
-	uint8_t a = 0x11;
-	uint8_t b = 0x12;
-	uint8_t c = 0x13;
-	uint8_t d = 0x14;
-	uint8_t e = 0x15;
-	uint8_t f = 0x16;
-	uint8_t g = 0x17;
-	uint8_t h = 0x18;
-	uint8_t i = 0x19;
-} testSysEx;
+
+uint32_t MidiHandler::ReadCfgSysEx()
+{
+	// Converts a Configuration encoded Sysex packet to a regular byte array (two bytes are header)
+	// Data split into 4 byte words, each starting with appropriate sysEx header byte
+	for (uint32_t i = 2; i < sysExCount; ++i) {
+		uint32_t idx = (i / 2) - 1;
+		if (i % 2 == 0) {
+			config.configBuffer[idx] = sysEx[i];
+		} else {
+			config.configBuffer[idx] += sysEx[i] << 4;
+		}
+	}
+	return (sysExCount / 2) - 2;
+}
 
 void MidiHandler::ProcessSysex()
 {
-
-//	tx.Code = 0x03;
-//	tx.db0 = 0xF0;
-//	tx.db1 = sysExCount;
-//	tx.db2 = 0xF7;
-//	usb->SendData((uint8_t*) &tx, 4, inEP);
-
-	enum sysExCommands {VoiceConfig = 0x1C};
+	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C};
 
 	// Check if SysEx contains read config command
-	if (sysEx[0] == VoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
+	if (sysEx[0] == GetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
 		uint32_t bytes = voiceManager.noteMapper[sysEx[1]].drumVoice->SerialiseConfig(config.configBuffer);
 		uint32_t len = ConstructSysEx(config.configBuffer, bytes);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
 
 	}
-/*
-	// Store float into test variable
-	float testFloat = 1.234567f;
-	float* ptr = (float*)&testSysEx;
-	*ptr = testFloat;
 
-	uint32_t len = ConstructSysEx((uint8_t*)&testSysEx, 6);
-	len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
-	usb->SendData(sysExOut, len, inEP);
-	*/
+	if (sysEx[0] == SetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
+		uint32_t bytes = ReadCfgSysEx();
+		voiceManager.noteMapper[sysEx[1]].drumVoice->ReadConfig(config.configBuffer, bytes);
+
+	}
+
 }
 
 

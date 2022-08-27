@@ -104,3 +104,7 @@ uint32_t Kick::SerialiseConfig(uint8_t* buff)
 {
 	return 0;
 }
+
+void Kick::ReadConfig(uint8_t* buff, uint32_t len)
+{
+}

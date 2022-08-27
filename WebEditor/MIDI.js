@@ -102,12 +102,37 @@ function getMIDIMessage(midiMessage) {
         }
         //stringData += "float: " + BytesToFloat(result.slice(0, 4));
         response.innerHTML = "Received: " + stringData;
-        var freq = document.getElementById("baseFreq").value = BytesToFloat(result.slice(0, 4));
+        document.getElementById("baseFreq").value = BytesToFloat(result.slice(0, 4));
         document.getElementById("partialDecay").value = BytesToFloat(result.slice(4, 8));
-        
-
-
 	}
+}
+
+
+function updateConfig()
+{
+    var baseFreq = document.getElementById("baseFreq").value;
+    var farr = new Float32Array([document.getElementById("baseFreq").value,
+                                 document.getElementById("partialDecay").value]);
+    var barr = new Uint8Array(farr.buffer);   // use the buffer of Float32Array view
+
+    // Convert to sysex information
+    var message = new Uint8Array(4 + (barr.length * 2));
+    message[0] = 0xF0;
+    message[1] = 0x2C;
+    message[2] = voiceEnum.snare;
+    var msgPos = 3;
+    var lowerNibble = true;
+    for (i = 0; i < barr.length * 2; ++i) {
+		if (lowerNibble) {
+			message[msgPos++] = barr[Math.trunc(i / 2)] & 0xF;
+		} else {
+			message[msgPos++] = barr[Math.trunc(i / 2)] >> 4;
+		}
+        lowerNibble = !lowerNibble;
+    }
+    message[msgPos] = 0xF7;
+    
+    output.send(message);
 }
 
 
@@ -127,12 +152,15 @@ function sendNote(noteValue, channel) {
     }
 }
 
+
 // MIDI Note on
 function noteOn(noteValue, channel) {
     if (checkConnection()) {
         output.send([0x90 + parseInt(channel - 1), noteValue, 0x7f]);
     }
 }
+
+
 // MIDI note off
 function noteOff(noteValue, channel) {
     if (checkConnection()) {
@@ -140,125 +168,6 @@ function noteOff(noteValue, channel) {
     }
 }
 
-// Sends an appropriate MIDI signal to test output
-function testOutput(outputType, outputNo) {
-    if (outputType == controlEnum.cv) {
-        var ctlType = parseInt(document.getElementById("cType" + outputNo).value);
-
-        switch (ctlType) {
-        case cvEnum.controller:
-            var channel = document.getElementById("cChannel" + outputNo).value;
-            var controller = document.getElementById("cController" + outputNo).value;
-            for (var o = 0; o < 128; o++) {
-                output.send([0xB0 + parseInt(channel - 1), controller, o], window.performance.now() + (o * 5));
-            }
-            break;
-
-        case cvEnum.pitchbend:
-            break;
-
-        case cvEnum.aftertouch:
-            var channel = document.getElementById("cChannel" + outputNo).value;
-            for (var o = 0; o < 128; o++) {
-                output.send([0xD0 + parseInt(channel - 1), o], window.performance.now() + (o * 5));
-            }
-            break;
-        }
-
-    } else {
-        var ctlType = parseInt(document.getElementById("gType" + outputNo).value);
-
-        switch (ctlType) {
-        case gateEnum.specificNote:
-            var channel = document.getElementById("gChannel" + outputNo).value;
-            var note = document.getElementById("gNote" + outputNo).value;
-            output.send([0x90 + parseInt(channel - 1), note, 0x7f]);
-            // send each note on command after each interval
-            output.send([0x80 + parseInt(channel - 1), note, 0x40], window.performance.now() + 500);
-            // send off notes 50ms before next note
-            break;
-        case gateEnum.clock:
-            break;
-        }
-    }
-
-    // to test MIDI channel send sequence of notes
-    if ((outputType == controlEnum.cv && ctlType == cvEnum.channel) || outputType == controlEnum.gate && ctlType == gateEnum.channelNote) {
-        var channel = document.getElementById("cChannel" + outputNo).value;
-        // send out C1 to C7
-        var interval = 500.0;
-        // interval between each note
-        for (var o = 0; o < 7; o++) {
-            output.send([0x90 + parseInt(channel - 1), 24 + (o * 12), 0x7f], window.performance.now() + (o * interval));
-            // send each note on command after each interval
-            output.send([0x80 + parseInt(channel - 1), 24 + (o * 12), 0x40], window.performance.now() + (o * interval) + (interval - 50));
-            // send off notes 50ms before next note
-        }
-    }
-}
-
-// Request configuration for output (uses MIDI song position mechanism)
-function getOutputConfig(outputNo) {
-    var message = [0xF2, parseInt(outputNo), 0x00];
-    output.send(message);
-}
-
-// Send out a configuration change to a specific gate
-function updateGate(gateNo, cfgType) {
-    updateDisplay(controlEnum.gate, gateNo);
-
-    switch (cfgType) {
-    case cfgEnum.type:
-        var gType = document.getElementById("gType" + gateNo);
-        var cfgValue = gType.options[gType.selectedIndex].value;
-        break;
-    case cfgEnum.specificNote:
-        var gNote = document.getElementById("gNote" + gateNo);
-        var cfgValue = gNote.options[gNote.selectedIndex].value;
-        break;
-    case cfgEnum.channel:
-        var gChannel = document.getElementById("gChannel" + gateNo);
-        var cfgValue = gChannel.options[gChannel.selectedIndex].value;
-        break;
-    }
-    // to send config message use format: ggggtttt vvvvvvvv where g is the gate number and t is the type of setting to pass
-    var message = [0xF2, (cfgType << 4) + gateNo, parseInt(cfgValue)];
-    // Use MIDI song position to send patch data
-    output.send(message);
-
-    // Reload all settings
-    requestNo = 1;
-    getOutputConfig(1);
-}
-
-// Send out a configuration change to a specific cv output
-function updateCV(cvNo, cfgType) {
-    updateDisplay(controlEnum.cv, cvNo);
-
-    switch (cfgType) {
-    case cfgEnum.type:
-        var cType = document.getElementById("cType" + cvNo);
-        var cfgValue = cType.options[cType.selectedIndex].value;
-        break;
-    case cfgEnum.channel:
-        var cChannel = document.getElementById("cChannel" + cvNo);
-        var cfgValue = cChannel.options[cChannel.selectedIndex].value;
-        break;
-    case cfgEnum.controller:
-        var cController = document.getElementById("cController" + cvNo);
-        var cfgValue = cController.options[cController.selectedIndex].value;
-        break;
-    }
-    // to send config message use format: ttttoooo vvvvvvvv where o is the output number and t is the type of setting to pass
-    var message = [0xF2, (cfgType << 4) + (cvNo + 8), parseInt(cfgValue)];
-    // Use MIDI song position to send patch data
-    output.send(message);
-
-    // Reload all settings
-    requestNo = 1;
-    getOutputConfig(1);
-
-}
 
 //Test the MIDI connection is active and update UI accordingly
 function checkConnection() {
@@ -274,33 +183,8 @@ function checkConnection() {
     }
 }
 
-// Updates configuration blocks to show/hide irrelevant settings
-function updateDisplay(controlType, ctlNo) {
-    if (controlType == controlEnum.gate) {
 
-        // specific note picker
-        var gateShow = document.getElementById("gType" + ctlNo).value == gateEnum.specificNote ? "block" : "none";
-        var gateControls = document.getElementById("gateCtl" + ctlNo).getElementsByClassName("gateControl");
-        for (var i = 0; i < gateControls.length; i++) {
-            gateControls[i].style.display = gateShow;
-        }
 
-        // channel picker
-        var channelShow = document.getElementById("gType" + ctlNo).value != gateEnum.clock ? "block" : "none";
-        var channelControls = document.getElementById("gateCtl" + ctlNo).getElementsByClassName("channelControl");
-        for (var i = 0; i < gateControls.length; i++) {
-            channelControls[i].style.display = channelShow;
-        }
-    } else {
-        // controller picker
-        var controllerShow = document.getElementById("cType" + ctlNo).value == cvEnum.controller ? "block" : "none";
-        var controllerControls = document.getElementById("cvCtl" + ctlNo).getElementsByClassName("controllerControl");
-        for (var i = 0; i < controllerControls.length; i++) {
-            controllerControls[i].style.display = controllerShow;
-        }
-
-    }
-}
 
 function testSysex() {
     var message = [0xF0, 0x1C, voiceEnum.snare, 0xF7];

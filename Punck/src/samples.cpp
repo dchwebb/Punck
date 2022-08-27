@@ -208,3 +208,8 @@ uint32_t Samples::SerialiseConfig(uint8_t* buff)
 {
 	return 0;
 }
+
+
+void Samples::ReadConfig(uint8_t* buff, uint32_t len)
+{
+}
