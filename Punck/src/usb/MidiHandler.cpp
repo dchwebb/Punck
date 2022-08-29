@@ -10,16 +10,30 @@ void MidiHandler::DataIn()
 
 void MidiHandler::DataOut()
 {
+
 	uint8_t* outBuffBytes = reinterpret_cast<uint8_t*>(outBuff);
 	// Handle incoming midi command here
-	if (outBuffCount == 4) {
+	if (!partialSysEx && outBuffCount == 4) {
 		midiEvent(*outBuff);
 
-	} else if (outBuffBytes[1] == 0xF0 && outBuffCount > 3) {		// Sysex
+	} else if (partialSysEx || (outBuffBytes[1] == 0xF0 && outBuffCount > 3)) {		// Sysex
+		if (partialSysEx) {
+			volatile int susp = 1;
+		}
+
 		// sysEx will be padded when supplied by usb - add only actual sysEx message bytes to array
-		uint8_t sysExCnt = 2, i = 0;
-		for (i = 0; i < sysexMaxSize; ++i) {
-			if (outBuffBytes[sysExCnt] == 0xF7) break;
+		uint16_t sysExCnt = partialSysEx ? 1 : 2;		// If continuing a long sysex command only ignore first (size) byte
+		uint16_t i;
+		for (i = partialSysEx ? sysExCount : 0; i < sysexMaxSize; ++i) {
+			if (outBuffBytes[sysExCnt] == 0xF7) {
+				partialSysEx = false;
+				break;
+			}
+			if (sysExCnt >= outBuffCount) {
+				partialSysEx = true;
+				break;
+			}
+
 			sysEx[i] = outBuffBytes[sysExCnt++];
 
 			// remove 1 byte padding at the beginning of each 32 bit word
@@ -28,7 +42,11 @@ void MidiHandler::DataOut()
 			}
 		}
 		sysExCount = i;
-		ProcessSysex();
+		if (partialSysEx) {
+			volatile int susp = 1;
+		} else {
+			ProcessSysex();
+		}
 	}
 }
 
@@ -37,36 +55,39 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* buffer, uint32_t len)
 {
 	// Constructs a Sysex packet: data split into 4 byte words, each starting with appropriate sysex header byte
 	// Bytes in a sysEx commands must have upper nibble = 0 (ie only allowed 0-127 values) so double length and split bytes into nibbles
+	// pos allows sysex to start at an offset so header data can be injected
 	len *= 2;
-	sysExOut[0] = 0x04;								// 0x4	SysEx starts or continues
-	sysExOut[1] = 0xF0;
-	uint32_t sysExCnt = 2;
+	uint32_t pos = 0;
+
+	sysExOut[pos++] = 0x04;								// 0x4	SysEx starts or continues
+	sysExOut[pos++] = 0xF0;
+
 	bool lowerNibble = true;
 	for (uint32_t i = 0; i < len; ++i) {
 		if (lowerNibble) {
-			sysExOut[sysExCnt++] = buffer[i / 2] & 0xF;
+			sysExOut[pos++] = buffer[i / 2] & 0xF;
 		} else {
-			sysExOut[sysExCnt++] = buffer[i / 2] >> 4;
+			sysExOut[pos++] = buffer[i / 2] >> 4;
 		}
 		lowerNibble = !lowerNibble;
 
 		// add 1 byte padding at the beginning of each 32 bit word to indicate length of remaining message + 0xF7 termination byte
-		if (sysExCnt % 4 == 0) {
+		if (pos % 4 == 0) {
 			uint32_t rem = len - i;
 
 			if (rem == 3) {
-				sysExOut[sysExCnt++] = 0x07;		// 0x7	SysEx ends with following three bytes.
+				sysExOut[pos++] = 0x07;		// 0x7	SysEx ends with following three bytes.
 			} else if (rem == 2) {
-				sysExOut[sysExCnt++] = 0x06;		// 0x6	SysEx ends with following two bytes.
+				sysExOut[pos++] = 0x06;		// 0x6	SysEx ends with following two bytes.
 			} else if (rem == 1) {
-				sysExOut[sysExCnt++] = 0x05;		// 0x5	Single-byte System Common Message or SysEx ends with following single byte.
+				sysExOut[pos++] = 0x05;		// 0x5	Single-byte System Common Message or SysEx ends with following single byte.
 			} else {
-				sysExOut[sysExCnt++] = 0x04;		// 0x4	SysEx starts or continues
+				sysExOut[pos++] = 0x04;		// 0x4	SysEx starts or continues
 			}
 		}
 	}
-	sysExOut[sysExCnt++] = 0xF7;
-	return sysExCnt;
+	sysExOut[pos++] = 0xF7;
+	return pos;
 }
 
 
@@ -85,14 +106,22 @@ uint32_t MidiHandler::ReadCfgSysEx()
 	return (sysExCount / 2) - 2;
 }
 
+
 void MidiHandler::ProcessSysex()
 {
 	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C};
 
 	// Check if SysEx contains read config command
 	if (sysEx[0] == GetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
-		uint32_t bytes = voiceManager.noteMapper[sysEx[1]].drumVoice->SerialiseConfig(config.configBuffer);
-		uint32_t len = ConstructSysEx(config.configBuffer, bytes);
+		VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
+
+		// Insert header data
+		config.configBuffer[0] = GetVoiceConfig;
+		config.configBuffer[1] = voice;
+
+		uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(config.configBuffer + 2);
+
+		uint32_t len = ConstructSysEx(config.configBuffer, bytes + 2);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
 

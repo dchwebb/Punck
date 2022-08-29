@@ -6,6 +6,7 @@
 #include "Kick.h"
 #include "Snare.h"
 #include "HiHat.h"
+#include <cstring>
 
 struct NoteMapper {
 	uint8_t voice;

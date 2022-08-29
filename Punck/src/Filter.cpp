@@ -7,8 +7,7 @@ bool calculatingFilter = false;			// Debug
 void Filter::Update(bool reset)
 {
 	// get filter values from pot and CV and smooth through fixed IIR filter
-	//dampedADC = filterADC.FilterSample(*adcControl);
-	dampedADC = 0.9 * dampedADC + 0.1 * (*adcControl);
+	dampedADC = filterADC.FilterSample(*adcControl);
 
 	if (reset || std::abs(dampedADC - previousADC) > hysteresis) {
 		calculatingFilter = true;

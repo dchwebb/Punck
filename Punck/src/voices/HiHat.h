@@ -16,20 +16,24 @@ public:
 	NoteMapper* noteMapper;
 
 private:
-	Filter filter{4, BandPass, &(ADC_array[ADC_Filter_Pot])};
+	Filter filter{4, HighPass, &(ADC_array[ADC_Filter_Pot])};
 
 	float position;
 	float velocityScale;
 	float currentLevel;
 
 	float carrierLevel;
-	float carrierFreq = 2490.0f;
 	float carrierPos;
 
 	bool modulatorHigh;
-	float modulatorFreq = 1047.0f;
-	float modulatorDuty = 0.75f;
 	float modulatorPos;
-	float modulatorHighMult = 1.2f;
-	float modulatorLowMult = 0.9f;
+
+	struct Config {
+		float carrierFreq = 2490.0f;
+		float modulatorFreq = 1047.0f;
+		float modulatorDuty = 0.75f;
+		float modulatorHighMult = 3.2f;
+		float modulatorLowMult = 0.7f;
+		float decay = 0.99f;
+	} config;
 };

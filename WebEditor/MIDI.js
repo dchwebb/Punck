@@ -48,8 +48,7 @@ function onMIDISuccess(midiAccess) {
 
     // Update UI to show connection status
     if (checkConnection()) {
-        //getOutputConfig(1);
-        // get configuration for first port
+        RequestConfig(voiceEnum.snare);
     }
 }
 
@@ -62,36 +61,14 @@ function onMIDIFailure() {
 function getMIDIMessage(midiMessage) {
     console.log(midiMessage);
 
-    if (midiMessage.data[0] == 0xF2) {
-        var type = (midiMessage.data[1] & 0xF0) >> 4;
-        if (requestNo < 9) {
-            document.getElementById("gType" + requestNo).value = type;
-            document.getElementById("gChannel" + requestNo).value = (midiMessage.data[1] & 0xF) + 1;
-            document.getElementById("gNote" + requestNo).value = midiMessage.data[2];
-
-            updateDisplay(controlEnum.gate, requestNo);
-        } else {
-            document.getElementById("cType" + (requestNo - 8)).value = type;
-            document.getElementById("cChannel" + (requestNo - 8)).value = (midiMessage.data[1] & 0xF) + 1;
-            document.getElementById("cController" + (requestNo - 8)).value = midiMessage.data[2];
-
-            updateDisplay(controlEnum.cv, requestNo - 8);
-        }
-
-        if (requestNo < 12) {
-            requestNo++;
-            getOutputConfig(requestNo);
-
-        }
-        recCount++;
-    } else if (midiMessage.data[0] == 0xF0) {
+    if (midiMessage.data[0] == 0xF0) {
         // As upper bit cannot be set in a sysEx byte, data is sent a nibble at a time - reconstruct into byte array
         var result = [];
         for (i = 1; i < midiMessage.data.length - 1; ++i) {
             if (i % 2 != 0) {
                 result[Math.trunc((i - 1) / 2)] = midiMessage.data[i];
             } else {
-                result[Math.trunc((i - 1) / 2)] +=(midiMessage.data[i] << 4);
+                result[Math.trunc((i - 1) / 2)] += (midiMessage.data[i] << 4);
             }
         };
         
@@ -100,10 +77,29 @@ function getMIDIMessage(midiMessage) {
         for (i = 0; i < (midiMessage.data.length / 2) - 1; ++i) {
             stringData += result[i].toString(16) + " ";
         }
-        //stringData += "float: " + BytesToFloat(result.slice(0, 4));
+        
         response.innerHTML = "Received: " + stringData;
-        document.getElementById("baseFreq").value = BytesToFloat(result.slice(0, 4));
-        document.getElementById("partialDecay").value = BytesToFloat(result.slice(4, 8));
+
+		if (result[0] == 0x1C) {
+			sysEx = result.slice(2);
+			if (result[1] == voiceEnum.hatClosed) {
+				document.getElementById("carrierFreq").value = BytesToFloat(sysEx.slice(0, 4));
+	            document.getElementById("modulatorFreq").value = BytesToFloat(sysEx.slice(4, 8));
+				document.getElementById("modulatorDuty").value = BytesToFloat(sysEx.slice(8, 12));
+				document.getElementById("modulatorHighMult").value = BytesToFloat(sysEx.slice(12, 16));
+				document.getElementById("modulatorLowMult").value = BytesToFloat(sysEx.slice(16, 20));
+				document.getElementById("decay").value = BytesToFloat(sysEx.slice(20, 24));
+			} else if (result[1] == voiceEnum.snare) {
+		        document.getElementById("baseFreq").value = BytesToFloat(sysEx.slice(0, 4));
+				document.getElementById("partial0Level").value = BytesToFloat(sysEx.slice(4, 8));
+		        document.getElementById("partial1Level").value = BytesToFloat(sysEx.slice(8, 12));
+				document.getElementById("partial2Level").value = BytesToFloat(sysEx.slice(12, 16));
+			}
+			if (requestNo < 2) {
+	            requestNo++;
+	            RequestConfig(requestNo);
+	        }
+		}
 	}
 }
 
@@ -114,18 +110,44 @@ function updateRange()
 }
 
 
-function updateConfig()
+function RequestConfig(voice)
 {
-    var baseFreq = document.getElementById("baseFreq").value;
-    var farr = new Float32Array([document.getElementById("baseFreq").value,
-                                 document.getElementById("partialDecay").value]);
+	var message = [0xF0, 0x1C, voice, 0xF7];
+    output.send(message);
+}
+
+
+function serialiseConfig(voice)
+{
+
+    if (voice == voiceEnum.snare) {
+		return new Float32Array([document.getElementById("baseFreq").value,
+	              document.getElementById("partial0Level").value,
+				  document.getElementById("partial1Level").value, 
+				  document.getElementById("partial2Level").value
+				 ]);
+	} else if (voice == voiceEnum.hatClosed) {
+		return new Float32Array([document.getElementById("carrierFreq").value,
+				  document.getElementById("modulatorFreq").value,
+				  document.getElementById("modulatorDuty").value,
+				  document.getElementById("modulatorHighMult").value,
+				  document.getElementById("modulatorLowMult").value,
+				  document.getElementById("decay").value
+				 ]);
+	}
+}
+
+
+function updateConfig(voice)
+{
+	var farr = serialiseConfig(voice);
     var barr = new Uint8Array(farr.buffer);   // use the buffer of Float32Array view
 
     // Convert to sysex information
     var message = new Uint8Array(4 + (barr.length * 2));
     message[0] = 0xF0;
     message[1] = 0x2C;
-    message[2] = voiceEnum.snare;
+    message[2] = voice;
     var msgPos = 3;
     var lowerNibble = true;
     for (i = 0; i < barr.length * 2; ++i) {

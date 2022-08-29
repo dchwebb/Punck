@@ -112,7 +112,7 @@ private:
 struct Filter {
 public:
 	Filter(uint8_t poles, PassType pass, volatile uint16_t* adc) :
-		iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)}, adcControl{adc}, passType{pass}
+		passType{pass}, iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)}, adcControl{adc}
 	{
 		Update(true);						// Force calculation of coefficients
 	}

@@ -4,15 +4,15 @@
 void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
-	partialInc[0] = FreqToInc(baseFreq);		// First Mode 0,1 frequency
+	partialInc[0] = FreqToInc(config.baseFreq);		// First Mode 0,1 frequency
 	partialpos[0] = 0.3f;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
 
 	for (uint8_t i = 0; i < partialCount; ++i) {
-		partialLevel[i] = partialInitLevel[i];
-		partialInc[i] = FreqToInc(baseFreq * partialFreqOffset[i]);
+		partialLevel[i] = config.partialInitLevel[i];
+		partialInc[i] = FreqToInc(config.baseFreq * config.partialFreqOffset[i]);
 	}
-	noiseLevel = noiseInitLevel;
+	noiseLevel = config.noiseInitLevel;
 	velocityScale = velocity;
 	playing = true;
 	noteMapper->led.On();
@@ -35,16 +35,16 @@ void Snare::CalcOutput()
 		float partialOutput = 0.0f;
 		bool partialsInaudible = true;							// To calculate when to terminate note
 		for (uint8_t i = 0; i < partialCount; ++i) {
-			partialInc[i] *= partialPitchDrop;
+			partialInc[i] *= config.partialPitchDrop;
 			partialpos[i] += partialInc[i];						// Set current poition in sine wave
-			partialLevel[i] *= partialDecay + adcDecay;
+			partialLevel[i] *= config.partialDecay + adcDecay;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
 			if (partialLevel[i] > 0.00001f) {
 				partialsInaudible = false;
 			}
 		}
-		noiseLevel *= noiseDecay + adcDecay;
+		noiseLevel *= config.noiseDecay + adcDecay;
 
 		float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
 
@@ -72,16 +72,14 @@ void Snare::UpdateFilter()
 
 uint32_t Snare::SerialiseConfig(uint8_t* buff)
 {
-	float* ptr = (float*)buff;
-	ptr[0] = baseFreq;
-	ptr[1] = partialDecay;
-	return 8;		// Return size
+	memcpy(buff, &config, sizeof(config));
+	return sizeof(config);
 }
 
 
 void Snare::ReadConfig(uint8_t* buff, uint32_t len)
 {
-	float* ptr = (float*)buff;
-	baseFreq = ptr[0];
-	partialDecay = ptr[1];
+	if (len <= sizeof(config)) {
+		memcpy(&config, buff, len);
+	}
 }

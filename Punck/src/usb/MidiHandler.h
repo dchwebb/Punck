@@ -69,9 +69,10 @@ private:
 	uint8_t QueueWrite = 0;
 	uint8_t QueueSize = 0;
 
-	constexpr static uint32_t sysexMaxSize = 32;
+	constexpr static uint32_t sysexMaxSize = 256;
 	uint8_t sysEx[sysexMaxSize];
 	uint8_t sysExCount = 0;
+	bool partialSysEx;
 
 	MidiData tx;
 	uint8_t sysExOut[sysexMaxSize];
