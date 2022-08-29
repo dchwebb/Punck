@@ -108,6 +108,12 @@ function getMIDIMessage(midiMessage) {
 }
 
 
+function updateRange()
+{
+	document.getElementById("partialDecay").value = document.getElementById("partialDecayR").value;
+}
+
+
 function updateConfig()
 {
     var baseFreq = document.getElementById("baseFreq").value;

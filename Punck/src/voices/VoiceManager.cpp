@@ -179,6 +179,9 @@ void VoiceManager::CheckButtons()
 
 void VoiceManager::IdleTasks()
 {
-	kickPlayer.UpdateFilter();					// Check if filter coefficients need to be updated
-	snarePlayer.UpdateFilter();					// Check if filter coefficients need to be updated
+	for (auto& nm : noteMapper) {
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0 && nm.drumVoice->playing) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+			nm.drumVoice->UpdateFilter();					// Check if filter coefficients need to be updated
+		}
+	}
 }

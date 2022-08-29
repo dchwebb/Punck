@@ -7,7 +7,8 @@ bool calculatingFilter = false;			// Debug
 void Filter::Update(bool reset)
 {
 	// get filter values from pot and CV and smooth through fixed IIR filter
-	dampedADC = filterADC.FilterSample(*adcControl);
+	//dampedADC = filterADC.FilterSample(*adcControl);
+	dampedADC = 0.9 * dampedADC + 0.1 * (*adcControl);
 
 	if (reset || std::abs(dampedADC - previousADC) > hysteresis) {
 		calculatingFilter = true;
@@ -29,7 +30,7 @@ void Filter::InitIIRFilter(iirdouble_t tone)	// tone is a 0-65535 number represe
 
 	bool inactiveFilter = !activeFilter;
 
-	if (passType == HighPass) {					// Want a sweep from 0.03 to 0.99 with most travel at low end
+	if (passType == HighPass || passType == BandPass) {					// Want a sweep from 0.03 to 0.99 with most travel at low end
 		cutoff = pow((tone / 100000.0), 3.0) + HPMin;
 	} else {									// Want a sweep from 0.001 to 0.2-0.3
 		cutoff = std::min(0.03f + std::pow(tone / 65536.0f, 2.0f), LPMax);
@@ -61,7 +62,7 @@ iirdouble_t IIRFilter::FilterSample(iirdouble_t sample, IIRRegisters& registers)
 // Calculates each stage of a multi-section IIR filter (eg 8 pole is constructed from four 2-pole filters)
 iirdouble_t IIRFilter::CalcSection(int k, iirdouble_t x, IIRRegisters& registers)
 {
-	iirdouble_t y, CenterTap;
+	iirdouble_t y, centerTap;
 	static iirdouble_t MaxRegVal = 1.0E-12;
 
 	// Zero the registers on an overflow condition
@@ -75,8 +76,8 @@ iirdouble_t IIRFilter::CalcSection(int k, iirdouble_t x, IIRRegisters& registers
 		}
 	}
 
-	CenterTap = x * iirCoeff.b0[k] + iirCoeff.b1[k] * registers.X1[k] + iirCoeff.b2[k] * registers.X2[k];
-	y = iirCoeff.a0[k] * CenterTap - iirCoeff.a1[k] * registers.Y1[k] - iirCoeff.a2[k] * registers.Y2[k];
+	centerTap = x * iirCoeff.b0[k] + iirCoeff.b1[k] * registers.X1[k] + iirCoeff.b2[k] * registers.X2[k];
+	y = iirCoeff.a0[k] * centerTap - iirCoeff.a1[k] * registers.Y1[k] - iirCoeff.a2[k] * registers.Y2[k];
 
 	registers.X2[k] = registers.X1[k];
 	registers.X1[k] = x;
@@ -84,8 +85,8 @@ iirdouble_t IIRFilter::CalcSection(int k, iirdouble_t x, IIRRegisters& registers
 	registers.Y1[k] = y;
 
 	// MaxRegVal is used to prevent overflow. Note that CenterTap regularly exceeds 100k but y maxes out at about 65k
-	if (std::abs(CenterTap) > MaxRegVal) {
-		MaxRegVal = std::abs(CenterTap);
+	if (std::abs(centerTap) > MaxRegVal) {
+		MaxRegVal = std::abs(centerTap);
 	}
 	if (std::abs(y) > MaxRegVal) {
 		MaxRegVal = std::abs(y);
@@ -102,10 +103,11 @@ iirdouble_t IIRFilter::CalcSection(int k, iirdouble_t x, IIRRegisters& registers
  H(z) = ( b2 z^-2 + b1 z^-1 + b0 ) / ( a2 z^-2 + a1 z^-1 + a0 )
  See http://www.iowahills.com/A4IIRBilinearTransform.html
  function originally CalcIIRFilterCoeff()
+ cutoff freq = omega * (sampling_rate / 2)
  */
 void IIRFilter::CalcCoeff(iirdouble_t omega)
 {
-	int j;
+	uint32_t j;
 	iirdouble_t A, B, C, T, arg;
 
 	if (cutoffFreq == omega)		// Avoid recalculating coefficients when already found
@@ -115,6 +117,29 @@ void IIRFilter::CalcCoeff(iirdouble_t omega)
 
 	// Set the number of IIR filter sections we will be generating.
 	numSections = (numPoles + 1) / 2;
+
+	if (passType == BandPass) {
+		float freq = omega;
+		float bw = 0.001f;
+
+		float R = 1.0f - 3.0 * bw;
+		float c2 =  2.0f * std::cos(2.0f * M_PI * freq);
+		float K = (1.0f - (R * c2) + (R * R)) / (2.0f - c2);
+
+//		centerTap = x * iirCoeff.b0[k] + iirCoeff.b1[k] * registers.X1[k] + iirCoeff.b2[k] * registers.X2[k];
+//		y = iirCoeff.a0[k] * centerTap - iirCoeff.a1[k] * registers.Y1[k] - iirCoeff.a2[k] * registers.Y2[k];
+
+		for (j = 0; j < numSections; j++) {
+			iirCoeff.b0[j] = 1.0f - K;
+			iirCoeff.b1[j] = (K - R) * c2;
+			iirCoeff.b2[j] = (R * R) - K;
+
+			iirCoeff.a0[j] = 1.0f;
+			iirCoeff.a1[j] = R * c2;
+			iirCoeff.a2[j] = -(R * R);
+		}
+		return;
+	}
 
 	// T sets the IIR filter's corner frequency, or center frequency
 	// The Bilinear transform is defined as:  s = 2/T * tan(Omega/2) = 2/T * (1 - z^-1)/(1 + z^-1)

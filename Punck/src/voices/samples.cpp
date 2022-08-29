@@ -49,6 +49,7 @@ static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
 
 void Samples::CalcOutput()
 {
+	playing = (sampler[playerA].playing || sampler[playerB].playing);
 	for (auto& sp : sampler) {
 		if (sp.playing) {
 			auto& bytes = sp.sample->byteDepth;
@@ -81,14 +82,16 @@ void Samples::CalcOutput()
 		}
 	}
 
-	// Mix samples for final output to DAC
-	outputLevel[left] = intToFloatMult *
-			(sampler[playerA].velocityScale * sampler[playerA].currentSamples[left] +
-			 sampler[playerB].velocityScale * sampler[playerB].currentSamples[left]);
+	if (playing) {
+		// Mix samples for final output to DAC
+		outputLevel[left] = intToFloatMult *
+				(sampler[playerA].velocityScale * sampler[playerA].currentSamples[left] +
+				 sampler[playerB].velocityScale * sampler[playerB].currentSamples[left]);
 
-	outputLevel[right] = intToFloatMult *
-			(sampler[playerA].velocityScale * sampler[playerA].currentSamples[right] +
-			 sampler[playerB].velocityScale * sampler[playerB].currentSamples[right]);
+		outputLevel[right] = intToFloatMult *
+				(sampler[playerA].velocityScale * sampler[playerA].currentSamples[right] +
+				 sampler[playerB].velocityScale * sampler[playerB].currentSamples[right]);
+	}
 }
 
 

@@ -7,6 +7,7 @@
 void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
+	playing = true;
 	phase = Phase::Ramp1;
 	position = 0.0f;
 	currentLevel = 0.0f;
@@ -18,11 +19,7 @@ void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 void Kick::Play(uint8_t voice, uint32_t index)
 {
 	// Called when button is pressed
-	phase = Phase::Ramp1;
-	position = 0.0f;
-	currentLevel = 0.0f;
-	noteMapper->led.On();
-	velocityScale = 1.0f;
+	Play(0, 0, 0, 1.0f);
 }
 
 
@@ -77,6 +74,7 @@ void Kick::CalcOutput()
 		currentLevel = std::sin(position) * slowSinLevel;
 
 		if (slowSinLevel <= 0.00001f) {
+			playing = false;
 			phase = Phase::Off;
 			noteMapper->led.Off();
 		}

@@ -19,7 +19,7 @@
 // For debugging
 extern bool calculatingFilter;
 
-enum PassType {FilterOff, LowPass, HighPass};
+enum PassType {FilterOff, LowPass, HighPass, BandPass};
 
 typedef float iirdouble_t;			// to allow easy testing with floats or doubles
 typedef std::complex<float> complex_t;
@@ -112,7 +112,7 @@ private:
 struct Filter {
 public:
 	Filter(uint8_t poles, PassType pass, volatile uint16_t* adc) :
-		iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)}, adcControl{adc}
+		iirFilter{IIRFilter(poles, pass), IIRFilter(poles, pass)}, adcControl{adc}, passType{pass}
 	{
 		Update(true);						// Force calculation of coefficients
 	}
