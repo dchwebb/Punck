@@ -4,33 +4,61 @@ if (navigator.requestMIDIAccess) {
     console.log('WebMIDI is not supported in this browser.');
 }
 
-var midi = null;
-// global MIDIAccess object
+var midi = null;           // global MIDIAccess object
 var output = null;
-var requestNo = 1;
-// stores number of control awaiting configuration information
+var requestNo = 0;         // stores number of control awaiting configuration information
 
+// enum from c++ code to match voice
 var voiceEnum = {
     kick: 0, snare: 1, hatClosed: 2, hatOpen: 3, tomHigh: 4, tomMedium: 5, tomLow: 6, samplerA: 7, samplerB: 8
 };
 
-var controlEnum = {
-    gate: 1,
-    cv: 2
-};
-var recCount = 0;
+var snareSettings = [
+	{name: 'Base Frequency', value: 'baseFreq'}, 
+	{name: 'Partial 0 Level', value: 'partial0Level'},
+	{name: 'Partial 1 Level', value: 'partial1Level'},
+	{name: 'Partial 2 Level', value: 'partial2Level'}
+];
+var hihatSettings = [
+	{name: 'Carrier Frequency', value: 'carrierFreq'}, 
+	{name: 'Modulator Freq', value: 'modulatorFreq'},
+	{name: 'Modulator Duty Cycle', value: 'modulatorDuty'},
+	{name: 'Modulator High Multiplier', value: 'modulatorHighMult'},
+	{name: 'Modulator Low Multiplier', value: 'modulatorLowMult'},
+	{name: 'Decay', value: 'decay'}
+];
+
+
+var drumSettings = [
+	{heading: "Snare Settings", id: voiceEnum.snare, settings: snareSettings},
+	{heading: "Hihat Settings", id: voiceEnum.hatClosed, settings: hihatSettings}
+]
+
+
 
 window.onload = afterLoad;
-function afterLoad() {
-    // sysex not currently working so no need request permission: requestMIDIAccess({ sysex: true })
+function afterLoad() 
+{
+	// Build html lists of settings for each drum voice
+	var html = '';
+	for (var i = 0; i < drumSettings.length; ++i) {
+		html += '<div style="grid-column: 1 / 3;  padding: 10px">' + drumSettings[i].heading + '</div>';
+		for (var s = 0; s < drumSettings[i].settings.length; s++) {
+	 		html += '<div class="grid-container3">' + drumSettings[i].settings[s].name + '</div>'+
+					'<div class="grid-container3"><input type="text" id="' + drumSettings[i].settings[s].value + '" onchange="updateConfig(' + i + ');"></div>';
+		}
+	}
+	document.getElementById("drumSettings").outerHTML = html;
+	
+	
     navigator.requestMIDIAccess({ sysex: true }).then(onMIDISuccess, onMIDIFailure);
 }
 
 
-// Check which MIDI interface is Punck and if found start requesting configuration from interface
-function onMIDISuccess(midiAccess) {
-    midi = midiAccess;
-    // store in the global variable
+function onMIDISuccess(midiAccess)
+{
+	// Check which MIDI interface is Punck and if found start requesting configuration from interface
+	midi = midiAccess;    // store in the global variable
 
     console.log(midiAccess);
 
@@ -48,113 +76,100 @@ function onMIDISuccess(midiAccess) {
 
     // Update UI to show connection status
     if (checkConnection()) {
-        RequestConfig(voiceEnum.snare);
+        RequestConfig(drumSettings[0].id);
     }
 }
 
-function onMIDIFailure() {
+
+function RequestConfig(voice)
+{
+	// Creates a SysEx request for a voice's configuration
+	var message = [0xF0, 0x1C, voice, 0xF7];
+    output.send(message);
+}
+
+
+function onMIDIFailure() 
+{
     console.log('Could not access your MIDI devices.');
 }
 
 
-//Receive MIDI message - mainly used to process configuration information returned from module
-function getMIDIMessage(midiMessage) {
-    console.log(midiMessage);
+function getMIDIMessage(midiMessage) 
+{
+	// Receive MIDI message - process SysEx containing encoded configuration data
+	console.log(midiMessage);
 
     if (midiMessage.data[0] == 0xF0) {
-        // As upper bit cannot be set in a sysEx byte, data is sent a nibble at a time - reconstruct into byte array
-        var result = [];
+        // As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
+        var decodedSysEx = [];
         for (i = 1; i < midiMessage.data.length - 1; ++i) {
             if (i % 2 != 0) {
-                result[Math.trunc((i - 1) / 2)] = midiMessage.data[i];
+                decodedSysEx[Math.trunc((i - 1) / 2)] = midiMessage.data[i];
             } else {
-                result[Math.trunc((i - 1) / 2)] += (midiMessage.data[i] << 4);
+                decodedSysEx[Math.trunc((i - 1) / 2)] += (midiMessage.data[i] << 4);
             }
         };
         
     	var response = document.getElementById("testResponse");    
         var stringData = "";
         for (i = 0; i < (midiMessage.data.length / 2) - 1; ++i) {
-            stringData += result[i].toString(16) + " ";
+            stringData += decodedSysEx[i].toString(16) + " ";
         }
         
-        response.innerHTML = "Received: " + stringData;
+        console.log("Received: " + stringData);
 
-		if (result[0] == 0x1C) {
-			sysEx = result.slice(2);
-			if (result[1] == voiceEnum.hatClosed) {
-				document.getElementById("carrierFreq").value = BytesToFloat(sysEx.slice(0, 4));
-	            document.getElementById("modulatorFreq").value = BytesToFloat(sysEx.slice(4, 8));
-				document.getElementById("modulatorDuty").value = BytesToFloat(sysEx.slice(8, 12));
-				document.getElementById("modulatorHighMult").value = BytesToFloat(sysEx.slice(12, 16));
-				document.getElementById("modulatorLowMult").value = BytesToFloat(sysEx.slice(16, 20));
-				document.getElementById("decay").value = BytesToFloat(sysEx.slice(20, 24));
-			} else if (result[1] == voiceEnum.snare) {
-		        document.getElementById("baseFreq").value = BytesToFloat(sysEx.slice(0, 4));
-				document.getElementById("partial0Level").value = BytesToFloat(sysEx.slice(4, 8));
-		        document.getElementById("partial1Level").value = BytesToFloat(sysEx.slice(8, 12));
-				document.getElementById("partial2Level").value = BytesToFloat(sysEx.slice(12, 16));
+		if (decodedSysEx[0] == 0x1C) {
+			sysEx = decodedSysEx.slice(2);
+
+			// locate settings that match the enum passed
+			for (var i = 0; i < drumSettings.length; ++i) {
+				if (drumSettings[i].id == decodedSysEx[1]) {
+					for (var s = 0; s < drumSettings[i].settings.length; s++) {
+						// Store the values encoded in the SysEx data into the html fields
+				        document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
+					}
+				}
 			}
-			if (requestNo < 2) {
-	            requestNo++;
-	            RequestConfig(requestNo);
+
+			// Request the configuration data for the next voice
+			if (++requestNo < drumSettings.length) {
+	            RequestConfig(drumSettings[requestNo].id);
 	        }
 		}
 	}
 }
 
 
-function updateRange()
+function BytesToFloat(buff) 
 {
-	document.getElementById("partialDecay").value = document.getElementById("partialDecayR").value;
+    return new Float32Array(new Uint8Array(buff).buffer)[0];
 }
 
 
-function RequestConfig(voice)
+function updateConfig(index)
 {
-	var message = [0xF0, 0x1C, voice, 0xF7];
-    output.send(message);
-}
-
-
-function serialiseConfig(voice)
-{
-
-    if (voice == voiceEnum.snare) {
-		return new Float32Array([document.getElementById("baseFreq").value,
-	              document.getElementById("partial0Level").value,
-				  document.getElementById("partial1Level").value, 
-				  document.getElementById("partial2Level").value
-				 ]);
-	} else if (voice == voiceEnum.hatClosed) {
-		return new Float32Array([document.getElementById("carrierFreq").value,
-				  document.getElementById("modulatorFreq").value,
-				  document.getElementById("modulatorDuty").value,
-				  document.getElementById("modulatorHighMult").value,
-				  document.getElementById("modulatorLowMult").value,
-				  document.getElementById("decay").value
-				 ]);
+	// Copy the values of the html fields into a float array for serialisation
+	var floatArray = new Float32Array(drumSettings[index].settings.length)
+	for (var s = 0; s < floatArray.length; s++) {
+		floatArray[s] = document.getElementById(drumSettings[index].settings[s].value).value;
 	}
-}
-
-
-function updateConfig(voice)
-{
-	var farr = serialiseConfig(voice);
-    var barr = new Uint8Array(farr.buffer);   // use the buffer of Float32Array view
+    var byteArray = new Uint8Array(floatArray.buffer);   // use the buffer of Float32Array view
 
     // Convert to sysex information
-    var message = new Uint8Array(4 + (barr.length * 2));
+    var message = new Uint8Array(4 + (byteArray.length * 2));
     message[0] = 0xF0;
-    message[1] = 0x2C;
-    message[2] = voice;
+    message[1] = 0x2C;                        // Set config command
+    message[2] = drumSettings[index].id;
     var msgPos = 3;
-    var lowerNibble = true;
-    for (i = 0; i < barr.length * 2; ++i) {
+   
+	// Since the upper bit of a sysex byte cannot be set, split each byte into an upper and lower nibble for transmission
+	var lowerNibble = true;
+    for (i = 0; i < byteArray.length * 2; ++i) {
 		if (lowerNibble) {
-			message[msgPos++] = barr[Math.trunc(i / 2)] & 0xF;
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] & 0xF;
 		} else {
-			message[msgPos++] = barr[Math.trunc(i / 2)] >> 4;
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] >> 4;
 		}
         lowerNibble = !lowerNibble;
     }
@@ -164,15 +179,9 @@ function updateConfig(voice)
 }
 
 
-function BytesToFloat(buff) {
-    var val = new Float32Array(new Uint8Array(buff).buffer)[0];
-    console.log(val);
-    return val;
-}
-
-
 // Sends MIDI note to requested channel
-function sendNote(noteValue, channel) {
+function sendNote(noteValue, channel)
+{
     if (checkConnection()) {
         output.send([0x90 + parseInt(channel - 1), noteValue, 0x7f]);
         output.send([0x80 + parseInt(channel - 1), noteValue, 0x40], window.performance.now() + 1000.0);
@@ -182,7 +191,8 @@ function sendNote(noteValue, channel) {
 
 
 // MIDI Note on
-function noteOn(noteValue, channel) {
+function noteOn(noteValue, channel) 
+{
     if (checkConnection()) {
         output.send([0x90 + parseInt(channel - 1), noteValue, 0x7f]);
     }
@@ -190,7 +200,8 @@ function noteOn(noteValue, channel) {
 
 
 // MIDI note off
-function noteOff(noteValue, channel) {
+function noteOff(noteValue, channel) 
+{
     if (checkConnection()) {
         output.send([0x80 + parseInt(channel - 1), noteValue, 0x40]);
     }
@@ -198,7 +209,8 @@ function noteOff(noteValue, channel) {
 
 
 //Test the MIDI connection is active and update UI accordingly
-function checkConnection() {
+function checkConnection()
+{
     var status = document.getElementById("connectionStatus");
     if (!output || output.state == "disconnected") {
         status.innerHTML = "Disconnected";
@@ -212,9 +224,3 @@ function checkConnection() {
 }
 
 
-
-
-function testSysex() {
-    var message = [0xF0, 0x1C, voiceEnum.snare, 0xF7];
-    output.send(message);
-}

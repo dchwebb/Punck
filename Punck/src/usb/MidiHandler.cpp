@@ -10,26 +10,23 @@ void MidiHandler::DataIn()
 
 void MidiHandler::DataOut()
 {
-
-	uint8_t* outBuffBytes = reinterpret_cast<uint8_t*>(outBuff);
 	// Handle incoming midi command here
+	uint8_t* outBuffBytes = reinterpret_cast<uint8_t*>(outBuff);
+
 	if (!partialSysEx && outBuffCount == 4) {
 		midiEvent(*outBuff);
 
 	} else if (partialSysEx || (outBuffBytes[1] == 0xF0 && outBuffCount > 3)) {		// Sysex
-		if (partialSysEx) {
-			volatile int susp = 1;
-		}
-
 		// sysEx will be padded when supplied by usb - add only actual sysEx message bytes to array
 		uint16_t sysExCnt = partialSysEx ? 1 : 2;		// If continuing a long sysex command only ignore first (size) byte
+
 		uint16_t i;
 		for (i = partialSysEx ? sysExCount : 0; i < sysexMaxSize; ++i) {
 			if (outBuffBytes[sysExCnt] == 0xF7) {
 				partialSysEx = false;
 				break;
 			}
-			if (sysExCnt >= outBuffCount) {
+			if (sysExCnt >= outBuffCount) {				// Long SysEx command will be received in multiple packets
 				partialSysEx = true;
 				break;
 			}
@@ -42,9 +39,7 @@ void MidiHandler::DataOut()
 			}
 		}
 		sysExCount = i;
-		if (partialSysEx) {
-			volatile int susp = 1;
-		} else {
+		if (!partialSysEx) {
 			ProcessSysex();
 		}
 	}
