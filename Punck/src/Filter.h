@@ -117,7 +117,8 @@ public:
 		Update(true);						// Force calculation of coefficients
 	}
 
-	void Update(bool reset = false);		// Recalculate coefficients if required
+	void Update(bool reset = false);		// Recalculate coefficients from ADC reading if required
+	void SetCutoff(float cutoff);			// Recalculate coefficients from supplied cutoff value
 	float CalcFilter(iirdouble_t sample, channel c);
 private:
 	float potCentre = 29000;				// Configurable in calibration

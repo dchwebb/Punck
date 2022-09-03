@@ -25,7 +25,8 @@ var hihatSettings = [
 	{name: 'Modulator Duty Cycle', value: 'modulatorDuty'},
 	{name: 'Modulator High Multiplier', value: 'modulatorHighMult'},
 	{name: 'Modulator Low Multiplier', value: 'modulatorLowMult'},
-	{name: 'Decay', value: 'decay'}
+	{name: 'Decay', value: 'decay'},
+	{name: 'Filter Q', value: 'q'}
 ];
 
 
@@ -143,7 +144,8 @@ function getMIDIMessage(midiMessage)
 
 function BytesToFloat(buff) 
 {
-    return new Float32Array(new Uint8Array(buff).buffer)[0];
+    var fl = new Float32Array(new Uint8Array(buff).buffer)[0];
+	return Math.trunc(fl * 10000000) / 10000000;
 }
 
 

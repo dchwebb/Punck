@@ -1,6 +1,7 @@
 #pragma once
 #include "initialisation.h"
 #include "Filter.h"
+#include "BPFilter.h"
 #include "DrumVoice.h"
 
 class NoteMapper;
@@ -16,7 +17,8 @@ public:
 	NoteMapper* noteMapper;
 
 private:
-	Filter filter{4, HighPass, &(ADC_array[ADC_Filter_Pot])};
+	Filter hpFilter{4, HighPass, &(ADC_array[ADC_Filter_Pot])};
+	BPFilter bpFilter;
 
 	float position;
 	float velocityScale;
@@ -34,6 +36,7 @@ private:
 		float modulatorDuty = 0.75f;
 		float modulatorHighMult = 3.2f;
 		float modulatorLowMult = 0.7f;
-		float decay = 0.99f;
+		float decay = 1.0f;	//0.999f;
+		float Q = 7.0f;
 	} config;
 };

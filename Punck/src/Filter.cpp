@@ -40,6 +40,14 @@ void Filter::InitIIRFilter(iirdouble_t tone)	// tone is a 0-65535 number represe
 }
 
 
+void Filter::SetCutoff(iirdouble_t cutoff)
+{
+	bool inactiveFilter = !activeFilter;
+	iirFilter[inactiveFilter].CalcCoeff(cutoff);
+	activeFilter = inactiveFilter;			// Switch active filter
+}
+
+
 //	Take a new sample and return filtered value
 float Filter::CalcFilter(iirdouble_t sample, channel c)
 {

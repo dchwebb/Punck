@@ -7,6 +7,9 @@
 
 void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
+	if (fatTools.noFileSystem) {
+		return;
+	}
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset < sampler[sp].bankLen) {
 		sampler[sp].sample = sampler[sp].bank[noteOffset].s;
@@ -26,6 +29,9 @@ void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float ve
 
 void Samples::Play(uint8_t sp, uint32_t index)
 {
+	if (fatTools.noFileSystem) {
+		return;
+	}
 	sampler[sp].playing = true;
 	sampler[sp].sample = sampler[sp].bank[index].s;		//&sampleList[index];
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;

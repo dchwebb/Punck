@@ -39,6 +39,7 @@ int main(void) {
 	InitRNG();						// Init random number generator
 	InitMidiUART();
 	InitADC();
+	InitDAC();
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
 

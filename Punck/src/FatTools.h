@@ -67,6 +67,7 @@ class FatTools
 	friend class CDCHandler;
 public:
 	bool busy = false;
+	bool noFileSystem = true;
 	uint16_t* clusterChain;				// Pointer to beginning of cluster chain (AKA FAT)
 	FATFileInfo* rootDirectory;			// Pointer to start of FAT directory listing
 
@@ -93,8 +94,6 @@ private:
 	uint8_t writeBlockCache[fatSectorSize * fatEraseSectors];
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
-
-
 
 	std::string GetFileName(FATFileInfo* lfn);
 	std::string GetAttributes(FATFileInfo* fi);
