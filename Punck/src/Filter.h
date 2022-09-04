@@ -120,6 +120,7 @@ public:
 	void Update(bool reset = false);		// Recalculate coefficients from ADC reading if required
 	void SetCutoff(float cutoff);			// Recalculate coefficients from supplied cutoff value
 	float CalcFilter(iirdouble_t sample, channel c);
+	void Init();
 private:
 	float potCentre = 29000;				// Configurable in calibration
 

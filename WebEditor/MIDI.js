@@ -25,8 +25,17 @@ var hihatSettings = [
 	{name: 'Modulator Duty Cycle', value: 'modulatorDuty'},
 	{name: 'Modulator High Multiplier', value: 'modulatorHighMult'},
 	{name: 'Modulator Low Multiplier', value: 'modulatorLowMult'},
+	
 	{name: 'Decay', value: 'decay'},
-	{name: 'Filter Q', value: 'q'}
+	
+	{name: 'BP Filter Freq', value: 'bpFilterFreq'},
+	{name: 'BP Filter Q', value: 'bpFilterQ'},
+	{name: 'BP Env Decay', value: 'bpEnvDecay'}, 
+	{name: 'BP Env Scale', value: 'bpEnvScale'}, 
+
+	{name: 'HP Filter Freq', value: 'hpFilterFreq'},
+	{name: 'HP Env Decay', value: 'hpEnvDecay'}, 
+	{name: 'HP Env Scale', value: 'hpEnvScale'}, 
 ];
 
 
@@ -112,13 +121,12 @@ function getMIDIMessage(midiMessage)
             }
         };
         
-    	var response = document.getElementById("testResponse");    
-        var stringData = "";
-        for (i = 0; i < (midiMessage.data.length / 2) - 1; ++i) {
+        // Print contents of payload to console
+		var stringData = "";
+		for (i = 0; i < decodedSysEx.length; ++i) {
             stringData += decodedSysEx[i].toString(16) + " ";
         }
-        
-        console.log("Received: " + stringData);
+        console.log("Received " + decodedSysEx.length + ": " + stringData);
 
 		if (decodedSysEx[0] == 0x1C) {
 			sysEx = decodedSysEx.slice(2);
@@ -176,6 +184,14 @@ function updateConfig(index)
         lowerNibble = !lowerNibble;
     }
     message[msgPos] = 0xF7;
+
+	// Print contents of payload to console
+	var stringData = "";
+	for (i = 0; i < message.length; ++i) {
+		stringData += message[i].toString(16) + " ";
+	}
+	console.log("Sent " + message.length + ": " + stringData);
+
     
     output.send(message);
 }

@@ -5,11 +5,16 @@
 uint32_t dbgPos = 0;
 uint32_t dbgCnt = 48;
 
+float hpCutoff = 0.27f;
+float bpCutoff = 3000.0f;
+
 void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
-	if (playing) {
-		playing = false;
-	} else {
+//	if (playing) {
+//		playing = false;
+//		noteMapper->led.Off();
+//	} else {
+
 		// Called when accessed from MIDI
 		playing = true;
 		position = 0.0f;
@@ -20,10 +25,13 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 		currentLevel = 1.0f;
 		carrierLevel = 1.0f;
 		modulatorHigh = true;
-		hpFilter.SetCutoff(0);
-		dbgPos = 0;
-		dbgCnt = 48;
-	}
+		hpFilter.Init();
+		hpFilter.SetCutoff(hpCutoff);
+		bpFilter.SetCutoff(bpCutoff, config.bpFilterQ);
+		bpFilter.Init();
+		bpEnvLevel = 1.0f;
+		hpEnvLevel = 1.0f;
+//	}
 }
 
 
@@ -34,44 +42,73 @@ void HiHat::Play(uint8_t voice, uint32_t index)
 }
 
 
-static constexpr uint32_t dbgSize = 3000;
-float __attribute__((section (".ram_d1_data"))) dbgCutoff[dbgSize];
-float decayRate = 0.1;
+float hhPartialInc[6] = {
+						 -569.0f / ((float)systemSampleRate / 4.0f),
+						 621.0f / ((float)systemSampleRate / 4.0f),
+						 -1559.0f / ((float)systemSampleRate / 4.0f),
+						 2056.0f / ((float)systemSampleRate / 4.0f),
+						 -3300.0f / ((float)systemSampleRate / 4.0f),
+						 5515.0f / ((float)systemSampleRate / 4.0f),
+						};
+float hhPartialLevel[6] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+float hhPartialScale[6] = {0.2f, 0.3f, 0.4f, 0.8f, 0.75f, 0.85};
 
 void HiHat::CalcOutput()
 {
 	if (playing) {
 		++position;
+		float output = 0.0f;
 
-		// Calculate high pass filter
-		/*
-		float posInTime = (1.0f / systemSampleRate) * (position + 40);
-		float cutoff = 0.1f * (2 * decayRate * sqrt(posInTime) - posInTime) / (decayRate * decayRate);
-		*/
-		/*
-		float posInTime = (position / systemSampleRate) + 0.4;
-		float cutoff = sin(1.0f / posInTime);
+		// FM
+		hhPartialInc[4] += hhPartialLevel[1];
+		hhPartialInc[5] += hhPartialLevel[0];
+		hhPartialInc[3] += hhPartialLevel[2];
 
-		hpFilter.SetCutoff(cutoff);
-	*/
-		// Create fast decay of BP filter to 1kHz over 200ms (9600 samples)
-		float cutoff = 1000.0f + (20000.0f * (1.0f - (float)position / 9600.0f));
-		if (cutoff < 1000.0f) {
-			cutoff = 1000.0f;
-		}
-
-		DAC1->DHR12R1 = (cutoff / 20000.0f) * 4095.0f;		// DAC1->DHR12R2
-
-		//float cutoff = ((float)ADC_array[ADC_Filter_Pot] / 65536.0f) * 8000.0f;
-		bpFilter.SetCutoff(cutoff, config.Q);
-
-		if (dbgPos < dbgSize) {
-			if (dbgCnt++ == 48) {
-				dbgCnt = 0;
+		for (uint8_t i = 0; i < 6; ++i) {
+			hhPartialLevel[i] += hhPartialInc[i];
+			if (hhPartialLevel[i] > 1.0f) {
+				hhPartialLevel[i] = 1.0f;
+				hhPartialInc[i] = -hhPartialInc[i];
 			}
-			dbgCutoff[dbgPos++] = cutoff;
+			if (hhPartialLevel[i] < -1.0f) {
+				hhPartialLevel[i] = -1.0f;
+				hhPartialInc[i] = -hhPartialInc[i];
+			}
+			output += (hhPartialLevel[i] > 0 ? 1.0f : -1.0f) * hhPartialScale[i];
+			//output += hhPartialLevel[i] * hhPartialScale[i];
 		}
 
+
+
+
+
+		//velocityScale = 1.0f;
+
+		//float noise = intToFloatMult * (int32_t)RNG->DR;
+
+
+		velocityScale *= config.decay;
+		currentLevel = velocityScale * output - 0.00001f;
+		//DAC1->DHR12R1 = velocityScale * 4095.0f;		// Output envelope to DAC for debugging
+
+		if (velocityScale < 0.00001f) {
+			playing = false;
+			currentLevel = 0.0f;
+			//velocityScale = 0.0f;
+			noteMapper->led.Off();
+		}
+
+		//outputLevel[0] = hpFilter.CalcFilter(currentLevel, left);
+		outputLevel[0] = hpFilter.CalcFilter(currentLevel, left);
+		outputLevel[1] = outputLevel[0];
+	}
+
+	/*
+	if (playing) {
+		++position;
+		float output = 0.0f;
+
+		// Generate FM signal
 		float carrierPeriod = ((float)systemSampleRate / 2.0f) / config.carrierFreq;
 		float modHighPeriod = config.modulatorDuty * ((float)systemSampleRate) / config.modulatorFreq;
 		float modLowPeriod = (1 - config.modulatorDuty) * ((float)systemSampleRate) / config.modulatorFreq;
@@ -88,22 +125,50 @@ void HiHat::CalcOutput()
 			modulatorPos = 0.0f;
 			modulatorHigh = !modulatorHigh;
 		}
-		currentLevel = carrierLevel;
 
 		//currentLevel = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
+		//float noise = intToFloatMult * (int32_t)RNG->DR;
 
-//		if (position > 96000.0f) {
-//			playing = false;
-//			currentLevel = 0.0f;
-//			velocityScale = 0.0f;
-//			noteMapper->led.Off();
-//		}
+		// Create fast decay of BP filter to 15kHz over ~370ms (9600 samples)
+		if (bpEnvLevel >= 0.0001) {
+			bpEnvLevel *= config.bpEnvMult;
+
+			// Set fast decay band pass filter
+			float bpCutoff = config.bpFilterFreq + (systemMaxFreq - config.bpFilterFreq) * bpEnvLevel;
+			if (bpCutoff < 15000.0f) {
+				bpCutoff = 15000.0f;
+			}
+			//float cutoff = ((float)ADC_array[ADC_Filter_Pot] / 65536.0f) * 8000.0f;
+			bpFilter.SetCutoff(bpCutoff, config.bpFilterQ);
+			output = config.bpEnvScale * bpEnvLevel * bpFilter.CalcFilter(carrierLevel);
+		}
+
+		// Create slow envelope controlling high pass filter
+		hpEnvLevel *= config.hpEnvMult;
+		float hpCutoff = (config.hpFilterFreq + (systemMaxFreq - config.hpFilterFreq) * hpEnvLevel) / systemMaxFreq;
+		//(1570.0f + (18430.0f * hpEnvLevel) / 20000.0f);
+		hpFilter.SetCutoff(hpCutoff);
+		output += config.hpEnvScale * hpFilter.CalcFilter(carrierLevel, left);
+
+		DAC1->DHR12R1 = hpCutoff * 4095.0f;		// Output envevlope to DAC for debugging
+
+		velocityScale *= config.decay;
+		currentLevel = velocityScale * output;
+		//DAC1->DHR12R1 = velocityScale * 4095.0f;		// Output envelope to DAC for debugging
+
+		if (velocityScale < 0.00001f) {
+			playing = false;
+			//currentLevel = 0.0f;
+			//velocityScale = 0.0f;
+			noteMapper->led.Off();
+		}
 
 		outputLevel[0] = currentLevel;
 		//outputLevel[0] = velocityScale * bpFilter.CalcFilter(currentLevel);
 		//outputLevel[0] = velocityScale * hpFilter.CalcFilter(currentLevel, left);
 		outputLevel[1] = outputLevel[0];
 	}
+	*/
 }
 
 

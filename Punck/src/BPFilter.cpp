@@ -27,3 +27,12 @@ float BPFilter::CalcFilter(float xn0)
 
 	return yn0;
 }
+
+
+void BPFilter::Init()
+{
+	xn2 = 0.0f;
+	xn1 = 0.0f;
+	yn2 = 0.0f;
+	yn1 = 0.0f;
+}

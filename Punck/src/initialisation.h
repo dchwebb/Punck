@@ -17,6 +17,7 @@ constexpr double pi = 3.14159265358979323846;
 constexpr float intToFloatMult = 1.0f / std::pow(2.0f, 31.0f);		// Multiple to convert 32 bit int to -1.0 - 1.0 float
 
 static constexpr uint32_t systemSampleRate = 48000;
+static constexpr float systemMaxFreq = 22000.0f;
 
 extern volatile uint16_t ADC_array[ADC2_BUFFER_LENGTH];
 extern int32_t adcZeroOffset[2];

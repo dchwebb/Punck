@@ -15,7 +15,6 @@ void FatTools::InitFatFS()
 	FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
-		noFileSystem = true;
 		return;
 //		uint8_t fsWork[fatSectorSize];						// Work buffer for the f_mkfs()
 //
@@ -32,6 +31,8 @@ void FatTools::InitFatFS()
 //		// Populate Windows spam files to prevent them being created later in unwanted locations
 //		MakeDummyFiles();
 	}
+
+	noFileSystem = false;
 
 	// Store the address of the cluster chain for speed in future lookups
 	clusterChain = (uint16_t*)(headerCache + (fatFs.fatbase * fatSectorSize));

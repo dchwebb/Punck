@@ -5,6 +5,7 @@ class BPFilter {
 public:
 	void SetCutoff(float cutoff, float Q);
 	float CalcFilter(float x);
+	void Init();
 
 	float xn2 = 0.0f, xn1 = 0.0f, yn2 = 0.0f, yn1 = 0.0f;
 
