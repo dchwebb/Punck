@@ -52,6 +52,8 @@ void Filter::SetCutoff(iirdouble_t cutoff)
 	bool inactiveFilter = !activeFilter;
 	iirFilter[inactiveFilter].CalcCoeff(cutoff);
 	activeFilter = inactiveFilter;				// Switch active filter
+	currentCutoff = cutoff;						// Debug
+
 }
 
 

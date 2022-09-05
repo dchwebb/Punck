@@ -17,36 +17,43 @@ public:
 	NoteMapper* noteMapper;
 
 private:
-	Filter hpFilter{2, HighPass, &(ADC_array[ADC_Filter_Pot])};
-	BPFilter bpFilter;
+	struct Config {
+		float attackInc = 0.005f;
+		float decay = 0.9991f;
 
-	float position;
+		float hpInitCutoff = 0.07f;
+		float hpFinalCutoff = 0.27f;
+
+		float noiseInitLevel = 0.9f;
+
+		float partialScale[6] = {0.8f, 0.5f, 0.4f, 0.4f, 0.5f, 0.4f};
+		float partialFreq[6] = {569.0f, 621.0f, 1559.0f, 2056.0f, 3300.0f, 5515.0f};
+	} config;
+
+
+	Filter hpFilter{2, HighPass, &(ADC_array[ADC_Filter_Pot])};
+	//Filter lpFilter{4, LowPass, &(ADC_array[ADC_Filter_Pot])};
+	//BPFilter bpFilter;
+
 	float velocityScale;
 	float currentLevel;
+	bool attack;
+	float attackLevel;
+	float noiseScale;
 
-	float carrierLevel;
-	float carrierPos;
+	float hpFilterCutoff;
 
-	bool modulatorHigh;
-	float modulatorPos;
+	// multiplier to convert frequency to half a period of a triangle wave
+	static constexpr float freqToTriPeriod = 1 / ((float)systemSampleRate / 4.0f);
+	float partialInc[6] = {
+			  -569.0f * freqToTriPeriod,
+			   621.0f * freqToTriPeriod,
+			 -1559.0f * freqToTriPeriod,
+			  2056.0f * freqToTriPeriod,
+			 -3300.0f * freqToTriPeriod,
+			  5515.0f * freqToTriPeriod,
+			};
+	float partialLevel[6] = {};
 
-	float bpEnvLevel;
-	float hpEnvLevel;
 
-	struct Config {
-		float carrierFreq = 2490.0f;
-		float modulatorFreq = 1047.0f;
-		float modulatorDuty = 0.75f;
-		float modulatorHighMult = 3.2f;
-		float modulatorLowMult = 0.7f;
-		float decay = 0.9994f;
-		float bpFilterFreq = 15000.0f;
-		float bpFilterQ = 7.0f;
-		float bpEnvMult = 0.9997f;
-		float bpEnvScale = 5.0f;
-
-		float hpFilterFreq = 1570.0f;
-		float hpEnvMult = 0.9999f;
-		float hpEnvScale = 5.0f;
-	} config;
 };
