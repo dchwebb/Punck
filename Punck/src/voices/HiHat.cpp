@@ -13,20 +13,26 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 		// Called when accessed from MIDI
 		playing = true;
 		noteMapper->led.On();
+
 		velocityScale = velocity;
-		currentLevel = 1.0f;
+		attack = true;
+		attackLevel = 0.0f;
+		noiseScale = intToFloatMult * config.noiseInitLevel;		// noise uses RND peripheral: scale 32 bit value to -1.0 to +1.0
+
 		hpFilter.Init();
 		hpFilterCutoff = config.hpInitCutoff;
 		hpFilter.SetCutoff(hpFilterCutoff);
-		attack = true;
-		attackLevel = 0.0f;
+
+		// Control over decay
+		decayScale = 0.999 + (0.001 * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f);
 
 		// Scale high frequency components according to brightness setting
-		float brightness = 50.0f * (1.0f - ((float)ADC_array[ADC_Filter_Pot] / 65536.0f));
+		float brightness = (float)ADC_array[ADC_Filter_Pot] / 65536.0f;
+		lpFilter.SetCutoff(0.05f + brightness * 0.8);
 
-		for (uint8_t i = 0; i < 2; ++i) {
-			//partialInc[i] = (config.partialFreq[i] - brightness) * freqToTriPeriod;
-			//partialInc[i] = (config.partialFreq[i]) * freqToTriPeriod;
+		for (uint8_t i = 0; i < 6; ++i) {
+			//partialInc[i] = (config.partialFreq[i] - (50.0f * (1.0f - brightness))) * freqToTriPeriod;
+			partialInc[i] = config.partialFreq[i] * freqToTriPeriod;
 		}
 //	}
 }
@@ -87,7 +93,7 @@ void HiHat::CalcOutput()
 			envScale = attackLevel;
 
 		} else {
-			velocityScale *= config.decay;
+			velocityScale *= decayScale;
 			envScale = velocityScale;
 		}
 		DAC1->DHR12R1 = envScale * 4095.0f;		// Output envelope to DAC for debugging
@@ -101,7 +107,8 @@ void HiHat::CalcOutput()
 			DAC1->DHR12R1 = 0;		// Output envelope to DAC for debugging
 		}
 
-		outputLevel[0] = envScale * hpFilter.CalcFilter(currentLevel, left) - 0.0001f;
+		//outputLevel[0] = envScale * hpFilter.CalcFilter(currentLevel, left) - 0.0001f;
+		outputLevel[0] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel, left), left) - 0.0001f;
 		outputLevel[1] = outputLevel[0];
 	}
 
