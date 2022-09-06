@@ -39,8 +39,7 @@ private:
 
 	float velocityScale;
 	float decayScale;
-	float currentLevel;
-	bool attack;
+	bool attack;						// True during the envelope attack phase
 	float attackLevel;
 	float noiseScale;
 
@@ -51,6 +50,6 @@ private:
 
 	float partialLevel[6];				// Output level of each partial
 	uint32_t partialPeriod[6];			// Square wave period
-	uint32_t partialPos[6];			// partial position counter
+	uint32_t partialPos[6];				// partial position counter
 
 };
