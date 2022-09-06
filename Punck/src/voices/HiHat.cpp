@@ -5,36 +5,30 @@
 
 void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
-//	if (playing) {
-//		playing = false;
-//		noteMapper->led.Off();
-//	} else {
 
-		// Called when accessed from MIDI
-		playing = true;
-		noteMapper->led.On();
+	// Called when accessed from MIDI
+	playing = true;
+	noteMapper->led.On();
 
-		velocityScale = velocity;
-		attack = true;
-		attackLevel = 0.0f;
-		noiseScale = intToFloatMult * config.noiseInitLevel;		// noise uses RND peripheral: scale 32 bit value to -1.0 to +1.0
+	velocityScale = velocity;
+	attack = true;
+	attackLevel = 0.0f;
+	noiseScale = intToFloatMult * config.noiseInitLevel;		// noise uses RND peripheral: scale 32 bit value to -1.0 to +1.0
 
-		hpFilter.Init();
-		hpFilterCutoff = config.hpInitCutoff;
-		hpFilter.SetCutoff(hpFilterCutoff);
+	hpFilter.Init();
+	hpFilterCutoff = config.hpInitCutoff;
+	hpFilter.SetCutoff(hpFilterCutoff);
 
-		// Control over decay - FIXME change ADC for production
-		decayScale = 0.999 + (0.001 * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f);
+	// Control over decay - FIXME change ADC for production
+	decayScale = 0.999 + (0.001 * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f);
 
-		// Scale high frequency components according to brightness setting
-		float brightness = (float)ADC_array[ADC_Filter_Pot] / 65536.0f;
-		lpFilter.SetCutoff(0.05f + brightness * 0.8);
+	for (uint8_t i = 0; i < 6; ++i) {
+		partialPeriod[i] = freqToSqPeriod / config.partialFreq[i];
+		partialPos[i] = 0;
+		partialLevel[i] = config.partialScale[i];
+	}
 
-		for (uint8_t i = 0; i < 6; ++i) {
-			//partialInc[i] = (config.partialFreq[i] - (50.0f * (1.0f - brightness))) * freqToTriPeriod;
-			partialInc[i] = config.partialFreq[i] * freqToTriPeriod;
-		}
-//	}
+
 }
 
 
@@ -46,32 +40,28 @@ void HiHat::Play(uint8_t voice, uint32_t index)
 
 
 
-
+bool fmOn = true;
 
 void HiHat::CalcOutput()
 {
 	if (playing) {
 		currentLevel = 0.0f;
 
-		// Apply FM to the higher three partials from the lower three
-		partialInc[3] += partialLevel[1];
-		partialInc[4] += partialLevel[2];
-		partialInc[5] += partialLevel[0];
-
 		for (uint8_t i = 0; i < 6; ++i) {
-			partialLevel[i] += partialInc[i];
-			if (partialLevel[i] > 1.0f) {
-				partialLevel[i] = 1.0f;
-				partialInc[i] = -partialInc[i];
-			}
-			if (partialLevel[i] < -1.0f) {
-				partialLevel[i] = -1.0f;
-				partialInc[i] = -partialInc[i];
+			if (config.partialFM[i] > 0 && partialLevel[0] > 0.0f) {			// Add some frequency modulation to some partials
+				partialPos[i] += config.partialFM[i];
+			} else {
+				++partialPos[i];
 			}
 
-			// Convert to square wave
-			currentLevel += (partialLevel[i] > 0 ? 1.0f : -1.0f) * config.partialScale[i];
+			if (partialPos[i] > partialPeriod[i]) {
+				partialPos[i] = 0;
+				partialLevel[i] = -partialLevel[i];
+			}
+
+			currentLevel += partialLevel[i];
 		}
+
 
 		// Add a burst of noise at the beginning of the note
 		noiseScale *= config.noiseDecay;
@@ -108,8 +98,7 @@ void HiHat::CalcOutput()
 			DAC1->DHR12R1 = 0;		// Output envelope to DAC for debugging
 		}
 
-		//outputLevel[0] = envScale * hpFilter.CalcFilter(currentLevel, left) - 0.0001f;
-		outputLevel[0] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel, left), left) - 0.0001f;
+		outputLevel[0] = envScale * hpFilter.CalcFilter(currentLevel, left) - 0.0001f;
 		outputLevel[1] = outputLevel[0];
 	}
 
@@ -118,7 +107,6 @@ void HiHat::CalcOutput()
 
 void HiHat::UpdateFilter()
 {
-	//lpFilter.Update();
 
 }
 

@@ -20,22 +20,19 @@ var snareSettings = [
 	{name: 'Partial 2 Level', value: 'partial2Level'}
 ];
 var hihatSettings = [
-	{name: 'Carrier Frequency', value: 'carrierFreq'}, 
-	{name: 'Modulator Freq', value: 'modulatorFreq'},
-	{name: 'Modulator Duty Cycle', value: 'modulatorDuty'},
-	{name: 'Modulator High Multiplier', value: 'modulatorHighMult'},
-	{name: 'Modulator Low Multiplier', value: 'modulatorLowMult'},
-	
+	{name: 'Attack', value: 'attackInc'}, 
 	{name: 'Decay', value: 'decay'},
-	
-	{name: 'BP Filter Freq', value: 'bpFilterFreq'},
-	{name: 'BP Filter Q', value: 'bpFilterQ'},
-	{name: 'BP Env Decay', value: 'bpEnvDecay'}, 
-	{name: 'BP Env Scale', value: 'bpEnvScale'}, 
+	{name: 'HP Initial Cutoff', value: 'hpInitCutoff'},
+	{name: 'HP Final Cutoff', value: 'hpFinalCutoff'},
+	{name: 'Noise level', value: 'noiseInitLevel'},
+	{name: 'Noise Decay', value: 'noiseDecay'},
 
-	{name: 'HP Filter Freq', value: 'hpFilterFreq'},
-	{name: 'HP Env Decay', value: 'hpEnvDecay'}, 
-	{name: 'HP Env Scale', value: 'hpEnvScale'}, 
+	{name: 'Partial 0 Level', value: 'plevel0'},
+	{name: 'Partial 1 Level', value: 'plevel1'},
+	{name: 'Partial 2 Level', value: 'plevel2'},
+	{name: 'Partial 3 Level', value: 'plevel3'},
+	{name: 'Partial 4 Level', value: 'plevel4'},
+	{name: 'Partial 5 Level', value: 'plevel5'},
 ];
 
 

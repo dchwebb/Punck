@@ -18,23 +18,24 @@ public:
 
 private:
 	struct Config {
-		float attackInc = 0.005f;
-		float decay = 0.9991f;
+		float attackInc = 0.005f;			// Attack envelope speed
+		float decay = 0.9991f;				// Decay envelope speed
 
-		float hpInitCutoff = 0.07f;
+		float hpInitCutoff = 0.07f;			// HP filter ramps from 1.68kHz to 6.48kHz
 		float hpFinalCutoff = 0.27f;
 
-		float noiseInitLevel = 0.99f;
-		float noiseDecay = 0.9999f;
+		float noiseInitLevel = 0.99f;		// Initial level of noise component
+		float noiseDecay = 0.99985f;
 
+		// Relative level and frequency of 6 signal partials
 		float partialScale[6] = {0.8f, 0.5f, 0.4f, 0.4f, 0.5f, 0.4f};
-		float partialFreq[6] = {-569.0f, 621.0f, -1559.0f, 2056.0f, -3300.0f, 5515.0f};
+		float partialFreq[6] = {569.0f, 621.0f, 1559.0f, 2056.0f, 3300.0f, 5515.0f};
+
+		// Frequency modulation - amount by which partial 0 frequency modulates other partials
+		uint8_t partialFM[6] = {0, 8, 1, 6, 1, 0};
 	} config;
 
-
-	Filter hpFilter{2, HighPass, &(ADC_array[ADC_Filter_Pot])};
-	Filter lpFilter{1, LowPass, &(ADC_array[ADC_Filter_Pot])};
-	//BPFilter bpFilter;
+	Filter hpFilter{2, HighPass, nullptr};
 
 	float velocityScale;
 	float decayScale;
@@ -45,17 +46,11 @@ private:
 
 	float hpFilterCutoff;
 
-	// multiplier to convert frequency to half a period of a triangle wave
-	static constexpr float freqToTriPeriod = 1 / ((float)systemSampleRate / 4.0f);
-	float partialInc[6] = {
-			  -569.0f * freqToTriPeriod,
-			   621.0f * freqToTriPeriod,
-			 -1559.0f * freqToTriPeriod,
-			  2056.0f * freqToTriPeriod,
-			 -3300.0f * freqToTriPeriod,
-			  5515.0f * freqToTriPeriod,
-			};
-	float partialLevel[6] = {};
+	// multiplier to convert frequency to half a period of a square wave
+	static constexpr uint32_t freqToSqPeriod = systemSampleRate / 2;
 
+	float partialLevel[6];				// Output level of each partial
+	uint32_t partialPeriod[6];			// Square wave period
+	uint32_t partialPos[6];			// partial position counter
 
 };

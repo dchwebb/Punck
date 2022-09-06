@@ -49,11 +49,11 @@ void Filter::InitIIRFilter(iirdouble_t tone)	// tone is a 0-65535 number represe
 
 void Filter::SetCutoff(iirdouble_t cutoff)
 {
+	// cutoff passed as omega - ie cutoff_frequency / nyquist
 	bool inactiveFilter = !activeFilter;
 	iirFilter[inactiveFilter].CalcCoeff(cutoff);
 	activeFilter = inactiveFilter;				// Switch active filter
 	currentCutoff = cutoff;						// Debug
-
 }
 
 
