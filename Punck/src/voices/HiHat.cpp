@@ -23,7 +23,7 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 		hpFilterCutoff = config.hpInitCutoff;
 		hpFilter.SetCutoff(hpFilterCutoff);
 
-		// Control over decay
+		// Control over decay - FIXME change ADC for production
 		decayScale = 0.999 + (0.001 * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f);
 
 		// Scale high frequency components according to brightness setting
@@ -74,7 +74,8 @@ void HiHat::CalcOutput()
 		}
 
 		// Add a burst of noise at the beginning of the note
-		currentLevel += velocityScale * noiseScale * (int32_t)RNG->DR;
+		noiseScale *= config.noiseDecay;
+		currentLevel += noiseScale * (int32_t)RNG->DR;
 
 		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
 		if (hpFilterCutoff < config.hpFinalCutoff) {
