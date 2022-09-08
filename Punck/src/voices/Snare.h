@@ -30,13 +30,13 @@ private:
 	float velocityScale;
 
 	struct Config {
-		float baseFreq = 150.0f;				// Lowest frequency which partials will be non-integer multiples of
-		float partialInitLevel[partialCount] = {0.7f, -0.4f, -0.5};
-		float partialFreqOffset[partialCount] = {1.0f, 1.588f, 1.833f};
-		float partialPitchDrop = 1.0f;			// FIXME - 1 = disabled not sure this really adds anything
-		float partialDecay = 0.9991f;			// Decay rate of partials (increased by decay adc amount)
 		float noiseInitLevel = 1.0f;
 		float noiseDecay = 0.999f;				// Decay rate of noise (increased by decay adc amount)
+
+		float baseFreq = 150.0f;				// Lowest frequency which partials will be non-integer multiples of
+		float partialDecay = 0.9991f;			// Decay rate of partials (increased by decay adc amount)
+		float partialInitLevel[partialCount] = {0.7f, -0.4f, -0.5};
+		float partialFreqOffset[partialCount] = {1.0f, 1.588f, 1.833f};
 	} config;
 
 

@@ -35,7 +35,6 @@ void Snare::CalcOutput()
 		float partialOutput = 0.0f;
 		bool partialsInaudible = true;							// To calculate when to terminate note
 		for (uint8_t i = 0; i < partialCount; ++i) {
-			partialInc[i] *= config.partialPitchDrop;
 			partialpos[i] += partialInc[i];						// Set current poition in sine wave
 			partialLevel[i] *= config.partialDecay + adcDecay;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];

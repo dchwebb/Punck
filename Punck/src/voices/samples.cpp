@@ -213,6 +213,7 @@ bool Samples::UpdateSampleList()
 	return changed;
 }
 
+
 uint32_t Samples::SerialiseConfig(uint8_t* buff)
 {
 	return 0;

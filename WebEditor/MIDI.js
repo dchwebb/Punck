@@ -13,30 +13,60 @@ var voiceEnum = {
     kick: 0, snare: 1, hatClosed: 2, hatOpen: 3, tomHigh: 4, tomMedium: 5, tomLow: 6, samplerA: 7, samplerB: 8
 };
 
-var snareSettings = [
-	{name: 'Base Frequency', value: 'baseFreq'}, 
-	{name: 'Partial 0 Level', value: 'partial0Level'},
-	{name: 'Partial 1 Level', value: 'partial1Level'},
-	{name: 'Partial 2 Level', value: 'partial2Level'}
-];
-var hihatSettings = [
-	{name: 'Attack', value: 'attackInc'}, 
-	{name: 'Decay', value: 'decay'},
-	{name: 'HP Initial Cutoff', value: 'hpInitCutoff'},
-	{name: 'HP Final Cutoff', value: 'hpFinalCutoff'},
-	{name: 'Noise level', value: 'noiseInitLevel'},
-	{name: 'Noise Decay', value: 'noiseDecay'},
+var kickSettings = [
+	{name: 'Ramp 1 Inc', value: 'kiRamp1Inc'},
+	{name: 'Ramp 2 Inc', value: 'kiRamp2Inc'},
+	{name: 'Ramp 3 Inc', value: 'kiRamp3Inc'},
 
-	{name: 'Partial 0 Level', value: 'plevel0'},
-	{name: 'Partial 1 Level', value: 'plevel1'},
-	{name: 'Partial 2 Level', value: 'plevel2'},
-	{name: 'Partial 3 Level', value: 'plevel3'},
-	{name: 'Partial 4 Level', value: 'plevel4'},
-	{name: 'Partial 5 Level', value: 'plevel5'},
+	{name: 'Fast Sine Inc', value: 'kiFastSinInc'},
+	{name: 'Slow Sine Inc', value: 'kiInitSlowSinInc'},
+	
+	{name: 'sineSlowDownRate', value: 'kiSineSlowDownRate'},
+];
+
+
+var snareSettings = [
+	{name: 'Noise level', value: 'snNoiseInitLevel'},
+	{name: 'Noise Decay', value: 'snNoiseDecay'},
+
+	{name: 'Base Frequency', value: 'snBaseFreq'},
+	{name: 'Partial Decay', value: 'snPartialDecay'},
+	
+	{name: 'Partial 0 Level', value: 'snPartial0Level'},
+	{name: 'Partial 1 Level', value: 'snPartial1Level'},
+	{name: 'Partial 2 Level', value: 'snPartial2Level'},
+	
+	{name: 'Partial 0 Freq Offset', value: 'snFreq0'},
+	{name: 'Partial 1 Freq Offset', value: 'snFreq1'},
+	{name: 'Partial 2 Freq Offset', value: 'snFreq2'},
+];
+
+var hihatSettings = [
+	{name: 'Attack', value: 'hhAttackInc'}, 
+	{name: 'Decay', value: 'hhDecay'},
+	{name: 'HP Initial Cutoff', value: 'hhHPInitCutoff'},
+	{name: 'HP Final Cutoff', value: 'hhHPFinalCutoff'},
+	{name: 'Noise level', value: 'hhNoiseInitLevel'},
+	{name: 'Noise Decay', value: 'hhNoiseDecay'},
+
+	{name: 'Partial 0 Level', value: 'hhPLevel0'},
+	{name: 'Partial 1 Level', value: 'hhPLevel1'},
+	{name: 'Partial 2 Level', value: 'hhPLevel2'},
+	{name: 'Partial 3 Level', value: 'hhPLevel3'},
+	{name: 'Partial 4 Level', value: 'hhPLevel4'},
+	{name: 'Partial 5 Level', value: 'hhPLevel5'},
+
+	{name: 'Partial 0 Frequency', value: 'hhPFreq0'},
+	{name: 'Partial 1 Frequency', value: 'hhPFreq1'},
+	{name: 'Partial 2 Frequency', value: 'hhPFreq2'},
+	{name: 'Partial 3 Frequency', value: 'hhPFreq3'},
+	{name: 'Partial 4 Frequency', value: 'hhPFreq4'},
+	{name: 'Partial 5 Frequency', value: 'hhPFreq5'},
 ];
 
 
 var drumSettings = [
+	{heading: "Kick Settings", id: voiceEnum.kick, settings: kickSettings},
 	{heading: "Snare Settings", id: voiceEnum.snare, settings: snareSettings},
 	{heading: "Hihat Settings", id: voiceEnum.hatClosed, settings: hihatSettings}
 ]

@@ -27,7 +27,7 @@ void Kick::CalcOutput()
 {
 	switch (phase) {
 	case Phase::Ramp1:
-		currentLevel = currentLevel + (ramp1Inc * (1.0f - currentLevel));
+		currentLevel = currentLevel + (config.ramp1Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.6f) {
 			phase = Phase::Ramp2;
@@ -36,7 +36,7 @@ void Kick::CalcOutput()
 		break;
 
 	case Phase::Ramp2:
-		currentLevel = currentLevel + (ramp2Inc * (1.0f - currentLevel));
+		currentLevel = currentLevel + (config.ramp2Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.82f) {
 			currentLevel = 0.78f;				// discontinuity sharply falls at first
@@ -46,7 +46,7 @@ void Kick::CalcOutput()
 		break;
 
 	case Phase::Ramp3:
-		currentLevel = currentLevel + (ramp3Inc * (1.0f - currentLevel));
+		currentLevel = currentLevel + (config.ramp3Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.93f) {
 			position = 2.0f;
@@ -56,18 +56,18 @@ void Kick::CalcOutput()
 		break;
 
 	case Phase::FastSine:
-		position += fastSinInc;
+		position += config.fastSinInc;
 		currentLevel = std::sin(position);
 
 		if (position >= 1.5f * pi) {
-			slowSinInc = initSlowSinInc;
+			slowSinInc = config.initSlowSinInc;
 			slowSinLevel = 1.0f;
 			phase = Phase::SlowSine;
 		}
 		break;
 
 	case Phase::SlowSine: {
-		slowSinInc *= sineSlowDownRate;			// Sine wave slowly decreases in frequency
+		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
 		position += slowSinInc;					// Set current poition in sine wave
 		float decaySpeed = 0.9994 + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
 		slowSinLevel = slowSinLevel * decaySpeed;
@@ -100,9 +100,15 @@ void Kick::UpdateFilter()
 
 uint32_t Kick::SerialiseConfig(uint8_t* buff)
 {
-	return 0;
+	memcpy(buff, &config, sizeof(config));
+	return sizeof(config);
 }
+
 
 void Kick::ReadConfig(uint8_t* buff, uint32_t len)
 {
+	if (len <= sizeof(config)) {
+		memcpy(&config, buff, len);
+	}
 }
+

@@ -1,4 +1,5 @@
 #include "VoiceManager.h"
+#include "Sequencer.h"
 
 VoiceManager voiceManager;
 
@@ -62,6 +63,7 @@ float adjOutputScale = 0.92f;
 void VoiceManager::Output()
 {
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn
+	sequencer.Play();
 
 /*
 	// Test code for calculating offsets and maximum levels before ADC distorts
@@ -137,7 +139,8 @@ void VoiceManager::CheckButtons()
 {
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
 	if (GPIOB->IDR & GPIO_IDR_ID3) {			// MIDI learn mode
-		buttonMode = ButtonMode::midiLearn;
+		//buttonMode = ButtonMode::midiLearn;
+		buttonMode = ButtonMode::drumPattern;
 	} else {
 		if (buttonMode == ButtonMode::midiLearn) {
 			// Switch off all LEDs
@@ -167,6 +170,7 @@ void VoiceManager::CheckButtons()
 					midiLearnVoice = note.voice;
 					break;
 				case ButtonMode::drumPattern:
+					sequencer.Start();
 					break;
 				}
 			}
