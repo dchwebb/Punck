@@ -9,19 +9,32 @@
 #include <cstring>
 
 struct NoteMapper {
-	uint8_t voice;
-	uint8_t midiLow;
-	uint8_t midiHigh;
 
 	DrumVoice* drumVoice = nullptr;
+	uint8_t voice;
 	uint8_t voiceIndex = 0;				// For use with players that have multiple outputs (eg sampler)
+	uint8_t midiLow;
+	uint8_t midiHigh;
 
 	struct Btn {
 		GPIO_TypeDef* gpioBank;
 		uint8_t gpioPin;
+		uint8_t debounce = 0;
 		bool buttonOn;
 
-		bool IsOn()  { return (gpioBank != nullptr) && (gpioBank->IDR & (1 << gpioPin)) == 0; }
+		bool IsOn()  {
+			if (gpioBank && (gpioBank->IDR & (1 << gpioPin)) == 0) {
+				if (debounce == 0) {
+					debounce = 20;
+					return true;
+				}
+				debounce = 20;
+			}
+			if (debounce > 0) {
+				--debounce;
+			}
+			return false;
+		}
 	} btn;
 
 	struct LED {

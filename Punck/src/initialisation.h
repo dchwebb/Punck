@@ -9,7 +9,7 @@
 extern volatile uint32_t SysTickVal;
 
 #define ADC1_BUFFER_LENGTH 4				// currently unused
-#define ADC2_BUFFER_LENGTH 3
+#define ADC2_BUFFER_LENGTH 4
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
@@ -26,7 +26,8 @@ extern int32_t adcZeroOffset[2];
 enum ADC_Controls {
 	ADC_SampleSpeed = 0,
 	ADC_KickDecay	= 1,
-	ADC_Filter_Pot	= 2
+	ADC_Filter_Pot	= 2,
+	ADC_Tempo		= 3
 };
 enum channel {left = 0, right = 1};
 
