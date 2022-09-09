@@ -10,7 +10,11 @@ var requestNo = 0;         // stores number of control awaiting configuration in
 
 // enum from c++ code to match voice
 var voiceEnum = {
-    kick: 0, snare: 1, hatClosed: 2, hatOpen: 3, tomHigh: 4, tomMedium: 5, tomLow: 6, samplerA: 7, samplerB: 8
+    Kick: 0, Snare: 1, HiHat: 2, Sampler_A: 3, Sampler_B: 4
+};
+
+var requestEnum = {
+    GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B
 };
 
 var kickSettings = [
@@ -66,20 +70,49 @@ var hihatSettings = [
 
 
 var drumSettings = [
-	{heading: "Kick Settings", id: voiceEnum.kick, settings: kickSettings},
-	{heading: "Snare Settings", id: voiceEnum.snare, settings: snareSettings},
-	{heading: "Hihat Settings", id: voiceEnum.hatClosed, settings: hihatSettings}
+	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
+	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
+	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings}
 ]
 
+function radioClicked(note)
+{
+	// style="background-color: #d6756a;"
+	if (document.getElementById(note).style.backgroundColor == "rgb(74, 77, 78)") {
+		document.getElementById(note).style.backgroundColor = "rgb(236, 81, 78)";
+	} else {
+		document.getElementById(note).style.backgroundColor = "rgb(74, 77, 78)";
+	}
+}
+
+
+function ShowSetting()
+{
+	document.getElementById("settingsBlock0").innerHTML.display = "none";
+}
 
 
 window.onload = afterLoad;
 function afterLoad() 
 {
+	// Build drum editor
+	var html = '';
+	for (let v in voiceEnum) {
+		html += '<div class="grid-container3">' + v + '</div><div class="grid-container3">';
+		for (var b = 0; b < 24; b++) {
+			if (b % 6 == 0 && b > 0) {
+				html += '</div><div class="grid-container3">';
+			}
+			html += '<button id="' + v + b + '" class="topcoat-button" onclick="radioClicked(\'' + v + b + '\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button>';
+		}
+		html += "</div>";
+	}
+	document.getElementById("drumEditor").outerHTML = html;
+	
 	// Build html lists of settings for each drum voice
 	var html = '';
 	for (var i = 0; i < drumSettings.length; ++i) {
-		html += '<div style="grid-column: 1 / 3;  padding: 10px">' + drumSettings[i].heading + '</div>';
+		html += '<div id="settingsBlock' + i + '" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">' + drumSettings[i].heading + '</div>';
 		for (var s = 0; s < drumSettings[i].settings.length; s++) {
 	 		html += '<div class="grid-container3">' + drumSettings[i].settings[s].name + '</div>'+
 					'<div class="grid-container3"><input type="text" id="' + drumSettings[i].settings[s].value + '" onchange="updateConfig(' + i + ');"></div>';
@@ -113,15 +146,24 @@ function onMIDISuccess(midiAccess)
 
     // Update UI to show connection status
     if (checkConnection()) {
-        RequestConfig(drumSettings[0].id);
+		RequestSequence(0);
+        //RequestConfig(drumSettings[0].id);
     }
+}
+
+
+function RequestSequence(id)
+{
+	// Creates a SysEx request for a voice's configuration
+	var message = [0xF0, requestEnum.GetSequence, id, 0xF7];
+    output.send(message);
 }
 
 
 function RequestConfig(voice)
 {
 	// Creates a SysEx request for a voice's configuration
-	var message = [0xF0, 0x1C, voice, 0xF7];
+	var message = [0xF0, requestEnum.GetVoiceConfig, voice, 0xF7];
     output.send(message);
 }
 
@@ -155,7 +197,14 @@ function getMIDIMessage(midiMessage)
         }
         console.log("Received " + decodedSysEx.length + ": " + stringData);
 
-		if (decodedSysEx[0] == 0x1C) {
+		if (decodedSysEx[0] == requestEnum.GetSequence) {
+			// Request the configuration data for the first drum voice
+			if (requestNo < drumSettings.length) {
+	            RequestConfig(drumSettings[requestNo].id);
+	        }
+		}
+		
+		if (decodedSysEx[0] == requestEnum.GetVoiceConfig) {
 			sysEx = decodedSysEx.slice(2);
 
 			// locate settings that match the enum passed
@@ -196,7 +245,7 @@ function updateConfig(index)
     // Convert to sysex information
     var message = new Uint8Array(4 + (byteArray.length * 2));
     message[0] = 0xF0;
-    message[1] = 0x2C;                        // Set config command
+    message[1] = requestEnum.SetVoiceConfig;                        // Set config command
     message[2] = drumSettings[index].id;
     var msgPos = 3;
    

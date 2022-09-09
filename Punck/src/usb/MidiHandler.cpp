@@ -2,6 +2,7 @@
 #include "MidiHandler.h"
 #include "VoiceManager.h"
 #include "config.h"
+#include "sequencer.h"
 
 void MidiHandler::DataIn()
 {
@@ -104,7 +105,7 @@ uint32_t MidiHandler::ReadCfgSysEx()
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C};
+	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B};
 
 	// Check if SysEx contains read config command
 	if (sysEx[0] == GetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
@@ -126,6 +127,17 @@ void MidiHandler::ProcessSysex()
 		uint32_t bytes = ReadCfgSysEx();
 		voiceManager.noteMapper[sysEx[1]].drumVoice->ReadConfig(config.configBuffer, bytes);
 
+	}
+
+	if (sysEx[0] == GetSequence) {
+		// Insert header data
+		config.configBuffer[0] = GetSequence;
+		config.configBuffer[1] = 0;
+
+		uint32_t bytes = sequencer.SerialiseConfig(config.configBuffer + 2);
+		uint32_t len = ConstructSysEx(config.configBuffer, bytes + 2);
+		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+		usb->SendData(sysExOut, len, inEP);
 	}
 
 }

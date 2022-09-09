@@ -50,8 +50,8 @@ struct NoteMapper {
 class VoiceManager {
 	friend class CDCHandler;
 public:
-	enum Voice {kick, snare, hatClosed, hatOpen, tomHigh, tomMedium, tomLow, samplerA, samplerB};
-	static constexpr uint8_t voiceCount = 9;
+	enum Voice {kick, snare, hihat, samplerA, samplerB};
+	static constexpr uint8_t voiceCount = 5;
 
 	VoiceManager();
 	void VoiceLED(Voice v, bool on);

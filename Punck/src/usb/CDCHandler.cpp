@@ -98,20 +98,8 @@ void CDCHandler::ProcessCommand()
 			case VoiceManager::snare:
 				printf("Snare   ");
 				break;
-			case VoiceManager::hatClosed:
+			case VoiceManager::hihat:
 				printf("Close HH");
-				break;
-			case VoiceManager::hatOpen:
-				printf("Open HH ");
-				break;
-			case VoiceManager::tomHigh:
-				printf("High Tom");
-				break;
-			case VoiceManager::tomMedium:
-				printf("Mid Tom ");
-				break;
-			case VoiceManager::tomLow:
-				printf("Low Tom ");
 				break;
 			case VoiceManager::samplerA:
 				printf("Sample 1");

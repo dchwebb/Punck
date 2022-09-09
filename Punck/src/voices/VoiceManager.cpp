@@ -43,7 +43,7 @@ VoiceManager::VoiceManager()
 	s.midiLow = 83;
 	s.midiHigh = 83;
 
-	NoteMapper& hh = noteMapper[Voice::hatClosed];
+	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
 	hh.drumVoice = &hihatPlayer;
 	hh.btn = {GPIOC, 6};

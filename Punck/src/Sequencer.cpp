@@ -7,35 +7,38 @@ Sequencer::Sequencer()
 	// Create simple rock pattern for testing
 	bar.beat[0][VoiceManager::kick].index = 0;
 	bar.beat[0][VoiceManager::kick].level = 127;
-	bar.beat[0][VoiceManager::hatClosed].index = 0;
-	bar.beat[0][VoiceManager::hatClosed].level = 100;
+	bar.beat[0][VoiceManager::hihat].index = 0;
+	bar.beat[0][VoiceManager::hihat].level = 100;
 
-	bar.beat[1][VoiceManager::hatClosed].index = 0;
-	bar.beat[1][VoiceManager::hatClosed].level = 20;
+	bar.beat[1][VoiceManager::hihat].index = 0;
+	bar.beat[1][VoiceManager::hihat].level = 20;
 
 	bar.beat[2][VoiceManager::snare].index = 0;
 	bar.beat[2][VoiceManager::snare].level = 110;
-	bar.beat[2][VoiceManager::hatClosed].index = 0;
-	bar.beat[2][VoiceManager::hatClosed].level = 100;
+	bar.beat[2][VoiceManager::hihat].index = 0;
+	bar.beat[2][VoiceManager::hihat].level = 100;
 
-	bar.beat[3][VoiceManager::hatClosed].index = 0;
-	bar.beat[3][VoiceManager::hatClosed].level = 30;
+	bar.beat[3][VoiceManager::hihat].index = 0;
+	bar.beat[3][VoiceManager::hihat].level = 30;
 
 	bar.beat[4][VoiceManager::kick].index = 0;
 	bar.beat[4][VoiceManager::kick].level = 127;
-	bar.beat[4][VoiceManager::hatClosed].index = 0;
-	bar.beat[4][VoiceManager::hatClosed].level = 100;
+	bar.beat[4][VoiceManager::hihat].index = 0;
+	bar.beat[4][VoiceManager::hihat].level = 100;
 
-	bar.beat[5][VoiceManager::hatClosed].index = 0;
-	bar.beat[5][VoiceManager::hatClosed].level = 10;
+	bar.beat[5][VoiceManager::hihat].index = 0;
+	bar.beat[5][VoiceManager::hihat].level = 10;
 
 	bar.beat[6][VoiceManager::snare].index = 0;
 	bar.beat[6][VoiceManager::snare].level = 120;
-	bar.beat[6][VoiceManager::hatClosed].index = 0;
-	bar.beat[6][VoiceManager::hatClosed].level = 80;
+	bar.beat[6][VoiceManager::hihat].index = 0;
+	bar.beat[6][VoiceManager::hihat].level = 80;
 
-	bar.beat[7][VoiceManager::hatClosed].index = 0;
-	bar.beat[7][VoiceManager::hatClosed].level = 70;
+	bar.beat[7][VoiceManager::hihat].index = 0;
+	bar.beat[7][VoiceManager::hihat].level = 70;
+
+	bar.beat[7][VoiceManager::samplerA].index = 2;
+	bar.beat[7][VoiceManager::samplerA].level = 70;
 }
 
 
@@ -76,5 +79,20 @@ void Sequencer::Play()
 			}
 		}
 
+	}
+}
+
+
+uint32_t Sequencer::SerialiseConfig(uint8_t* buff)
+{
+	memcpy(buff, &bar, sizeof(bar));
+	return sizeof(bar);
+}
+
+
+void Sequencer::ReadConfig(uint8_t* buff, uint32_t len)
+{
+	if (len <= sizeof(bar)) {
+		memcpy(&bar, buff, len);
 	}
 }
