@@ -99,8 +99,8 @@ function afterLoad()
 	var html = '';
 	for (let v in voiceEnum) {
 		html += '<div class="grid-container3">' + v + '</div><div class="grid-container3">';
-		for (var b = 0; b < 24; b++) {
-			if (b % 6 == 0 && b > 0) {
+		for (var b = 0; b < 16; b++) {
+			if (b % 4 == 0 && b > 0) {
 				html += '</div><div class="grid-container3">';
 			}
 			html += '<button id="' + v + b + '" class="topcoat-button" onclick="radioClicked(\'' + v + b + '\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button>';
@@ -124,32 +124,6 @@ function afterLoad()
     navigator.requestMIDIAccess({ sysex: true }).then(onMIDISuccess, onMIDIFailure);
 }
 
-
-function onMIDISuccess(midiAccess)
-{
-	// Check which MIDI interface is Punck and if found start requesting configuration from interface
-	midi = midiAccess;    // store in the global variable
-
-    console.log(midiAccess);
-
-    for (var input of midiAccess.inputs.values()) {
-        console.log(input.name);
-        if (input.name == "Mountjoy Punck MIDI") {
-            input.onmidimessage = getMIDIMessage;
-        }
-    }
-    for (var out of midiAccess.outputs.values()) {
-        if (out.name == "Mountjoy Punck MIDI") {
-            output = out;
-        }
-    }
-
-    // Update UI to show connection status
-    if (checkConnection()) {
-		RequestSequence(0);
-        //RequestConfig(drumSettings[0].id);
-    }
-}
 
 
 function RequestSequence(id)
@@ -180,15 +154,27 @@ function getMIDIMessage(midiMessage)
 	console.log(midiMessage);
 
     if (midiMessage.data[0] == 0xF0) {
-        // As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
-        var decodedSysEx = [];
-        for (i = 1; i < midiMessage.data.length - 1; ++i) {
-            if (i % 2 != 0) {
-                decodedSysEx[Math.trunc((i - 1) / 2)] = midiMessage.data[i];
-            } else {
-                decodedSysEx[Math.trunc((i - 1) / 2)] += (midiMessage.data[i] << 4);
-            }
-        };
+		var decodedSysEx = [];
+			
+		
+		if (midiMessage.data[1] == requestEnum.GetSequence) {
+			// Sequences only use 7 bit values so are not encoded
+			for (i = 1; i < midiMessage.data.length - 1; ++i) {
+				decodedSysEx[i - 1] = midiMessage.data[i];
+			}
+		} else {
+			// As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
+			// header is F0 | command | voice
+			var headerLen = 3;
+			for (i = headerLen; i < midiMessage.data.length - 2; ++i) {
+				if (i % 2 != 0) {
+					decodedSysEx[Math.trunc((i - headerLen) / 2)] = midiMessage.data[i];
+				} else {
+					decodedSysEx[Math.trunc((i - headerLen) / 2)] += (midiMessage.data[i] << 4);
+				}
+			}
+		}
+		
         
         // Print contents of payload to console
 		var stringData = "";
@@ -198,18 +184,35 @@ function getMIDIMessage(midiMessage)
         console.log("Received " + decodedSysEx.length + ": " + stringData);
 
 		if (decodedSysEx[0] == requestEnum.GetSequence) {
+			var seq = decodedSysEx[1];
+			var beatsPerBar = decodedSysEx[2];
+			var bars = decodedSysEx[3];
+
+			var index = 4;
+			
+				
+			for (var b = 0; b < beatsPerBar; b++) {
+				for (let v in voiceEnum) {
+					// decodedSysEx[index] is level of current voice; decodedSysEx[index + 1] is voice index
+					if (decodedSysEx[index] > 0) {
+						document.getElementById(v + b).style.backgroundColor = "rgb(236, 81, 78)";
+					}
+					index += 2;
+				}
+			}
+			
 			// Request the configuration data for the first drum voice
 			if (requestNo < drumSettings.length) {
 	            RequestConfig(drumSettings[requestNo].id);
 	        }
 		}
 		
-		if (decodedSysEx[0] == requestEnum.GetVoiceConfig) {
-			sysEx = decodedSysEx.slice(2);
+		if (midiMessage.data[1] == requestEnum.GetVoiceConfig) {
+			sysEx = decodedSysEx.slice(0);
 
 			// locate settings that match the enum passed
 			for (var i = 0; i < drumSettings.length; ++i) {
-				if (drumSettings[i].id == decodedSysEx[1]) {
+				if (drumSettings[i].id == midiMessage.data[2]) {
 					for (var s = 0; s < drumSettings[i].settings.length; s++) {
 						// Store the values encoded in the SysEx data into the html fields
 				        document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
@@ -318,3 +321,28 @@ function checkConnection()
 }
 
 
+function onMIDISuccess(midiAccess)
+{
+	// Check which MIDI interface is Punck and if found start requesting configuration from interface
+	midi = midiAccess;    // store in the global variable
+
+    console.log(midiAccess);
+
+    for (var input of midiAccess.inputs.values()) {
+        console.log(input.name);
+        if (input.name == "Mountjoy Punck MIDI") {
+            input.onmidimessage = getMIDIMessage;
+        }
+    }
+    for (var out of midiAccess.outputs.values()) {
+        if (out.name == "Mountjoy Punck MIDI") {
+            output = out;
+        }
+    }
+
+    // Update UI to show connection status
+    if (checkConnection()) {
+		RequestSequence(0);
+        //RequestConfig(drumSettings[0].id);
+    }
+}

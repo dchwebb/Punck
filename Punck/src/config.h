@@ -41,7 +41,7 @@ class Config {
 public:
 	bool scheduleSave = false;
 	uint32_t saveBooked;
-	uint8_t configBuffer[100];
+	uint8_t configBuffer[256];
 
 	void Calibrate();
 	void AutoZeroOffset();				// Automatically adjusts ADC zero offset by averaging low level signals

@@ -214,7 +214,7 @@ bool Samples::UpdateSampleList()
 }
 
 
-uint32_t Samples::SerialiseConfig(uint8_t* buff)
+uint32_t Samples::SerialiseConfig(uint8_t** buff)
 {
 	return 0;
 }

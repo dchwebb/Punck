@@ -47,29 +47,43 @@ void MidiHandler::DataOut()
 }
 
 
-uint32_t MidiHandler::ConstructSysEx(uint8_t* buffer, uint32_t len)
+uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint8_t* headerBuffer, uint32_t headerLen, bool noSplit)
 {
 	// Constructs a Sysex packet: data split into 4 byte words, each starting with appropriate sysex header byte
-	// Bytes in a sysEx commands must have upper nibble = 0 (ie only allowed 0-127 values) so double length and split bytes into nibbles
-	// pos allows sysex to start at an offset so header data can be injected
-	len *= 2;
+	// Bytes in sysEx commands must have upper nibble = 0 (ie only 0-127 values) so double length and split bytes into nibbles (unless noSplit specified)
+
+	if (!noSplit) {
+		dataLen *= 2;
+	}
 	uint32_t pos = 0;
 
-	sysExOut[pos++] = 0x04;								// 0x4	SysEx starts or continues
+	sysExOut[pos++] = 0x04;					// 0x4	SysEx starts or continues
 	sysExOut[pos++] = 0xF0;
 
-	bool lowerNibble = true;
-	for (uint32_t i = 0; i < len; ++i) {
-		if (lowerNibble) {
-			sysExOut[pos++] = buffer[i / 2] & 0xF;
-		} else {
-			sysExOut[pos++] = buffer[i / 2] >> 4;
+	// header must be 7 bit values so no need to split
+	for (uint32_t i = 0; i < headerLen; ++i) {
+		sysExOut[pos++] = headerBuffer[i];
+		if (pos % 4 == 0) {
+			sysExOut[pos++] = 0x04;			// 0x4	SysEx starts or continues
 		}
-		lowerNibble = !lowerNibble;
+	}
+
+	bool lowerNibble = true;
+	for (uint32_t i = 0; i < dataLen; ++i) {
+		if (noSplit) {
+			sysExOut[pos++] = dataBuffer[i];
+		} else {
+			if (lowerNibble) {
+				sysExOut[pos++] = dataBuffer[i / 2] & 0xF;
+			} else {
+				sysExOut[pos++] = dataBuffer[i / 2] >> 4;
+			}
+			lowerNibble = !lowerNibble;
+		}
 
 		// add 1 byte padding at the beginning of each 32 bit word to indicate length of remaining message + 0xF7 termination byte
 		if (pos % 4 == 0) {
-			uint32_t rem = len - i;
+			uint32_t rem = dataLen - i;
 
 			if (rem == 3) {
 				sysExOut[pos++] = 0x07;		// 0x7	SysEx ends with following three bytes.
@@ -99,7 +113,7 @@ uint32_t MidiHandler::ReadCfgSysEx()
 			config.configBuffer[idx] += sysEx[i] << 4;
 		}
 	}
-	return (sysExCount / 2) - 2;
+	return (sysExCount / 2) - 1;
 }
 
 
@@ -115,9 +129,10 @@ void MidiHandler::ProcessSysex()
 		config.configBuffer[0] = GetVoiceConfig;
 		config.configBuffer[1] = voice;
 
-		uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(config.configBuffer + 2);
+		uint8_t* cfgBuffer = nullptr;
+		uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(&cfgBuffer);
 
-		uint32_t len = ConstructSysEx(config.configBuffer, bytes + 2);
+		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 2, false);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
 
@@ -132,10 +147,13 @@ void MidiHandler::ProcessSysex()
 	if (sysEx[0] == GetSequence) {
 		// Insert header data
 		config.configBuffer[0] = GetSequence;
-		config.configBuffer[1] = 0;
+		config.configBuffer[1] = 0;			// sequence
+		config.configBuffer[2] = 16;		// beats per bar
+		config.configBuffer[3] = 1;			// bars
 
-		uint32_t bytes = sequencer.SerialiseConfig(config.configBuffer + 2);
-		uint32_t len = ConstructSysEx(config.configBuffer, bytes + 2);
+		uint8_t* cfgBuffer = nullptr;
+		uint32_t bytes = sequencer.SerialiseConfig(&cfgBuffer);
+		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 4, true);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
 	}
@@ -145,9 +163,7 @@ void MidiHandler::ProcessSysex()
 
 void MidiHandler::midiEvent(const uint32_t data)
 {
-
 	auto midiData = MidiData(data);
-
 	MidiNote midiNote(midiData.db1, midiData.db2);
 
 	switch (midiData.msg) {

@@ -111,9 +111,10 @@ void HiHat::UpdateFilter()
 }
 
 
-uint32_t HiHat::SerialiseConfig(uint8_t* buff)
+uint32_t HiHat::SerialiseConfig(uint8_t** buff)
 {
-	memcpy(buff, &config, sizeof(config));
+	*buff = (uint8_t*)&config;
+	//memcpy(buff, &config, sizeof(config));
 	return sizeof(config);
 }
 

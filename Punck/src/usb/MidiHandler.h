@@ -35,7 +35,7 @@ private:
 	void midiEvent(const uint32_t data);
 	void QueueInc();
 	void ProcessSysex();
-	uint32_t ConstructSysEx(uint8_t* buffer, uint32_t len);
+	uint32_t ConstructSysEx(uint8_t* buffer, uint32_t len, uint8_t* headerBuffer, uint32_t headerLen, bool noSplit);
 	uint32_t ReadCfgSysEx();
 
 	uint32_t xfer_buff[64];									// OUT Data filled in RxLevel Interrupt
@@ -69,7 +69,7 @@ private:
 	uint8_t QueueWrite = 0;
 	uint8_t QueueSize = 0;
 
-	constexpr static uint32_t sysexMaxSize = 256;
+	constexpr static uint32_t sysexMaxSize = 512;
 	uint8_t sysEx[sysexMaxSize];
 	uint8_t sysExCount = 0;
 	bool partialSysEx;
