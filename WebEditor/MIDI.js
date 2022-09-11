@@ -14,7 +14,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B
+    GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B, SetSequence: 0x2B
 };
 
 var kickSettings = [
@@ -69,20 +69,56 @@ var hihatSettings = [
 ];
 
 
+var sequenceSettings = {seq: 0,	beatsPerBar: 0, bars: 0, bar: 0};
+
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
 	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings}
 ]
 
-function radioClicked(note)
+function drumClicked(note)
 {
 	// style="background-color: #d6756a;"
-	if (document.getElementById(note).style.backgroundColor == "rgb(74, 77, 78)") {
-		document.getElementById(note).style.backgroundColor = "rgb(236, 81, 78)";
-	} else {
+	noteLevel = parseInt(document.getElementById(note).getAttribute("level"));
+	noteIndex = parseInt(document.getElementById(note).getAttribute("index"));
+	if (noteLevel > 0) {
+		document.getElementById(note).setAttribute("level", "0");
 		document.getElementById(note).style.backgroundColor = "rgb(74, 77, 78)";
+	} else {
+		document.getElementById(note).setAttribute("level", "100");
+		document.getElementById(note).style.backgroundColor = "rgb(236, 81, 78)";
 	}
+	
+	// Convert drum sequence to sysex information
+	var ve = Object.keys(voiceEnum).length;
+	var seqLen = sequenceSettings.beatsPerBar * ve * 2;
+
+	var message = new Uint8Array(7 + seqLen);
+	message[0] = 0xF0;
+	message[1] = requestEnum.SetSequence;
+	message[2] = sequenceSettings.seq;
+	message[3] = sequenceSettings.beatsPerBar;
+	message[4] = sequenceSettings.bars;
+	message[5] = sequenceSettings.bar;
+	var msgPos = 6;
+
+	for (var b = 0; b < sequenceSettings.beatsPerBar; b++) {
+		for (let v in voiceEnum) {
+			message[msgPos++] = parseInt(document.getElementById(v + b).getAttribute("level"));
+			message[msgPos++] = parseInt(document.getElementById(v + b).getAttribute("index"));
+		}
+	}
+	message[msgPos] = 0xF7;
+
+	// Print contents of payload to console
+	var stringData = "";
+	for (i = 0; i < message.length; ++i) {
+		stringData += message[i].toString(16) + " ";
+	}
+	console.log("Sent " + message.length + ": " + stringData);
+
+	output.send(message);
 }
 
 
@@ -95,7 +131,7 @@ function ShowSetting()
 window.onload = afterLoad;
 function afterLoad() 
 {
-	// Build drum editor
+	// Build drum sequence editor
 	var html = '';
 	for (let v in voiceEnum) {
 		html += '<div class="grid-container3">' + v + '</div><div class="grid-container3">';
@@ -103,7 +139,7 @@ function afterLoad()
 			if (b % 4 == 0 && b > 0) {
 				html += '</div><div class="grid-container3">';
 			}
-			html += '<button id="' + v + b + '" class="topcoat-button" onclick="radioClicked(\'' + v + b + '\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button>';
+			html += '<button id="' + v + b + '" class="topcoat-button" onclick="drumClicked(\'' + v + b + '\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button>';
 		}
 		html += "</div>";
 	}
@@ -183,17 +219,18 @@ function getMIDIMessage(midiMessage)
         }
         console.log("Received " + decodedSysEx.length + ": " + stringData);
 
-		if (decodedSysEx[0] == requestEnum.GetSequence) {
-			var seq = decodedSysEx[1];
-			var beatsPerBar = decodedSysEx[2];
-			var bars = decodedSysEx[3];
+		if (midiMessage.data[1] == requestEnum.GetSequence) {
+			sequenceSettings.seq = decodedSysEx[1];
+			sequenceSettings.beatsPerBar = decodedSysEx[2];
+			sequenceSettings.bars = decodedSysEx[3];
+			sequenceSettings.bar = decodedSysEx[4];
 
-			var index = 4;
-			
-				
-			for (var b = 0; b < beatsPerBar; b++) {
+			var index = 5;
+			for (var b = 0; b < sequenceSettings.beatsPerBar; b++) {
 				for (let v in voiceEnum) {
 					// decodedSysEx[index] is level of current voice; decodedSysEx[index + 1] is voice index
+					document.getElementById(v + b).setAttribute("level", decodedSysEx[index]);
+					document.getElementById(v + b).setAttribute("index", decodedSysEx[index + 1]);
 					if (decodedSysEx[index] > 0) {
 						document.getElementById(v + b).style.backgroundColor = "rgb(236, 81, 78)";
 					}
@@ -271,7 +308,6 @@ function updateConfig(index)
 	}
 	console.log("Sent " + message.length + ": " + stringData);
 
-    
     output.send(message);
 }
 

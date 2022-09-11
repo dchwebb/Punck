@@ -5,30 +5,45 @@
 
 static constexpr uint32_t beatsPerBar = 16;
 
-struct Bar {
-	struct Beat {
-		uint8_t level;		// Volume of note (0-127)
-		uint8_t index;		// Note index (eg for voices with multiple channels like the sampler)
-
-	} beat[beatsPerBar][VoiceManager::voiceCount];
-};
 
 class Sequencer {
 public:
-	Sequencer();
-	void Start();
-	void Play();
+	struct SeqInfo {
+		uint8_t bars;
+		uint8_t beatsPerBar;
+	};
 
-	uint32_t SerialiseConfig(uint8_t** buff);
-	void ReadConfig(uint8_t* buff, uint32_t len);
+	Sequencer();
+	void Start(uint8_t sequence);
+	void Play();
+	SeqInfo GetSeqInfo(uint8_t seq);
+
+	uint32_t SerialiseConfig(uint8_t** buff, uint8_t seq, uint8_t bar);
+	void StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar);
 
 private:
-	Bar bar;
+	struct Sequence {
+		SeqInfo info;
+
+		struct Bar {
+			struct Beat {
+				uint8_t level;		// Volume of note (0-127)
+				uint8_t index;		// Note index (eg for voices with multiple channels like the sampler)
+
+			} beat[beatsPerBar][VoiceManager::voiceCount];
+		} bar[4];
+	} sequence[6];
+
+
+
 	bool playing;
 	float tempo;
-	uint32_t position;
+
+	uint8_t activeSequence;
+	uint8_t currentBar;
 	uint32_t currentBeat;
-	uint32_t beatLen;
+	uint32_t position;
+
 
 };
 

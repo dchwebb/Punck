@@ -77,7 +77,7 @@ uint32_t Snare::SerialiseConfig(uint8_t** buff)
 }
 
 
-void Snare::ReadConfig(uint8_t* buff, uint32_t len)
+void Snare::StoreConfig(uint8_t* buff, uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

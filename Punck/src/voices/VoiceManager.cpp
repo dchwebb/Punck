@@ -30,7 +30,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& k = noteMapper[Voice::kick];
 	kickPlayer.noteMapper = &k;
 	k.drumVoice = &kickPlayer;
-	//k.btn = {GPIOC, 6};
+	k.btn = {GPIOC, 6};
 	k.led = {GPIOB, 14};				// PB14: Red LED nucleo
 	k.midiLow = 84;
 	k.midiHigh = 84;
@@ -46,7 +46,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
 	hh.drumVoice = &hihatPlayer;
-	hh.btn = {GPIOC, 6};
+	//hh.btn = {GPIOC, 6};
 	hh.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
 	hh.midiLow = 82;
 	hh.midiHigh = 82;
@@ -170,7 +170,7 @@ void VoiceManager::CheckButtons()
 					midiLearnVoice = note.voice;
 					break;
 				case ButtonMode::drumPattern:
-					sequencer.Start();
+					sequencer.Start(note.voice);
 					break;
 				}
 			}

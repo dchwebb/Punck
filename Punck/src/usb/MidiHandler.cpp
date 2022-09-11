@@ -119,7 +119,7 @@ uint32_t MidiHandler::ReadCfgSysEx()
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B};
+	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B, SetSequence = 0x2B};
 
 	// Check if SysEx contains read config command
 	if (sysEx[0] == GetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
@@ -140,7 +140,7 @@ void MidiHandler::ProcessSysex()
 
 	if (sysEx[0] == SetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
 		uint32_t bytes = ReadCfgSysEx();
-		voiceManager.noteMapper[sysEx[1]].drumVoice->ReadConfig(config.configBuffer, bytes);
+		voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
 
 	}
 
@@ -150,14 +150,27 @@ void MidiHandler::ProcessSysex()
 		config.configBuffer[1] = 0;			// sequence
 		config.configBuffer[2] = 16;		// beats per bar
 		config.configBuffer[3] = 1;			// bars
+		config.configBuffer[4] = 0;			// bar number
 
 		uint8_t* cfgBuffer = nullptr;
-		uint32_t bytes = sequencer.SerialiseConfig(&cfgBuffer);
-		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 4, true);
+		uint32_t bytes = sequencer.SerialiseConfig(&cfgBuffer, 0, 0);
+		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, true);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
 	}
 
+	if (sysEx[0] == SetSequence) {
+		//uint32_t bytes = ReadCfgSysEx();
+
+		// Header information
+		uint32_t seq = sysEx[1];				// sequence
+		uint32_t beatsPerBar = sysEx[2];		// beats per bar
+		uint32_t bars = sysEx[3];				// bars
+		uint32_t bar = sysEx[4];				// bar number
+
+		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, 0, 0);
+
+	}
 }
 
 

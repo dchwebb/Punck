@@ -106,7 +106,7 @@ uint32_t Kick::SerialiseConfig(uint8_t** buff)
 }
 
 
-void Kick::ReadConfig(uint8_t* buff, uint32_t len)
+void Kick::StoreConfig(uint8_t* buff, uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

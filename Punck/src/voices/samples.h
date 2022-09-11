@@ -52,6 +52,6 @@ public:
 	bool UpdateSampleList();
 	bool GetSampleInfo(Sample* sample);
 	uint32_t SerialiseConfig(uint8_t** buff);
-	void ReadConfig(uint8_t* buff, uint32_t len);
+	void StoreConfig(uint8_t* buff, uint32_t len);
 };
 

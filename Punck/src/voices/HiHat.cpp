@@ -119,7 +119,7 @@ uint32_t HiHat::SerialiseConfig(uint8_t** buff)
 }
 
 
-void HiHat::ReadConfig(uint8_t* buff, uint32_t len)
+void HiHat::StoreConfig(uint8_t* buff, uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);
