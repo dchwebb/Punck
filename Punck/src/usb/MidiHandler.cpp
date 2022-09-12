@@ -145,15 +145,23 @@ void MidiHandler::ProcessSysex()
 	}
 
 	if (sysEx[0] == GetSequence) {
+		// if passed 127 then requesting currently active sequence
+		uint8_t seq = sysEx[1];
+		uint8_t bar = sysEx[2];
+		if (seq == getActiveSequence) {
+			seq = sequencer.activeSequence;
+		}
+		auto seqInfo = sequencer.GetSeqInfo(seq);
+
 		// Insert header data
 		config.configBuffer[0] = GetSequence;
-		config.configBuffer[1] = 0;			// sequence
-		config.configBuffer[2] = 16;		// beats per bar
-		config.configBuffer[3] = 1;			// bars
-		config.configBuffer[4] = 0;			// bar number
+		config.configBuffer[1] = seq;					// sequence
+		config.configBuffer[2] = seqInfo.beatsPerBar;	// beats per bar
+		config.configBuffer[3] = seqInfo.bars;			// bars
+		config.configBuffer[4] = bar;					// bar number
 
 		uint8_t* cfgBuffer = nullptr;
-		uint32_t bytes = sequencer.SerialiseConfig(&cfgBuffer, 0, 0);
+		uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
 		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, true);
 		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 		usb->SendData(sysExOut, len, inEP);
@@ -168,7 +176,7 @@ void MidiHandler::ProcessSysex()
 		uint32_t bars = sysEx[3];				// bars
 		uint32_t bar = sysEx[4];				// bar number
 
-		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, 0, 0);
+		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar);
 
 	}
 }

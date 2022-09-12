@@ -7,6 +7,7 @@ if (navigator.requestMIDIAccess) {
 var midi = null;           // global MIDIAccess object
 var output = null;
 var requestNo = 0;         // stores number of control awaiting configuration information
+var requestState = {type: "sequence", number: 0};
 
 // enum from c++ code to match voice
 var voiceEnum = {
@@ -69,7 +70,7 @@ var hihatSettings = [
 ];
 
 
-var sequenceSettings = {seq: 0,	beatsPerBar: 0, bars: 0, bar: 0};
+var sequenceSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0};
 
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
@@ -77,17 +78,17 @@ var drumSettings = [
 	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings}
 ]
 
-function drumClicked(note)
+function drumClicked(bar, note)
 {
 	// style="background-color: #d6756a;"
-	noteLevel = parseInt(document.getElementById(note).getAttribute("level"));
-	noteIndex = parseInt(document.getElementById(note).getAttribute("index"));
+	noteLevel = parseInt(document.getElementById(bar + note).getAttribute("level"));
+	noteIndex = parseInt(document.getElementById(bar + note).getAttribute("index"));
 	if (noteLevel > 0) {
-		document.getElementById(note).setAttribute("level", "0");
-		document.getElementById(note).style.backgroundColor = "rgb(74, 77, 78)";
+		document.getElementById(bar + note).setAttribute("level", "0");
+		document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
 	} else {
-		document.getElementById(note).setAttribute("level", "100");
-		document.getElementById(note).style.backgroundColor = "rgb(236, 81, 78)";
+		document.getElementById(bar + note).setAttribute("level", "100");
+		document.getElementById(bar + note).style.backgroundColor = "rgb(236, 81, 78)";
 	}
 	
 	// Convert drum sequence to sysex information
@@ -100,13 +101,13 @@ function drumClicked(note)
 	message[2] = sequenceSettings.seq;
 	message[3] = sequenceSettings.beatsPerBar;
 	message[4] = sequenceSettings.bars;
-	message[5] = sequenceSettings.bar;
+	message[5] = bar;
 	var msgPos = 6;
 
 	for (var b = 0; b < sequenceSettings.beatsPerBar; b++) {
 		for (let v in voiceEnum) {
-			message[msgPos++] = parseInt(document.getElementById(v + b).getAttribute("level"));
-			message[msgPos++] = parseInt(document.getElementById(v + b).getAttribute("index"));
+			message[msgPos++] = parseInt(document.getElementById(bar + v + b).getAttribute("level"));
+			message[msgPos++] = parseInt(document.getElementById(bar + v + b).getAttribute("index"));
 		}
 	}
 	message[msgPos] = 0xF7;
@@ -122,51 +123,83 @@ function drumClicked(note)
 }
 
 
-function ShowSetting()
-{
-	document.getElementById("settingsBlock0").innerHTML.display = "none";
-}
-
-
 window.onload = afterLoad;
 function afterLoad() 
 {
-	// Build drum sequence editor
+	// Build button bar
 	var html = '';
-	for (let v in voiceEnum) {
-		html += '<div class="grid-container3">' + v + '</div><div class="grid-container3">';
-		for (var b = 0; b < 16; b++) {
-			if (b % 4 == 0 && b > 0) {
-				html += '</div><div class="grid-container3">';
-			}
-			html += '<button id="' + v + b + '" class="topcoat-button" onclick="drumClicked(\'' + v + b + '\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button>';
-		}
-		html += "</div>";
+	for (var s = 0; s < 6; ++s) {
+		html += `<button class="topcoat-button-bar__button--large" onclick="RefreshSequence(${s})" style="background-color: rgb(74, 77, 78)">Drum Sequence ${s + 1}</button> `;
 	}
-	document.getElementById("drumEditor").outerHTML = html;
-	
-	// Build html lists of settings for each drum voice
-	var html = '';
-	for (var i = 0; i < drumSettings.length; ++i) {
-		html += '<div id="settingsBlock' + i + '" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">' + drumSettings[i].heading + '</div>';
-		for (var s = 0; s < drumSettings[i].settings.length; s++) {
-	 		html += '<div class="grid-container3">' + drumSettings[i].settings[s].name + '</div>'+
-					'<div class="grid-container3"><input type="text" id="' + drumSettings[i].settings[s].value + '" onchange="updateConfig(' + i + ');"></div>';
-		}
-	}
-	document.getElementById("drumSettings").outerHTML = html;
-	
+	html += `<button class="topcoat-button-bar__button--large" onclick="RefreshConfig();">Drum Settings</button>`;
+	document.getElementById("buttonBar").innerHTML = html;
 	
     navigator.requestMIDIAccess({ sysex: true }).then(onMIDISuccess, onMIDIFailure);
 }
 
 
+function DisplayConfig()
+{
+	// Build html lists of settings for each drum voice
+	var html = '<div style="display: grid; grid-template-columns: 250px 100px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.8);">';
+	for (var i = 0; i < drumSettings.length; ++i) {
+		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">${drumSettings[i].heading}</div>`;
+		for (var s = 0; s < drumSettings[i].settings.length; s++) {
+	 		html += `<div class="grid-container3">${drumSettings[i].settings[s].name}</div>` +
+					`<div class="grid-container3"><input type="text" id="${drumSettings[i].settings[s].value}" onchange="updateConfig(${i});"></div>`;
+		}
+	}
+	html += '</div>'
+	//document.getElementById("drumSettings").outerHTML = html;
+	document.getElementById("drumEditor").innerHTML = html;
+}
 
-function RequestSequence(id)
+
+function DisplaySequence()
+{
+	// Build drum sequence editor html
+	var html = ''
+	for (var bar = 0; bar < sequenceSettings.bars; ++bar) {
+		html += '<div style="display: grid; grid-template-columns: 100px 160px 160px 160px 160px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.8);">';
+		for (let v in voiceEnum) {
+			html += `<div class="grid-container3">${v}</div><div class="grid-container3">`;
+			for (var beat = 0; beat < sequenceSettings.beatsPerBar; beat++) {
+				var barBreak = sequenceSettings.beatsPerBar / 4;
+				if (beat % barBreak == 0 && beat > 0) {
+					html += '</div><div class="grid-container3">';
+				}
+				html += `<button id="${bar + v + beat}" class="topcoat-button" onclick="drumClicked(${bar}, \'${v + beat}\');" style="background-color: rgb(74, 77, 78);">&nbsp;</button> `;
+			}
+			html += "</div>";
+		}
+		html += '</div>';
+	}
+	document.getElementById("drumEditor").innerHTML = html;
+}
+
+
+function RefreshSequence(seq)
+{
+	requestState.type = "sequence";
+	requestState.number = 0;		// request bar 0
+	RequestSequence(seq, 0);	
+}
+
+
+function RequestSequence(seq, bar)
 {
 	// Creates a SysEx request for a voice's configuration
-	var message = [0xF0, requestEnum.GetSequence, id, 0xF7];
+	var message = [0xF0, requestEnum.GetSequence, seq, bar, 0xF7];
     output.send(message);
+}
+
+
+function RefreshConfig()
+{
+	requestNo = 0;
+	requestState.type == "config";
+	requestState.number = 0;
+	RequestConfig(drumSettings[requestNo].id);
 }
 
 
@@ -219,32 +252,41 @@ function getMIDIMessage(midiMessage)
         }
         console.log("Received " + decodedSysEx.length + ": " + stringData);
 
+
 		if (midiMessage.data[1] == requestEnum.GetSequence) {
 			sequenceSettings.seq = decodedSysEx[1];
 			sequenceSettings.beatsPerBar = decodedSysEx[2];
 			sequenceSettings.bars = decodedSysEx[3];
 			sequenceSettings.bar = decodedSysEx[4];
 
+			// If received the first drum bar build the html accordingly
+			if (requestState.number == 0) {
+				DisplaySequence();
+			}
+
 			var index = 5;
 			for (var b = 0; b < sequenceSettings.beatsPerBar; b++) {
 				for (let v in voiceEnum) {
 					// decodedSysEx[index] is level of current voice; decodedSysEx[index + 1] is voice index
-					document.getElementById(v + b).setAttribute("level", decodedSysEx[index]);
-					document.getElementById(v + b).setAttribute("index", decodedSysEx[index + 1]);
+					document.getElementById(sequenceSettings.bar + v + b).setAttribute("level", decodedSysEx[index]);
+					document.getElementById(sequenceSettings.bar+ v + b).setAttribute("index", decodedSysEx[index + 1]);
 					if (decodedSysEx[index] > 0) {
-						document.getElementById(v + b).style.backgroundColor = "rgb(236, 81, 78)";
+						document.getElementById(sequenceSettings.bar + v + b).style.backgroundColor = "rgb(236, 81, 78)";
 					}
 					index += 2;
 				}
 			}
 			
 			// Request the configuration data for the first drum voice
-			if (requestNo < drumSettings.length) {
-	            RequestConfig(drumSettings[requestNo].id);
-	        }
+			if (requestState.type == "sequence" && ++requestState.number < sequenceSettings.bars) {
+				RequestSequence(sequenceSettings.seq, requestState.number);
+			}
 		}
 		
 		if (midiMessage.data[1] == requestEnum.GetVoiceConfig) {
+			if (requestNo == 0) {
+				DisplayConfig();
+			}
 			sysEx = decodedSysEx.slice(0);
 
 			// locate settings that match the enum passed
@@ -280,7 +322,7 @@ function updateConfig(index)
 	for (var s = 0; s < floatArray.length; s++) {
 		floatArray[s] = document.getElementById(drumSettings[index].settings[s].value).value;
 	}
-    var byteArray = new Uint8Array(floatArray.buffer);   // use the buffer of Float32Array view
+    var byteArray = new Uint8Array(floatArray.buffer);   			// use the buffer of Float32Array view
 
     // Convert to sysex information
     var message = new Uint8Array(4 + (byteArray.length * 2));
@@ -378,7 +420,9 @@ function onMIDISuccess(midiAccess)
 
     // Update UI to show connection status
     if (checkConnection()) {
-		RequestSequence(0);
+		requestState.type = "sequence";
+		requestState.number = 0;
+		RequestSequence(127, 0);
         //RequestConfig(drumSettings[0].id);
     }
 }

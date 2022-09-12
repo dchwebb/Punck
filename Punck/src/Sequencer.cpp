@@ -5,7 +5,7 @@ Sequencer sequencer;
 Sequencer::Sequencer()
 {
 	// Create simple rock pattern for testing
-	sequence[0].info.bars = 1;
+	sequence[0].info.bars = 2;
 	sequence[0].info.beatsPerBar = 16;
 
 	sequence[0].bar[0].beat[0][VoiceManager::kick].index = 0;
@@ -40,9 +40,43 @@ Sequencer::Sequencer()
 	sequence[0].bar[0].beat[14][VoiceManager::hihat].index = 0;
 	sequence[0].bar[0].beat[14][VoiceManager::hihat].level = 70;
 
-	sequence[0].bar[0].beat[14][VoiceManager::samplerA].index = 2;
-	sequence[0].bar[0].beat[14][VoiceManager::samplerA].level = 70;
+
+	sequence[0].bar[1].beat[0][VoiceManager::kick].index = 0;
+	sequence[0].bar[1].beat[0][VoiceManager::kick].level = 127;
+	sequence[0].bar[1].beat[0][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[0][VoiceManager::hihat].level = 100;
+
+	sequence[0].bar[1].beat[2][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[2][VoiceManager::hihat].level = 20;
+
+	sequence[0].bar[1].beat[4][VoiceManager::snare].index = 0;
+	sequence[0].bar[1].beat[4][VoiceManager::snare].level = 110;
+	sequence[0].bar[1].beat[4][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[4][VoiceManager::hihat].level = 100;
+
+	sequence[0].bar[1].beat[6][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[6][VoiceManager::hihat].level = 30;
+
+	sequence[0].bar[1].beat[8][VoiceManager::kick].index = 0;
+	sequence[0].bar[1].beat[8][VoiceManager::kick].level = 127;
+	sequence[0].bar[1].beat[8][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[8][VoiceManager::hihat].level = 100;
+
+	sequence[0].bar[1].beat[10][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[10][VoiceManager::hihat].level = 10;
+
+	sequence[0].bar[1].beat[12][VoiceManager::snare].index = 0;
+	sequence[0].bar[1].beat[12][VoiceManager::snare].level = 120;
+	sequence[0].bar[1].beat[12][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[12][VoiceManager::hihat].level = 80;
+
+	sequence[0].bar[1].beat[14][VoiceManager::hihat].index = 0;
+	sequence[0].bar[1].beat[14][VoiceManager::hihat].level = 70;
+
+	sequence[0].bar[1].beat[14][VoiceManager::samplerA].index = 2;
+	sequence[0].bar[1].beat[14][VoiceManager::samplerA].level = 70;
 }
+
 
 
 void Sequencer::Start(uint8_t seq)
@@ -98,7 +132,7 @@ Sequencer::SeqInfo Sequencer::GetSeqInfo(uint8_t seq)
 	return sequence[seq].info;
 }
 
-uint32_t Sequencer::SerialiseConfig(uint8_t** buff, uint8_t seq, uint8_t bar)
+uint32_t Sequencer::GetBar(uint8_t** buff, uint8_t seq, uint8_t bar)
 {
 	*buff = (uint8_t*)&(sequence[seq].bar[bar]);
 	return sizeof(sequence[seq].bar[bar]);
