@@ -117,7 +117,7 @@ bool Samples::GetSampleInfo(Sample* sample)
 	uint32_t pos = 12;				// First chunk ID at 12 byte (4 word) offset
 	while (*(uint32_t*)&(wavHeader[pos]) != 0x20746D66) {		// Look for string 'fmt '
 		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));			// Each chunk title is followed by the size of that chunk which can be used to locate the next one
-		if  (pos > 100) {
+		if  (pos > 1000) {
 			return false;
 		}
 	}
@@ -129,7 +129,7 @@ bool Samples::GetSampleInfo(Sample* sample)
 	// Navigate forward to find the start of the data area
 	while (*(uint32_t*)&(wavHeader[pos]) != 0x61746164) {		// Look for string 'data'
 		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));
-		if (pos > 200) {
+		if (pos > 1200) {
 			return false;
 		}
 	}
