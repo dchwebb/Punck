@@ -139,8 +139,10 @@ uint32_t Sequencer::GetBar(uint8_t** buff, uint8_t seq, uint8_t bar)
 }
 
 
-void Sequencer::StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar)
+void Sequencer::StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar, uint8_t beatsPerBar, uint8_t bars)
 {
+	sequence[seq].info.bars = bars;
+	sequence[seq].info.beatsPerBar = beatsPerBar;
 	if (len <= sizeof(sequence[seq].bar[bar])) {
 		memcpy(&(sequence[seq].bar[bar]), buff, len);
 	}

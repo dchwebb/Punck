@@ -176,7 +176,7 @@ void MidiHandler::ProcessSysex()
 		uint32_t bars = sysEx[3];				// bars
 		uint32_t bar = sysEx[4];				// bar number
 
-		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar);
+		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
 
 	}
 }

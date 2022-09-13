@@ -3,7 +3,7 @@
 #include "initialisation.h"
 #include "VoiceManager.h"
 
-static constexpr uint32_t beatsPerBar = 16;
+static constexpr uint32_t maxBeatsPerBar = 24;
 static constexpr uint8_t getActiveSequence = 127;		// Used in the web editor to request the currently playing sequence (versus a specific one)
 
 class Sequencer {
@@ -20,7 +20,7 @@ public:
 	SeqInfo GetSeqInfo(uint8_t seq);
 
 	uint32_t GetBar(uint8_t** buff, uint8_t seq, uint8_t bar);
-	void StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar);
+	void StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar, uint8_t beatsPerBar, uint8_t bars);
 
 private:
 	struct Sequence {
@@ -31,7 +31,7 @@ private:
 				uint8_t level;		// Volume of note (0-127)
 				uint8_t index;		// Note index (eg for voices with multiple channels like the sampler)
 
-			} beat[beatsPerBar][VoiceManager::voiceCount];
+			} beat[maxBeatsPerBar][VoiceManager::voiceCount];
 		} bar[4];
 	} sequence[6];
 
