@@ -14,7 +14,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B, SetSequence: 0x2B
+    StartStop: 0x1A, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B, SetSequence: 0x2B
 };
 
 
@@ -82,6 +82,32 @@ var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
 
+function PrintMessage(message)
+{
+	// Print contents of payload to console
+	var stringData = "";
+	for (i = 0; i < message.length; ++i) {
+		stringData += message[i].toString(16) + " ";
+	}
+	console.log("Sent " + message.length + ": " + stringData);
+}
+
+
+function SeqStart()
+{
+	// Start or stop playing the sequence
+	var message = new Uint8Array(4);
+	message[0] = 0xF0;
+	message[1] = requestEnum.StartStop;
+	message[2] = sequenceSettings.seq;
+	message[3] = 0xF7;
+
+	// Print contents of payload to console
+	PrintMessage(message);
+
+	output.send(message);
+}
+
 
 function UpdateDrum(bar, seqStructureChanged)
 {
@@ -112,13 +138,7 @@ function UpdateDrum(bar, seqStructureChanged)
 	}
 	message[msgPos] = 0xF7;
 
-	// Print contents of payload to console
-	var stringData = "";
-	for (i = 0; i < message.length; ++i) {
-		stringData += message[i].toString(16) + " ";
-	}
-	console.log("Sent " + message.length + ": " + stringData);
-
+	PrintMessage(message);			// Print contents of payload to console
 	output.send(message);
 
 	if (seqStructureChanged) {
@@ -176,7 +196,7 @@ function BuildConfigHtml()
 function BeatGotFocus(button)
 {
 	// Clear border of selected note and set new border
-	if (selectedBeat != "") {
+	if (selectedBeat != "" && document.getElementById(selectedBeat) != null) {
 		document.getElementById(selectedBeat).style.border = "";
 	}
 	selectedBeat = button;
@@ -228,7 +248,6 @@ function SequenceChanged()
 }
 
 
-
 function BuildSequenceHtml()
 {
 	// Build drum sequence editor html
@@ -256,7 +275,7 @@ function BuildSequenceHtml()
 	`<div style="display: grid; grid-template-columns: 100px 200px 100px 150px; padding: 10px;">
 		<div style="padding: 3px;">Volume</div>
 		<div style="padding: 10px;">
-			<input id="noteLevel" onchange="DrumLevelChanged();" min="0" max="127" type="range" class="topcoat-range">
+			<input id="noteLevel" onchange="DrumLevelChanged();" value="100" min="0" max="127" type="range" class="topcoat-range">
 		</div>
 		<div style="padding: 3px;">Variation</div>
 		<div>
@@ -367,8 +386,8 @@ function getMIDIMessage(midiMessage)
 
 		if (midiMessage.data[1] == requestEnum.GetSequence) {
 			sequenceSettings.seq = decodedSysEx[1];
-			sequenceSettings.beatsPerBar = decodedSysEx[2];
-			sequenceSettings.bars = decodedSysEx[3];
+			sequenceSettings.beatsPerBar = Math.max(decodedSysEx[2], beatOptions[0]);
+			sequenceSettings.bars = Math.max(decodedSysEx[3], 1);
 			sequenceSettings.bar = decodedSysEx[4];
 
 			// If received the first drum bar build the html accordingly
@@ -459,13 +478,7 @@ function updateConfig(index)
     }
     message[msgPos] = 0xF7;
 
-	// Print contents of payload to console
-	var stringData = "";
-	for (i = 0; i < message.length; ++i) {
-		stringData += message[i].toString(16) + " ";
-	}
-	console.log("Sent " + message.length + ": " + stringData);
-
+	PrintMessage(message);			// Print contents of payload to console
     output.send(message);
 }
 

@@ -119,66 +119,75 @@ uint32_t MidiHandler::ReadCfgSysEx()
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B, SetSequence = 0x2B};
+	enum sysExCommands {StartStopSeq = 0x1A, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B, SetSequence = 0x2B};
 
 	// Check if SysEx contains read config command
-	if (sysEx[0] == GetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
-		VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
+	switch (sysEx[0]) {
+		case GetVoiceConfig:
+			if (sysEx[1] < VoiceManager::voiceCount) {
+				VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
 
-		// Insert header data
-		config.configBuffer[0] = GetVoiceConfig;
-		config.configBuffer[1] = voice;
+				// Insert header data
+				config.configBuffer[0] = GetVoiceConfig;
+				config.configBuffer[1] = voice;
 
-		uint8_t* cfgBuffer = nullptr;
-		uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(&cfgBuffer);
+				uint8_t* cfgBuffer = nullptr;
+				uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(&cfgBuffer);
 
-		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 2, false);
-		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
-		usb->SendData(sysExOut, len, inEP);
+				uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 2, false);
+				len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+				usb->SendData(sysExOut, len, inEP);
+			}
+			break;
 
-	}
+		case SetVoiceConfig:
+			if (sysEx[1] < VoiceManager::voiceCount) {
+				uint32_t bytes = ReadCfgSysEx();
+				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
+			}
+			break;
 
-	if (sysEx[0] == SetVoiceConfig && sysEx[1] < VoiceManager::voiceCount) {
-		uint32_t bytes = ReadCfgSysEx();
-		voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
+		case StartStopSeq:
+			sequencer.StartStop(sysEx[1]);
+			break;
 
-	}
+		case GetSequence:
+		{
+			uint8_t seq = sysEx[1];							// if passed 127 then requesting currently active sequence
+			uint8_t bar = sysEx[2];
+			if (seq == getActiveSequence) {
+				seq = sequencer.activeSequence;
+			}
+			auto seqInfo = sequencer.GetSeqInfo(seq);
 
-	if (sysEx[0] == GetSequence) {
-		// if passed 127 then requesting currently active sequence
-		uint8_t seq = sysEx[1];
-		uint8_t bar = sysEx[2];
-		if (seq == getActiveSequence) {
-			seq = sequencer.activeSequence;
+			// Insert header data
+			config.configBuffer[0] = GetSequence;
+			config.configBuffer[1] = seq;					// sequence
+			config.configBuffer[2] = seqInfo.beatsPerBar;	// beats per bar
+			config.configBuffer[3] = seqInfo.bars;			// bars
+			config.configBuffer[4] = bar;					// bar number
+
+			uint8_t* cfgBuffer = nullptr;
+			uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
+			uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, true);
+			len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+			usb->SendData(sysExOut, len, inEP);
+			break;
 		}
-		auto seqInfo = sequencer.GetSeqInfo(seq);
 
-		// Insert header data
-		config.configBuffer[0] = GetSequence;
-		config.configBuffer[1] = seq;					// sequence
-		config.configBuffer[2] = seqInfo.beatsPerBar;	// beats per bar
-		config.configBuffer[3] = seqInfo.bars;			// bars
-		config.configBuffer[4] = bar;					// bar number
+		case SetSequence:
+		{
+			// Header information
+			uint32_t seq = sysEx[1];						// sequence
+			uint32_t beatsPerBar = sysEx[2];				// beats per bar
+			uint32_t bars = sysEx[3];						// bars
+			uint32_t bar = sysEx[4];						// bar number
 
-		uint8_t* cfgBuffer = nullptr;
-		uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
-		uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, true);
-		len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
-		usb->SendData(sysExOut, len, inEP);
+			sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
+			break;
+		}
 	}
 
-	if (sysEx[0] == SetSequence) {
-		//uint32_t bytes = ReadCfgSysEx();
-
-		// Header information
-		uint32_t seq = sysEx[1];				// sequence
-		uint32_t beatsPerBar = sysEx[2];		// beats per bar
-		uint32_t bars = sysEx[3];				// bars
-		uint32_t bar = sysEx[4];				// bar number
-
-		sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
-
-	}
 }
 
 

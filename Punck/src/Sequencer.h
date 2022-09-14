@@ -15,7 +15,7 @@ public:
 	uint8_t activeSequence;
 
 	Sequencer();
-	void Start(uint8_t sequence);
+	void StartStop(uint8_t sequence);
 	void Play();
 	SeqInfo GetSeqInfo(uint8_t seq);
 

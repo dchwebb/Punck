@@ -170,7 +170,7 @@ void VoiceManager::CheckButtons()
 					midiLearnVoice = note.voice;
 					break;
 				case ButtonMode::drumPattern:
-					sequencer.Start(note.voice);
+					sequencer.StartStop(note.voice);
 					break;
 				}
 			}

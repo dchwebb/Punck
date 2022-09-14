@@ -79,7 +79,7 @@ Sequencer::Sequencer()
 
 
 
-void Sequencer::Start(uint8_t seq)
+void Sequencer::StartStop(uint8_t seq)
 {
 	if (!playing) {
 		playing = true;
@@ -97,6 +97,10 @@ void Sequencer::Play()
 {
 	if (playing) {
 		Sequence& seq = sequence[activeSequence];
+
+		if (currentBar >= seq.info.bars) {
+			currentBar = 0;
+		}
 
 		// Get tempo
 		tempo = 0.9f * tempo + 0.1f * (0.5f * ADC_array[ADC_Tempo]);
@@ -116,10 +120,7 @@ void Sequencer::Play()
 			position = 0;
 			if (++currentBeat >= seq.info.beatsPerBar) {
 				currentBeat = 0;
-
-				if (++currentBar >= seq.info.bars) {
-					currentBar = 0;
-				}
+				++currentBar;
 			}
 		}
 
@@ -129,8 +130,10 @@ void Sequencer::Play()
 
 Sequencer::SeqInfo Sequencer::GetSeqInfo(uint8_t seq)
 {
+	activeSequence = seq;				// Update active sequence so switching sequence in the editor updates playing sequence
 	return sequence[seq].info;
 }
+
 
 uint32_t Sequencer::GetBar(uint8_t** buff, uint8_t seq, uint8_t bar)
 {
