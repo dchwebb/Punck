@@ -17,8 +17,6 @@ var requestEnum = {
     GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B, SetSequence: 0x2B
 };
 
-var beatOptions = [16, 24];
-var maxBeatsPerBar = 24;
 
 var kickSettings = [
 	{name: 'Ramp 1 Inc', value: 'kiRamp1Inc'},
@@ -30,7 +28,6 @@ var kickSettings = [
 	
 	{name: 'sineSlowDownRate', value: 'kiSineSlowDownRate'},
 ];
-
 
 var snareSettings = [
 	{name: 'Noise level', value: 'snNoiseInitLevel'},
@@ -72,49 +69,22 @@ var hihatSettings = [
 ];
 
 
-var sequenceSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0};
-
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
 	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings}
 ]
 
-
+// Settings related to drum sequence editing
+var sequenceSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0};
 var selectedBeat = "";
+var beatOptions = [16, 24];
+var maxBeatsPerBar = 24;
 
-function drumClicked(bar, note)
+
+
+function UpdateDrum(bar, seqStructureChanged)
 {
-	var seqStructureChanged = false;
-	if (bar == null) {
-		// editing sequence settings
-		bar = 0;
-		var newBars = document.querySelector('input[name="barCount"]:checked').id.substring(8);
-		var newBeats = document.querySelector('input[name="beatsPerBar"]:checked').id.substring(11);
-		if (sequenceSettings.bars != newBars || sequenceSettings.beatsPerBar != newBeats) {
-			seqStructureChanged = true;
-			sequenceSettings.bars = newBars;
-			sequenceSettings.beatsPerBar = newBeats;
-		}
-	} else {
-		noteLevel = parseInt(document.getElementById(bar + note).getAttribute("level"));
-		noteIndex = parseInt(document.getElementById(bar + note).getAttribute("index"));
-		if (noteLevel > 0) {
-			document.getElementById(bar + note).setAttribute("level", "0");
-			document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
-		} else {
-			document.getElementById(bar + note).setAttribute("level", "100");
-			document.getElementById(bar + note).style.backgroundColor = "rgb(236, 81, 78)";
-		}
-
-		// Clear border of selected note and set new border
-		if (selectedBeat != "") {
-			document.getElementById(selectedBeat).style.border = "";
-		}
-		selectedBeat = bar + note;
-		document.getElementById(bar + note).style.border = "3px solid #288edf";
-	}
-	
 	// Convert drum sequence to sysex information
 	var ve = Object.keys(voiceEnum).length;
 	var seqLen = maxBeatsPerBar * ve * 2;
@@ -203,7 +173,7 @@ function BuildConfigHtml()
 }
 
 
-function btnFocus(button)
+function BeatGotFocus(button)
 {
 	// Clear border of selected note and set new border
 	if (selectedBeat != "") {
@@ -211,20 +181,67 @@ function btnFocus(button)
 	}
 	selectedBeat = button;
 	document.getElementById(button).style.border = "3px solid #288edf";
+	if (document.getElementById(button).getAttribute("level") > 0) {
+		document.getElementById("noteLevel").value = document.getElementById(button).getAttribute("level");
+	}	
+
 }
+
+
+function DrumClicked(bar, note)
+{
+	noteLevel = parseInt(document.getElementById(bar + note).getAttribute("level"));
+	noteIndex = parseInt(document.getElementById(bar + note).getAttribute("index"));
+	if (noteLevel > 0) {
+		document.getElementById(bar + note).setAttribute("level", "0");
+		document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
+	} else {
+		document.getElementById(bar + note).setAttribute("level", document.getElementById("noteLevel").value);
+		document.getElementById(bar + note).style.backgroundColor = "rgb(236, 81, 78)";
+	}
+
+	BeatGotFocus(bar + note);					// Clear border of selected note and set new border
+	UpdateDrum(bar);
+}
+
+
+function DrumLevelChanged()
+{
+	if (selectedBeat != "") {
+		document.getElementById(selectedBeat).setAttribute("level", document.getElementById("noteLevel").value);
+		UpdateDrum(parseInt(selectedBeat.substring(0, 1)));
+	}
+}
+
+
+function SequenceChanged()
+{
+	// check if editing sequence settings
+	var newBars = document.querySelector('input[name="barCount"]:checked').id.substring(8);
+	var newBeats = document.querySelector('input[name="beatsPerBar"]:checked').id.substring(11);
+	if (sequenceSettings.bars != newBars || sequenceSettings.beatsPerBar != newBeats) {
+		seqStructureChanged = true;
+		sequenceSettings.bars = newBars;
+		sequenceSettings.beatsPerBar = newBeats;
+	}
+	UpdateDrum(0, true);			// inform update method that a structural change has occurred
+}
+
 
 
 function BuildSequenceHtml()
 {
 	// Build drum sequence editor html
+	
+	// Sequence header html (number of bars and beats per bar)
 	var barHtml = '';
 	for (var bars = 1; bars < 5; ++bars) {
-		barHtml += `<input type="radio" id="barCount${bars}" name="barCount" onclick="drumClicked();"><div class="topcoat-radio-button__checkmark"></div> 
+		barHtml += `<input type="radio" id="barCount${bars}" name="barCount" onclick="SequenceChanged();"><div class="topcoat-radio-button__checkmark"></div> 
 					<label class="topcoat-radio-button"> ${bars} </label> `;
 	}
 	var beatsHtml = '';
 	for (const beats of beatOptions) {
-		beatsHtml += `<input type="radio" id="beatsPerBar${beats}" name="beatsPerBar" onclick="drumClicked();"><div class="topcoat-radio-button__checkmark"></div> 
+		beatsHtml += `<input type="radio" id="beatsPerBar${beats}" name="beatsPerBar" onclick="SequenceChanged();"><div class="topcoat-radio-button__checkmark"></div> 
 					  <label class="topcoat-radio-button"> ${beats} </label> `;
 	}
 
@@ -233,6 +250,25 @@ function BuildSequenceHtml()
 		<div>Number of bars</div><div style="padding: 3px;">${barHtml}</div>
 		<div>Beats per bar</div><div style="padding: 3px;">${beatsHtml}</div>
 	</div>`;
+
+	// Note editing options (volume and note variation)
+	html += 
+	`<div style="display: grid; grid-template-columns: 100px 200px 100px 150px; padding: 10px;">
+		<div style="padding: 3px;">Volume</div>
+		<div style="padding: 10px;">
+			<input id="noteLevel" onchange="DrumLevelChanged();" min="0" max="127" type="range" class="topcoat-range">
+		</div>
+		<div style="padding: 3px;">Variation</div>
+		<div>
+			<select class="docNav">
+				<option value="index.html" selected="selected">Topcoat Desktop Dark</option>
+				<option value="topcoat-desktop-light.html">Topcoat Desktop Light</option>
+				<option value="topcoat-mobile-dark.html">Topcoat Mobile Dark</option>
+				<option value="topcoat-mobile-light.html">Topcoat Mobile Light</option>
+			  </select>
+		</div>
+	</div>`;
+
 
 	for (var bar = 0; bar < sequenceSettings.bars; ++bar) {
 		html += '<div style="display: grid; grid-template-columns: 100px 160px 160px 160px 160px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.8);">';
@@ -243,7 +279,7 @@ function BuildSequenceHtml()
 				if (beat % barBreak == 0 && beat > 0) {
 					html += '</div><div class="grid-container3">';
 				}
-				html += `<button id="${bar + v + beat}" class="topcoat-button" onclick="drumClicked(${bar}, \'${v + beat}\');" onfocusin="btnFocus('${bar + v + beat}');" style="background-color: rgb(74, 77, 78);">&nbsp;</button> `;
+				html += `<button id="${bar + v + beat}" class="topcoat-button" onclick="DrumClicked(${bar}, \'${v + beat}\');" onfocusin="BeatGotFocus('${bar + v + beat}');" style="background-color: rgb(74, 77, 78);">&nbsp;</button> `;
 			}
 			html += "</div>";
 		}
