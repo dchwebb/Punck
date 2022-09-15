@@ -37,6 +37,8 @@ private:
 	void ProcessSysex();
 	uint32_t ConstructSysEx(uint8_t* buffer, uint32_t len, uint8_t* headerBuffer, uint32_t headerLen, bool noSplit);
 	uint32_t ReadCfgSysEx();
+	static constexpr bool noSplit = true;
+	static constexpr bool split = false;
 
 	uint32_t xfer_buff[64];									// OUT Data filled in RxLevel Interrupt
 

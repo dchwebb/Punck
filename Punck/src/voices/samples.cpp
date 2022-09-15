@@ -1,6 +1,8 @@
 #include "samples.h"
 #include "FatTools.h"
 #include "VoiceManager.h"
+#include "config.h"
+
 #include <cstring>
 #include <cmath>
 
@@ -214,7 +216,32 @@ bool Samples::UpdateSampleList()
 }
 
 
-uint32_t Samples::SerialiseConfig(uint8_t** buff)
+uint32_t Samples::SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex)
+{
+	// Copy the first 8 characters of each file name to the config buffer
+	uint8_t s = 0;
+	for (; s < sampler[voiceIndex].bankLen; ++s) {
+		// overflow checking
+		if ((uint32_t)((s * 8) + 8) >= sizeof(config.configBuffer)) {
+			break;
+		}
+
+		const char* sampleName = sampler[voiceIndex].bank[s].s->name;
+		memcpy(config.configBuffer + (s * 8), sampleName, 8);
+	}
+
+	// Check that there are no characters with ASCII code > 127 for sysex transmission (replace with "_")
+	for (uint8_t i; i < s * 8; ++i) {
+		if (config.configBuffer[i] & 0x80) {
+			config.configBuffer[i] = '_';
+		}
+	}
+	*buff = config.configBuffer;
+	return s * 8;
+}
+
+
+uint32_t Samples::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
 	return 0;
 }

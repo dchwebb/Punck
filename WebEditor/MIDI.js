@@ -14,7 +14,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    StartStop: 0x1A, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSequence: 0x1B, SetSequence: 0x2B
+    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D
 };
 
 
@@ -69,6 +69,12 @@ var hihatSettings = [
 ];
 
 
+var variationPicker = [
+	{voice: 'Sampler_A', picker: 'samplePicker0'},
+	{voice: 'Sampler_B', picker: 'samplePicker1'},
+];
+
+
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
@@ -82,14 +88,14 @@ var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
 
-function PrintMessage(message)
+function PrintMessage(message, received)
 {
 	// Print contents of payload to console
 	var stringData = "";
 	for (i = 0; i < message.length; ++i) {
 		stringData += message[i].toString(16) + " ";
 	}
-	console.log("Sent " + message.length + ": " + stringData);
+	console.log((received ? "Received " : "Sent ") + message.length + ": " + stringData);
 }
 
 
@@ -193,6 +199,7 @@ function BuildConfigHtml()
 }
 
 
+
 function BeatGotFocus(button)
 {
 	// Clear border of selected note and set new border
@@ -203,8 +210,19 @@ function BeatGotFocus(button)
 	document.getElementById(button).style.border = "3px solid #288edf";
 	if (document.getElementById(button).getAttribute("level") > 0) {
 		document.getElementById("noteLevel").value = document.getElementById(button).getAttribute("level");
-	}	
+	}
 
+	// FIXME - automatically get variations for all voice types
+	for (i = 0; i < variationPicker.length; i++) {
+		var picker = document.getElementById(variationPicker[i].picker);
+		var currentPicker = button.includes(variationPicker[i].voice);
+		picker.style.display = currentPicker ? "block" : "none";
+
+		if (currentPicker) {
+			picker.value = document.getElementById(button).getAttribute("index");
+		}
+	}
+	
 }
 
 
@@ -270,6 +288,17 @@ function BuildSequenceHtml()
 		<div>Beats per bar</div><div style="padding: 3px;">${beatsHtml}</div>
 	</div>`;
 
+	
+	// Build sample pickers
+	var samplePickerhtml = '';
+	for (var bank = 0; bank < 2; ++bank) {
+		samplePickerhtml += `<select id="samplePicker${bank}" class="docNav" style="display: none">`;
+		for (var sample = 0; sample < sampleList[bank].length; ++sample) {
+			samplePickerhtml += `<option value="${sample}">${sampleList[bank][sample].toLowerCase()}</option>`;
+		}
+		samplePickerhtml += `</select>`;
+	}
+
 	// Note editing options (volume and note variation)
 	html += 
 	`<div style="display: grid; grid-template-columns: 100px 200px 100px 150px; padding: 10px;">
@@ -279,12 +308,7 @@ function BuildSequenceHtml()
 		</div>
 		<div style="padding: 3px;">Variation</div>
 		<div>
-			<select class="docNav">
-				<option value="index.html" selected="selected">Topcoat Desktop Dark</option>
-				<option value="topcoat-desktop-light.html">Topcoat Desktop Light</option>
-				<option value="topcoat-mobile-dark.html">Topcoat Mobile Dark</option>
-				<option value="topcoat-mobile-light.html">Topcoat Mobile Light</option>
-			  </select>
+			${samplePickerhtml}
 		</div>
 	</div>`;
 
@@ -342,11 +366,37 @@ function RequestConfig(voice)
 }
 
 
+function RequestSamples(bank)
+{
+	// Creates a SysEx request for a voice's configuration
+	var message = [0xF0, requestEnum.GetSamples, bank, 0xF7];
+    output.send(message);
+}
+
+
 function onMIDIFailure() 
 {
     console.log('Could not access your MIDI devices.');
 }
 
+
+function decodeSysEx(midiData, headerLen)
+{
+	// As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
+	var decodedSysEx = [];
+	for (i = headerLen; i < midiData.length - 1; ++i) {
+		if (i % 2 != 0) {
+			decodedSysEx[Math.trunc((i - headerLen) / 2)] = midiData[i];
+		} else {
+			decodedSysEx[Math.trunc((i - headerLen) / 2)] += (midiData[i] << 4);
+		}
+	}
+	return decodedSysEx;
+}
+
+
+//var sampleList = new Array(2).fill([]);
+var sampleList = [];
 
 function getMIDIMessage(midiMessage) 
 {
@@ -354,90 +404,86 @@ function getMIDIMessage(midiMessage)
 	console.log(midiMessage);
 
     if (midiMessage.data[0] == 0xF0) {
-		var decodedSysEx = [];
-			
-		
-		if (midiMessage.data[1] == requestEnum.GetSequence) {
-			// Sequences only use 7 bit values so are not encoded
-			for (i = 1; i < midiMessage.data.length - 1; ++i) {
-				decodedSysEx[i - 1] = midiMessage.data[i];
-			}
-		} else {
-			// As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
-			// header is F0 | command | voice
-			var headerLen = 3;
-			for (i = headerLen; i < midiMessage.data.length - 2; ++i) {
-				if (i % 2 != 0) {
-					decodedSysEx[Math.trunc((i - headerLen) / 2)] = midiMessage.data[i];
-				} else {
-					decodedSysEx[Math.trunc((i - headerLen) / 2)] += (midiMessage.data[i] << 4);
+
+		switch (midiMessage.data[1]) {
+			case requestEnum.GetSamples:
+				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
+				var bank = midiMessage.data[2];
+				sampleList[bank] = [];
+				
+				let decoder = new TextDecoder();				// Decoder to convert from utf8 array to string
+				let midiData = midiMessage.data.slice(3);		// remove header
+				for (var i = 0; i < Math.trunc(midiData.length / 8); ++i) {
+					sampleList[bank][i] = decoder.decode(midiData.slice(i * 8, i * 8 + 8));
 				}
-			}
-		}
-		
-        
-        // Print contents of payload to console
-		var stringData = "";
-		for (i = 0; i < decodedSysEx.length; ++i) {
-            stringData += decodedSysEx[i].toString(16) + " ";
-        }
-        console.log("Received " + decodedSysEx.length + ": " + stringData);
+				if (++requestNo < 2) {
+					RequestSamples(requestNo);
+				} else {
+					requestNo = 0;
+					RequestSequence(127, 0);					// 127 = currently active sequence
+				}
+				break;
+
+			case requestEnum.GetSequence:
+				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
+
+				sequenceSettings.seq = midiMessage.data[2];
+				sequenceSettings.beatsPerBar = Math.max(midiMessage.data[3], beatOptions[0]);
+				sequenceSettings.bars = Math.max(midiMessage.data[4], 1);
+				sequenceSettings.bar = midiMessage.data[5];
+
+				// If received the first drum bar build the html accordingly
+				if (requestNo == 0) {
+					BuildSequenceHtml();
+					document.getElementById(`barCount${sequenceSettings.bars}`).checked = true;
+					document.getElementById(`beatsPerBar${sequenceSettings.beatsPerBar}`).checked = true;
+				}
+
+				var index = 6;
+				for (var b = 0; b < maxBeatsPerBar; b++) {
+					for (let v in voiceEnum) {
+						if (b < sequenceSettings.beatsPerBar) {
+							document.getElementById(sequenceSettings.bar + v + b).setAttribute("level", midiMessage.data[index]);
+							document.getElementById(sequenceSettings.bar+ v + b).setAttribute("index", midiMessage.data[index + 1]);
+							if (midiMessage.data[index] > 0) {
+								document.getElementById(sequenceSettings.bar + v + b).style.backgroundColor = "rgb(236, 81, 78)";
+							}
+						}
+						index += 2;
+					}
+				}
+				
+				// Request the configuration data for the first drum voice
+				if (++requestNo < sequenceSettings.bars) {
+					RequestSequence(sequenceSettings.seq, requestNo);
+				}
+				break;
 
 
-		if (midiMessage.data[1] == requestEnum.GetSequence) {
-			sequenceSettings.seq = decodedSysEx[1];
-			sequenceSettings.beatsPerBar = Math.max(decodedSysEx[2], beatOptions[0]);
-			sequenceSettings.bars = Math.max(decodedSysEx[3], 1);
-			sequenceSettings.bar = decodedSysEx[4];
+			case requestEnum.GetVoiceConfig:
+				var sysEx = decodeSysEx(midiMessage.data, 3);		// 3 is length of header
+				PrintMessage(sysEx, true);			// Print contents of payload to console
 
-			// If received the first drum bar build the html accordingly
-			if (requestNo == 0) {
-				BuildSequenceHtml();
-				document.getElementById(`barCount${sequenceSettings.bars}`).checked = true;
-				document.getElementById(`beatsPerBar${sequenceSettings.beatsPerBar}`).checked = true;
-			}
+				if (requestNo == 0) {
+					BuildConfigHtml();
+				}
 
-			var index = 5;
-			for (var b = 0; b < maxBeatsPerBar; b++) {
-				for (let v in voiceEnum) {
-					if (b < sequenceSettings.beatsPerBar) {
-						// decodedSysEx[index] is level of current voice; decodedSysEx[index + 1] is voice index
-						document.getElementById(sequenceSettings.bar + v + b).setAttribute("level", decodedSysEx[index]);
-						document.getElementById(sequenceSettings.bar+ v + b).setAttribute("index", decodedSysEx[index + 1]);
-						if (decodedSysEx[index] > 0) {
-							document.getElementById(sequenceSettings.bar + v + b).style.backgroundColor = "rgb(236, 81, 78)";
+				// locate settings that match the enum passed
+				for (var i = 0; i < drumSettings.length; ++i) {
+					if (drumSettings[i].id == midiMessage.data[2]) {
+						for (var s = 0; s < drumSettings[i].settings.length; s++) {
+							// Store the values encoded in the SysEx data into the html fields
+							document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
 						}
 					}
-					index += 2;
 				}
-			}
+
+				// Request the configuration data for the next voice
+				if (++requestNo < drumSettings.length) {
+					RequestConfig(drumSettings[requestNo].id);
+				}
+				break;
 			
-			// Request the configuration data for the first drum voice
-			if (++requestNo < sequenceSettings.bars) {
-				RequestSequence(sequenceSettings.seq, requestNo);
-			}
-		}
-		
-		if (midiMessage.data[1] == requestEnum.GetVoiceConfig) {
-			if (requestNo == 0) {
-				BuildConfigHtml();
-			}
-			sysEx = decodedSysEx.slice(0);
-
-			// locate settings that match the enum passed
-			for (var i = 0; i < drumSettings.length; ++i) {
-				if (drumSettings[i].id == midiMessage.data[2]) {
-					for (var s = 0; s < drumSettings[i].settings.length; s++) {
-						// Store the values encoded in the SysEx data into the html fields
-				        document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
-					}
-				}
-			}
-
-			// Request the configuration data for the next voice
-			if (++requestNo < drumSettings.length) {
-	            RequestConfig(drumSettings[requestNo].id);
-	        }
 		}
 	}
 }
@@ -550,6 +596,6 @@ function onMIDISuccess(midiAccess)
     // Update UI to show connection status
     if (checkConnection()) {
 		requestNo = 0;
-		RequestSequence(127, 0);			// 127 = currently active sequence
+		RequestSamples(0);
     }
 }

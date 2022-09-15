@@ -111,7 +111,7 @@ void HiHat::UpdateFilter()
 }
 
 
-uint32_t HiHat::SerialiseConfig(uint8_t** buff)
+uint32_t HiHat::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
 	*buff = (uint8_t*)&config;
 	//memcpy(buff, &config, sizeof(config));

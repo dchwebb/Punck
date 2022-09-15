@@ -4,6 +4,7 @@
 #include "config.h"
 #include "sequencer.h"
 
+
 void MidiHandler::DataIn()
 {
 
@@ -97,6 +98,8 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint
 		}
 	}
 	sysExOut[pos++] = 0xF7;
+
+	pos = ((pos + 3) / 4) * 4;				// round up output size to multiple of 4
 	return pos;
 }
 
@@ -119,7 +122,7 @@ uint32_t MidiHandler::ReadCfgSysEx()
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {StartStopSeq = 0x1A, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSequence = 0x1B, SetSequence = 0x2B};
+	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D};
 
 	// Check if SysEx contains read config command
 	switch (sysEx[0]) {
@@ -128,14 +131,14 @@ void MidiHandler::ProcessSysex()
 				VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
 
 				// Insert header data
-				config.configBuffer[0] = GetVoiceConfig;
-				config.configBuffer[1] = voice;
+				uint8_t cfgHeader[2] = {GetVoiceConfig, voice};
 
 				uint8_t* cfgBuffer = nullptr;
-				uint32_t bytes = voiceManager.noteMapper[voice].drumVoice->SerialiseConfig(&cfgBuffer);
+				NoteMapper& vm = voiceManager.noteMapper[voice];
+				uint32_t bytes = vm.drumVoice->SerialiseConfig(&cfgBuffer, vm.voiceIndex);
 
-				uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 2, false);
-				len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+				uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, split);
+				//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 				usb->SendData(sysExOut, len, inEP);
 			}
 			break;
@@ -169,8 +172,8 @@ void MidiHandler::ProcessSysex()
 
 			uint8_t* cfgBuffer = nullptr;
 			uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
-			uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, true);
-			len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+			uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, noSplit);
+			//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
@@ -186,7 +189,25 @@ void MidiHandler::ProcessSysex()
 			sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
 			break;
 		}
+
+		case GetSamples:
+		{
+			uint8_t samplePlayer = sysEx[1];
+
+			// Insert header data
+			uint8_t cfgHeader[2] = {GetSamples, samplePlayer};
+
+			uint8_t* cfgBuffer = nullptr;
+			uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);;
+
+			uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, noSplit);
+			//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+			usb->SendData(sysExOut, len, inEP);
+			break;
+		}
 	}
+
+
 
 }
 

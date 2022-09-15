@@ -40,7 +40,7 @@ public:
 		uint32_t sampleVoice;
 		int32_t currentSamples[2] = {};		// Left/right sample levels for mixing
 		uint32_t bankLen;
-		std::array<Bank, 10> bank;			// Store pointer to Bank samples sorted by index
+		std::array<Bank, 40> bank;			// Store pointer to Bank samples sorted by index
 		NoteMapper* noteMapper;
 		float velocityScale;
 	} sampler[2];
@@ -51,7 +51,8 @@ public:
 	void CalcOutput();
 	bool UpdateSampleList();
 	bool GetSampleInfo(Sample* sample);
-	uint32_t SerialiseConfig(uint8_t** buff);
+	uint32_t SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex);
+	uint32_t SerialiseConfig(uint8_t** buff, uint8_t voiceIndex);
 	void StoreConfig(uint8_t* buff, uint32_t len);
 };
 

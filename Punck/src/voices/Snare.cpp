@@ -69,7 +69,7 @@ void Snare::UpdateFilter()
 }
 
 
-uint32_t Snare::SerialiseConfig(uint8_t** buff)
+uint32_t Snare::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
 	*buff = (uint8_t*)&config;
 	//memcpy(buff, &config, sizeof(config));
