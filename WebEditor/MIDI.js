@@ -202,10 +202,12 @@ function BuildConfigHtml()
 
 function BeatGotFocus(button)
 {
-	// Clear border of selected note and set new border
+	// Clear border of previously selected note
 	if (selectedBeat != "" && document.getElementById(selectedBeat) != null) {
 		document.getElementById(selectedBeat).style.border = "";
 	}
+
+	// Set appearance and level of
 	selectedBeat = button;
 	document.getElementById(button).style.border = "3px solid #288edf";
 	if (document.getElementById(button).getAttribute("level") > 0) {
@@ -218,23 +220,39 @@ function BeatGotFocus(button)
 		var currentPicker = button.includes(variationPicker[i].voice);
 		picker.style.display = currentPicker ? "block" : "none";
 
-		if (currentPicker) {
+		// If the drum beat is active update the picker
+		if (currentPicker && document.getElementById(button).getAttribute("level") > 0) {
 			picker.value = document.getElementById(button).getAttribute("index");
 		}
 	}
 	
 }
 
+function ActivePicker(button)
+{
+	// Return the variation picker associated with the button
+	for (i = 0; i < variationPicker.length; i++) {
+		var picker = document.getElementById(variationPicker[i].picker);
+		if (button.includes(variationPicker[i].voice)) {
+			return picker;
+		}
+	}
+}
 
 function DrumClicked(bar, note)
 {
 	noteLevel = parseInt(document.getElementById(bar + note).getAttribute("level"));
 	noteIndex = parseInt(document.getElementById(bar + note).getAttribute("index"));
 	if (noteLevel > 0) {
-		document.getElementById(bar + note).setAttribute("level", "0");
-		document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
+		// If mode is click to add/delete set level to 0
+		if (document.querySelector('input[name="editMode"]:checked').id == "editModeDelete") {
+			document.getElementById(bar + note).setAttribute("level", "0");
+			document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
+		}
 	} else {
 		document.getElementById(bar + note).setAttribute("level", document.getElementById("noteLevel").value);
+		var activePicker = ActivePicker(bar + note);
+		document.getElementById(bar + note).setAttribute("index", activePicker ? activePicker.value : 0);
 		document.getElementById(bar + note).style.backgroundColor = "rgb(236, 81, 78)";
 	}
 
@@ -252,6 +270,15 @@ function DrumLevelChanged()
 }
 
 
+function SampleChanged(picker)
+{
+	if (selectedBeat != "") {
+		document.getElementById(selectedBeat).setAttribute("index", document.getElementById(picker).value);
+		UpdateDrum(parseInt(selectedBeat.substring(0, 1)));
+	}
+}
+
+
 function SequenceChanged()
 {
 	// check if editing sequence settings
@@ -264,6 +291,7 @@ function SequenceChanged()
 	}
 	UpdateDrum(0, true);			// inform update method that a structural change has occurred
 }
+
 
 
 function BuildSequenceHtml()
@@ -292,7 +320,7 @@ function BuildSequenceHtml()
 	// Build sample pickers
 	var samplePickerhtml = '';
 	for (var bank = 0; bank < 2; ++bank) {
-		samplePickerhtml += `<select id="samplePicker${bank}" class="docNav" style="display: none">`;
+		samplePickerhtml += `<select id="samplePicker${bank}" class="docNav" style="display: none" onchange="SampleChanged('samplePicker${bank}');">`;
 		for (var sample = 0; sample < sampleList[bank].length; ++sample) {
 			samplePickerhtml += `<option value="${sample}">${sampleList[bank][sample].toLowerCase()}</option>`;
 		}
