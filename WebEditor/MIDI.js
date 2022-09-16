@@ -204,12 +204,12 @@ function BeatGotFocus(button)
 {
 	// Clear border of previously selected note
 	if (selectedBeat != "" && document.getElementById(selectedBeat) != null) {
-		document.getElementById(selectedBeat).style.border = "";
+		document.getElementById(selectedBeat).style.border = "1px solid #333434";
 	}
 
-	// Set appearance and level of
+	// Set border of selected note to white
 	selectedBeat = button;
-	document.getElementById(button).style.border = "3px solid #288edf";
+	document.getElementById(button).style.border = "1px solid #ffffff";
 	if (document.getElementById(button).getAttribute("level") > 0) {
 		document.getElementById("noteLevel").value = document.getElementById(button).getAttribute("level");
 	}
@@ -228,36 +228,56 @@ function BeatGotFocus(button)
 	
 }
 
-function ActivePicker(button)
+
+function BeatColour(button)
 {
-	// Return the variation picker associated with the button
-	for (i = 0; i < variationPicker.length; i++) {
-		var picker = document.getElementById(variationPicker[i].picker);
-		if (button.includes(variationPicker[i].voice)) {
-			return picker;
-		}
+	// Highlight beats according to variation (colour) and volume (brightness)
+	var beatColour = [
+		{high: [250, 81, 78], low: [100, 77, 78]},
+		{high: [14, 200, 20], low: [74, 100, 78]},
+		{high: [61, 94, 237], low: [74, 77, 100]},
+		{high: [234, 206, 49], low: [100, 100, 78]},
+		{high: [158, 100, 205], low: [80, 77, 100]},
+	]
+
+	beat = document.getElementById(button);
+	noteLevel = parseInt(beat.getAttribute("level"));
+	noteIndex = parseInt(beat.getAttribute("index"));
+
+	if (noteLevel > 0) {
+		var colourIndex = noteIndex < beatColour.length ? noteIndex : 0;
+		var newRed   = (noteLevel / 127) * (beatColour[colourIndex].high[0] - beatColour[colourIndex].low[0]) +  beatColour[colourIndex].low[0];
+		var newGreen = (noteLevel / 127) * (beatColour[colourIndex].high[1] - beatColour[colourIndex].low[1]) +  beatColour[colourIndex].low[1];
+		var newBlue  = (noteLevel / 127) * (beatColour[colourIndex].high[2] - beatColour[colourIndex].low[2]) +  beatColour[colourIndex].low[2];
+		beat.style.backgroundColor = `rgb(${newRed}, ${newGreen}, ${newBlue})`;
+	} else {
+		beat.style.backgroundColor = "rgb(74, 77, 78)";
 	}
 }
 
+
 function DrumClicked(bar, note)
 {
+	var changed = false;
 	noteLevel = parseInt(document.getElementById(bar + note).getAttribute("level"));
 	noteIndex = parseInt(document.getElementById(bar + note).getAttribute("index"));
 	if (noteLevel > 0) {
 		// If mode is click to add/delete set level to 0
 		if (document.querySelector('input[name="editMode"]:checked').id == "editModeDelete") {
 			document.getElementById(bar + note).setAttribute("level", "0");
-			document.getElementById(bar + note).style.backgroundColor = "rgb(74, 77, 78)";
+			changed = true;
 		}
 	} else {
 		document.getElementById(bar + note).setAttribute("level", document.getElementById("noteLevel").value);
-		var activePicker = ActivePicker(bar + note);
-		document.getElementById(bar + note).setAttribute("index", activePicker ? activePicker.value : 0);
-		document.getElementById(bar + note).style.backgroundColor = "rgb(236, 81, 78)";
+		document.getElementById(bar + note).setAttribute("index", ActivePickerValue(bar + note));
+		changed = true;
 	}
 
+	BeatColour(bar + note);
 	BeatGotFocus(bar + note);					// Clear border of selected note and set new border
-	UpdateDrum(bar);
+	if (changed) {
+		UpdateDrum(bar);
+	}
 }
 
 
@@ -266,7 +286,21 @@ function DrumLevelChanged()
 	if (selectedBeat != "") {
 		document.getElementById(selectedBeat).setAttribute("level", document.getElementById("noteLevel").value);
 		UpdateDrum(parseInt(selectedBeat.substring(0, 1)));
+		BeatColour(selectedBeat);
 	}
+}
+
+
+function ActivePickerValue(button)
+{
+	// Return the variation picker associated with the button
+	for (i = 0; i < variationPicker.length; i++) {
+		var picker = document.getElementById(variationPicker[i].picker);
+		if (button.includes(variationPicker[i].voice)) {
+			return picker.value;
+		}
+	}
+	return 0;
 }
 
 
@@ -275,6 +309,7 @@ function SampleChanged(picker)
 	if (selectedBeat != "") {
 		document.getElementById(selectedBeat).setAttribute("index", document.getElementById(picker).value);
 		UpdateDrum(parseInt(selectedBeat.substring(0, 1)));
+		BeatColour(selectedBeat);
 	}
 }
 
@@ -329,13 +364,13 @@ function BuildSequenceHtml()
 
 	// Note editing options (volume and note variation)
 	html += 
-	`<div style="display: grid; grid-template-columns: 100px 200px 100px 150px; padding: 10px;">
+	`<div style="display: grid; grid-template-columns: 100px 200px 300px; padding: 10px;">
 		<div style="padding: 3px;">Volume</div>
 		<div style="padding: 10px;">
 			<input id="noteLevel" onchange="DrumLevelChanged();" value="100" min="0" max="127" type="range" class="topcoat-range">
 		</div>
-		<div style="padding: 3px;">Variation</div>
-		<div>
+		
+		<div style="display: flex; gap: 10px"> <label style="padding: 5px;">Sample</label>
 			${samplePickerhtml}
 		</div>
 	</div>`;
@@ -474,9 +509,8 @@ function getMIDIMessage(midiMessage)
 							document.getElementById(sequenceSettings.bar + v + b).setAttribute("level", midiMessage.data[index]);
 							document.getElementById(sequenceSettings.bar+ v + b).setAttribute("index", midiMessage.data[index + 1]);
 							if (midiMessage.data[index] > 0) {
-								document.getElementById(sequenceSettings.bar + v + b).style.backgroundColor = "rgb(236, 81, 78)";
-							}
-						}
+								BeatColour(sequenceSettings.bar + v + b);
+							}						}
 						index += 2;
 					}
 				}
