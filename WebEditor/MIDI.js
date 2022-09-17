@@ -72,6 +72,7 @@ var hihatSettings = [
 var variationPicker = [
 	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0'},
 	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1'},
+	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock'},
 ];
 
 
@@ -305,7 +306,7 @@ function ActivePickerValue(button)
 }
 
 
-function SampleChanged(picker)
+function PickerChanged(picker)
 {
 	if (selectedBeat != "") {
 		document.getElementById(selectedBeat).setAttribute("index", document.getElementById(picker).value);
@@ -358,12 +359,23 @@ function BuildSequenceHtml()
 	for (var bank = 0; bank < 2; ++bank) {
 		samplePickerhtml += `<div id="samplePickerBlock${bank}" style="display: none;">
 								<label style="padding: 5px;">Sample</label>
-								<select id="samplePicker${bank}" class="docNav" onchange="SampleChanged('samplePicker${bank}');">`;
+								<select id="samplePicker${bank}" class="docNav" onchange="PickerChanged('samplePicker${bank}');">`;
 		for (var sample = 0; sample < sampleList[bank].length; ++sample) {
 			samplePickerhtml += `<option value="${sample}">${sampleList[bank][sample].toLowerCase()}</option>`;
 		}
 		samplePickerhtml += `</select></div>`;
 	}
+
+	samplePickerhtml += `<div id="hihatPickerBlock" style="display: none;">
+							<label style="padding: 5px;">Open</label>
+							<select id="hihatPicker" class="docNav" onchange="PickerChanged('hihatPicker');">
+								<option value="0">0% </option>
+								<option value="31">25% </option>
+								<option value="63">50% </option>
+								<option value="95">75%  </option>
+								<option value="127">100%  </option>
+							</select>
+						</div>`
 
 	// Note editing options (volume and note variation)
 	html += 

@@ -17,7 +17,7 @@ VoiceManager::VoiceManager()
 //	sa.btn = {GPIOC, 6};
 	sa.led = {GPIOB, 0};				// PB0: Green
 	sa.midiLow = 72;
-	sa.midiHigh = 79;
+	sa.midiHigh = 77;
 
 	NoteMapper& sb = noteMapper[samplerB];
 	samples.sampler[1].noteMapper = &sb;
@@ -48,7 +48,7 @@ VoiceManager::VoiceManager()
 	hh.drumVoice = &hihatPlayer;
 	//hh.btn = {GPIOC, 6};
 	hh.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
-	hh.midiLow = 82;
+	hh.midiLow = 78;
 	hh.midiHigh = 82;
 
 }
