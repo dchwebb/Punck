@@ -12,7 +12,10 @@ public:
 		uint8_t bars;
 		uint8_t beatsPerBar;
 	};
+	bool playing;
 	uint8_t activeSequence;
+	uint8_t currentBar;
+	uint8_t currentBeat;
 
 	Sequencer();
 	void StartStop(uint8_t sequence);
@@ -37,11 +40,10 @@ private:
 
 
 
-	bool playing;
+
 	float tempo;
 
-	uint8_t currentBar;
-	uint32_t currentBeat;
+
 	uint32_t position;
 
 

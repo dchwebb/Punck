@@ -122,7 +122,7 @@ uint32_t MidiHandler::ReadCfgSysEx()
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D};
+	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D, GetStatus = 0x1E};
 
 	// Check if SysEx contains read config command
 	switch (sysEx[0]) {
@@ -154,6 +154,20 @@ void MidiHandler::ProcessSysex()
 			sequencer.StartStop(sysEx[1]);
 			break;
 
+		case GetStatus:
+			{
+				// Get playing status from sequence
+				config.configBuffer[0] = GetStatus;
+				config.configBuffer[1] = sequencer.playing ? 1 : 0;					// playing
+				config.configBuffer[2] = sequencer.activeSequence; 					// active sequence
+				config.configBuffer[3] = sequencer.currentBar;     					// current bar
+				config.configBuffer[4] = sequencer.currentBeat;    					// current beat
+
+				uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
+				usb->SendData(sysExOut, len, inEP);
+			}
+			break;
+
 		case GetSequence:
 		{
 			uint8_t seq = sysEx[1];							// if passed 127 then requesting currently active sequence
@@ -173,7 +187,6 @@ void MidiHandler::ProcessSysex()
 			uint8_t* cfgBuffer = nullptr;
 			uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
 			uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, noSplit);
-			//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}

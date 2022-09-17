@@ -14,7 +14,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D
+    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E
 };
 
 
@@ -70,8 +70,8 @@ var hihatSettings = [
 
 
 var variationPicker = [
-	{voice: 'Sampler_A', picker: 'samplePicker0'},
-	{voice: 'Sampler_B', picker: 'samplePicker1'},
+	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0'},
+	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1'},
 ];
 
 
@@ -82,7 +82,8 @@ var drumSettings = [
 ]
 
 // Settings related to drum sequence editing
-var sequenceSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0};
+var sampleList = [];			// Array of sample names
+var seqSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0, playing: false, playingSeq: 0, playingBar: 0,  playingBeat:0};
 var selectedBeat = "";
 var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
@@ -105,13 +106,12 @@ function SeqStart()
 	var message = new Uint8Array(4);
 	message[0] = 0xF0;
 	message[1] = requestEnum.StartStop;
-	message[2] = sequenceSettings.seq;
+	message[2] = seqSettings.seq;
 	message[3] = 0xF7;
 
-	// Print contents of payload to console
-	PrintMessage(message);
-
+	PrintMessage(message);			// Print contents of payload to console
 	output.send(message);
+	StatusTimer(100);
 }
 
 
@@ -124,9 +124,9 @@ function UpdateDrum(bar, seqStructureChanged)
 	var message = new Uint8Array(7 + seqLen);
 	message[0] = 0xF0;
 	message[1] = requestEnum.SetSequence;
-	message[2] = sequenceSettings.seq;
-	message[3] = sequenceSettings.beatsPerBar;
-	message[4] = sequenceSettings.bars;
+	message[2] = seqSettings.seq;
+	message[3] = seqSettings.beatsPerBar;
+	message[4] = seqSettings.bars;
 	message[5] = bar;
 	var msgPos = 6;
 
@@ -148,7 +148,7 @@ function UpdateDrum(bar, seqStructureChanged)
 	output.send(message);
 
 	if (seqStructureChanged) {
-		RefreshSequence(sequenceSettings.seq);
+		RefreshSequence(seqSettings.seq);
 	}
 }
 
@@ -182,7 +182,7 @@ function ClearButtonBar()
 function BuildConfigHtml()
 {
 	// Build html lists of settings for each drum voice
-	var html = '<div style="display: grid; grid-template-columns: 250px 100px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.8);">';
+	var html = '<div style="display: grid; grid-template-columns: 250px 100px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.3);">';
 	for (var i = 0; i < drumSettings.length; ++i) {
 		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">${drumSettings[i].heading}</div>`;
 		for (var s = 0; s < drumSettings[i].settings.length; s++) {
@@ -217,8 +217,9 @@ function BeatGotFocus(button)
 	// FIXME - automatically get variations for all voice types
 	for (i = 0; i < variationPicker.length; i++) {
 		var picker = document.getElementById(variationPicker[i].picker);
+		var pickerBlock = document.getElementById(variationPicker[i].pickerBlock);
 		var currentPicker = button.includes(variationPicker[i].voice);
-		picker.style.display = currentPicker ? "block" : "none";
+		pickerBlock.style.display = currentPicker ? "block" : "none";
 
 		// If the drum beat is active update the picker
 		if (currentPicker && document.getElementById(button).getAttribute("level") > 0) {
@@ -319,10 +320,10 @@ function SequenceChanged()
 	// check if editing sequence settings
 	var newBars = document.querySelector('input[name="barCount"]:checked').id.substring(8);
 	var newBeats = document.querySelector('input[name="beatsPerBar"]:checked').id.substring(11);
-	if (sequenceSettings.bars != newBars || sequenceSettings.beatsPerBar != newBeats) {
+	if (seqSettings.bars != newBars || seqSettings.beatsPerBar != newBeats) {
 		seqStructureChanged = true;
-		sequenceSettings.bars = newBars;
-		sequenceSettings.beatsPerBar = newBeats;
+		seqSettings.bars = newBars;
+		seqSettings.beatsPerBar = newBeats;
 	}
 	UpdateDrum(0, true);			// inform update method that a structural change has occurred
 }
@@ -355,11 +356,13 @@ function BuildSequenceHtml()
 	// Build sample pickers
 	var samplePickerhtml = '';
 	for (var bank = 0; bank < 2; ++bank) {
-		samplePickerhtml += `<select id="samplePicker${bank}" class="docNav" style="display: none" onchange="SampleChanged('samplePicker${bank}');">`;
+		samplePickerhtml += `<div id="samplePickerBlock${bank}" style="display: none;">
+								<label style="padding: 5px;">Sample</label>
+								<select id="samplePicker${bank}" class="docNav" onchange="SampleChanged('samplePicker${bank}');">`;
 		for (var sample = 0; sample < sampleList[bank].length; ++sample) {
 			samplePickerhtml += `<option value="${sample}">${sampleList[bank][sample].toLowerCase()}</option>`;
 		}
-		samplePickerhtml += `</select>`;
+		samplePickerhtml += `</select></div>`;
 	}
 
 	// Note editing options (volume and note variation)
@@ -370,18 +373,18 @@ function BuildSequenceHtml()
 			<input id="noteLevel" onchange="DrumLevelChanged();" value="100" min="0" max="127" type="range" class="topcoat-range">
 		</div>
 		
-		<div style="display: flex; gap: 10px"> <label style="padding: 5px;">Sample</label>
+		<div style="display: flex; gap: 10px">
 			${samplePickerhtml}
 		</div>
 	</div>`;
 
 
-	for (var bar = 0; bar < sequenceSettings.bars; ++bar) {
-		html += '<div style="display: grid; grid-template-columns: 100px 160px 160px 160px 160px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.8);">';
+	for (var bar = 0; bar < seqSettings.bars; ++bar) {
+		html += `<div id="bar${bar}" style="display: grid; width: fit-content; margin-bottom: 6px; grid-template-columns: 100px 160px 160px 160px 160px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.3);">`;
 		for (let v in voiceEnum) {
 			html += `<div class="grid-container3">${v}</div><div class="grid-container3">`;
-			for (var beat = 0; beat < sequenceSettings.beatsPerBar; beat++) {
-				var barBreak = sequenceSettings.beatsPerBar / 4;
+			for (var beat = 0; beat < seqSettings.beatsPerBar; beat++) {
+				var barBreak = seqSettings.beatsPerBar / 4;
 				if (beat % barBreak == 0 && beat > 0) {
 					html += '</div><div class="grid-container3">';
 				}
@@ -395,7 +398,7 @@ function BuildSequenceHtml()
 
 	// Update the button bar to show current sequence
 	ClearButtonBar();
-	document.getElementById(`btnSeq${sequenceSettings.seq}`).style.backgroundColor = "#737373";
+	document.getElementById(`btnSeq${seqSettings.seq}`).style.backgroundColor = "#737373";
 }
 
 
@@ -410,6 +413,16 @@ function RequestSequence(seq, bar)
 {
 	// Creates a SysEx request for a voice's configuration
 	var message = [0xF0, requestEnum.GetSequence, seq, bar, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
+    output.send(message);
+}
+
+
+function RequestStatus()
+{
+	// Creates a SysEx request for current playing position
+	var message = [0xF0, requestEnum.GetStatus, 0, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
     output.send(message);
 }
 
@@ -425,6 +438,7 @@ function RequestConfig(voice)
 {
 	// Creates a SysEx request for a voice's configuration
 	var message = [0xF0, requestEnum.GetVoiceConfig, voice, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
     output.send(message);
 }
 
@@ -433,6 +447,7 @@ function RequestSamples(bank)
 {
 	// Creates a SysEx request for a voice's configuration
 	var message = [0xF0, requestEnum.GetSamples, bank, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
     output.send(message);
 }
 
@@ -458,8 +473,34 @@ function decodeSysEx(midiData, headerLen)
 }
 
 
-//var sampleList = new Array(2).fill([]);
-var sampleList = [];
+function DisplayPosition()
+{
+	// Updates the currently playing bar - FIXME should update sequence display if changed on module
+	for (var i = 0; i < 4; ++i) {
+		var barGrid = document.getElementById("bar" + i);
+		if (barGrid != null) {
+			if (seqSettings.playing && seqSettings.playingSeq == seqSettings.seq && i == seqSettings.playingBar) {
+				barGrid.style.border = "1px solid rgba(255, 0, 0, 0.8)";
+			} else {
+				barGrid.style.border = "1px solid rgba(0, 0, 0, 0.3)";
+			}
+		}
+	}
+	StatusTimer();
+}
+
+
+function StatusTimer(wait)
+{
+	// Request playing position update periodically
+	if (wait == null) {
+		wait = seqSettings.playing ? 250 : 1500;
+	}
+	if (document.getElementById("autoUpdate").checked) {
+		setTimeout(function(){ RequestStatus(); }, wait);
+	}
+}
+
 
 function getMIDIMessage(midiMessage) 
 {
@@ -469,6 +510,16 @@ function getMIDIMessage(midiMessage)
     if (midiMessage.data[0] == 0xF0) {
 
 		switch (midiMessage.data[1]) {
+			case requestEnum.GetStatus:
+				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
+				seqSettings.playing = midiMessage.data[2];
+				seqSettings.playingSeq = midiMessage.data[3];
+				seqSettings.playingBar = midiMessage.data[4];
+				seqSettings.playingBeat = midiMessage.data[5];
+				DisplayPosition();
+
+			break;
+
 			case requestEnum.GetSamples:
 				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
 				var bank = midiMessage.data[2];
@@ -490,34 +541,34 @@ function getMIDIMessage(midiMessage)
 			case requestEnum.GetSequence:
 				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
 
-				sequenceSettings.seq = midiMessage.data[2];
-				sequenceSettings.beatsPerBar = Math.max(midiMessage.data[3], beatOptions[0]);
-				sequenceSettings.bars = Math.max(midiMessage.data[4], 1);
-				sequenceSettings.bar = midiMessage.data[5];
+				seqSettings.seq = midiMessage.data[2];
+				seqSettings.beatsPerBar = Math.max(midiMessage.data[3], beatOptions[0]);
+				seqSettings.bars = Math.max(midiMessage.data[4], 1);
+				seqSettings.bar = midiMessage.data[5];
 
 				// If received the first drum bar build the html accordingly
 				if (requestNo == 0) {
 					BuildSequenceHtml();
-					document.getElementById(`barCount${sequenceSettings.bars}`).checked = true;
-					document.getElementById(`beatsPerBar${sequenceSettings.beatsPerBar}`).checked = true;
+					document.getElementById(`barCount${seqSettings.bars}`).checked = true;
+					document.getElementById(`beatsPerBar${seqSettings.beatsPerBar}`).checked = true;
 				}
 
 				var index = 6;
 				for (var b = 0; b < maxBeatsPerBar; b++) {
 					for (let v in voiceEnum) {
-						if (b < sequenceSettings.beatsPerBar) {
-							document.getElementById(sequenceSettings.bar + v + b).setAttribute("level", midiMessage.data[index]);
-							document.getElementById(sequenceSettings.bar+ v + b).setAttribute("index", midiMessage.data[index + 1]);
+						if (b < seqSettings.beatsPerBar) {
+							document.getElementById(seqSettings.bar + v + b).setAttribute("level", midiMessage.data[index]);
+							document.getElementById(seqSettings.bar+ v + b).setAttribute("index", midiMessage.data[index + 1]);
 							if (midiMessage.data[index] > 0) {
-								BeatColour(sequenceSettings.bar + v + b);
+								BeatColour(seqSettings.bar + v + b);
 							}						}
 						index += 2;
 					}
 				}
 				
 				// Request the configuration data for the first drum voice
-				if (++requestNo < sequenceSettings.bars) {
-					RequestSequence(sequenceSettings.seq, requestNo);
+				if (++requestNo < seqSettings.bars) {
+					RequestSequence(seqSettings.seq, requestNo);
 				}
 				break;
 

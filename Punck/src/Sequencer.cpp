@@ -135,6 +135,7 @@ Sequencer::SeqInfo Sequencer::GetSeqInfo(uint8_t seq)
 }
 
 
+
 uint32_t Sequencer::GetBar(uint8_t** buff, uint8_t seq, uint8_t bar)
 {
 	*buff = (uint8_t*)&(sequence[seq].bar[bar]);
