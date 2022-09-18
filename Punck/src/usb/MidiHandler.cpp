@@ -104,25 +104,28 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint
 }
 
 
-uint32_t MidiHandler::ReadCfgSysEx()
+uint32_t MidiHandler::ReadCfgSysEx(uint8_t headerLength)
 {
 	// Converts a Configuration encoded Sysex packet to a regular byte array (two bytes are header)
 	// Data split into 4 byte words, each starting with appropriate sysEx header byte
-	for (uint32_t i = 2; i < sysExCount; ++i) {
-		uint32_t idx = (i / 2) - 1;
-		if (i % 2 == 0) {
+	bool lowerNibble = true;
+	for (uint32_t i = headerLength; i < sysExCount; ++i) {
+		uint32_t idx = (i - headerLength) / 2;
+		if (lowerNibble) {
 			config.configBuffer[idx] = sysEx[i];
 		} else {
 			config.configBuffer[idx] += sysEx[i] << 4;
 		}
+		lowerNibble = !lowerNibble;
 	}
-	return (sysExCount / 2) - 1;
+	return (sysExCount - headerLength) / 2;
 }
 
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D, GetStatus = 0x1E};
+	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D,
+		GetStatus = 0x1E, GetADC = 0x1F, SetADC = 0x2F};
 
 	// Check if SysEx contains read config command
 	switch (sysEx[0]) {
@@ -145,7 +148,7 @@ void MidiHandler::ProcessSysex()
 
 		case SetVoiceConfig:
 			if (sysEx[1] < VoiceManager::voiceCount) {
-				uint32_t bytes = ReadCfgSysEx();
+				uint32_t bytes = ReadCfgSysEx(2);
 				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
 			}
 			break;
@@ -155,18 +158,18 @@ void MidiHandler::ProcessSysex()
 			break;
 
 		case GetStatus:
-			{
-				// Get playing status from sequence
-				config.configBuffer[0] = GetStatus;
-				config.configBuffer[1] = sequencer.playing ? 1 : 0;					// playing
-				config.configBuffer[2] = sequencer.activeSequence; 					// active sequence
-				config.configBuffer[3] = sequencer.currentBar;     					// current bar
-				config.configBuffer[4] = sequencer.currentBeat;    					// current beat
+		{
+			// Get playing status from sequence
+			config.configBuffer[0] = GetStatus;
+			config.configBuffer[1] = sequencer.playing ? 1 : 0;					// playing
+			config.configBuffer[2] = sequencer.activeSequence; 					// active sequence
+			config.configBuffer[3] = sequencer.currentBar;     					// current bar
+			config.configBuffer[4] = sequencer.currentBeat;    					// current beat
 
-				uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
-				usb->SendData(sysExOut, len, inEP);
-			}
+			uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
+			usb->SendData(sysExOut, len, inEP);
 			break;
+		}
 
 		case GetSequence:
 		{
@@ -218,6 +221,23 @@ void MidiHandler::ProcessSysex()
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
+
+		case GetADC:
+			{
+				// Get current (virtual) ADC settings
+				config.configBuffer[0] = GetADC;
+
+				uint32_t len = ConstructSysEx((uint8_t*)ADC_array, sizeof(ADC_array), config.configBuffer, 1, split);
+				usb->SendData(sysExOut, len, inEP);
+			}
+			break;
+
+		case SetADC:
+			{
+				uint32_t bytes = ReadCfgSysEx(1);
+				memcpy((uint8_t*)ADC_array, config.configBuffer, bytes);
+			}
+			break;
 	}
 
 

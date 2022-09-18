@@ -14,7 +14,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E
+    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E, GetADC: 0x1F, SetADC: 0x2F
 };
 
 
@@ -68,6 +68,16 @@ var hihatSettings = [
 	{name: 'Partial 5 Frequency', value: 'hhPFreq5'},
 ];
 
+
+var ADC_Controls = [
+	{name: 'Sample Speed', value: 'ADC_SampleSpeed'},
+	{name: 'Kick Decay', value: 'ADC_KickDecay'},
+	{name: 'Kick Filter', value: 'ADC_KickFilter'},
+	{name: 'Tempo', value: 'ADC_Tempo'},
+	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
+	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
+	{name: 'Snare Filter', value: 'ADC_SnareFilter'},
+];
 
 var variationPicker = [
 	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0'},
@@ -162,7 +172,9 @@ function afterLoad()
 	for (var s = 0; s < 6; ++s) {
 		html += `<button id="btnSeq${s}" class="topcoat-button-bar__button--large" onclick="RefreshSequence(${s})" >${s + 1}</button> `;
 	}
-	html += `&nbsp;&nbsp;<button id="btnEditConfig" class="topcoat-button-bar__button--large" onclick="RefreshConfig();" style="background-color: rgb(74, 77, 78)">Drum Settings</button></div>`;
+	html += `&nbsp;&nbsp;<button id="btnEditConfig" class="topcoat-button-bar__button--large" onclick="RefreshConfig();" style="background-color: rgb(74, 77, 78)">Drum Settings</button>
+			 &nbsp;&nbsp;<button id="btnEditADC" class="topcoat-button-bar__button--large" onclick="RefreshADC();" style="background-color: rgb(74, 77, 78)">ADC Editor</button>
+		</div>`;
 	document.getElementById("buttonBar").innerHTML = html;
 	ClearButtonBar();
 	
@@ -177,6 +189,7 @@ function ClearButtonBar()
 		document.getElementById(`btnSeq${s}`).style.backgroundColor = "rgb(74, 77, 78)";
 	}
 	document.getElementById(`btnEditConfig`).style.backgroundColor = "rgb(74, 77, 78)";
+	document.getElementById(`btnEditADC`).style.backgroundColor = "rgb(74, 77, 78)";
 }
 
 
@@ -330,6 +343,61 @@ function SequenceChanged()
 }
 
 
+function ADCChanged()
+{
+	var adcSettings = new Uint16Array(ADC_Controls.length);
+
+	for (var i = 0; i < ADC_Controls.length; ++i) {
+		adcSettings[i] = document.getElementById(ADC_Controls[i].value).value;
+	}
+	var byteArray = new Uint8Array(adcSettings.buffer);
+
+    // Convert to sysex information
+    var message = new Uint8Array(3 + (byteArray.length * 2));
+    message[0] = 0xF0;
+    message[1] = requestEnum.SetADC;
+    var msgPos = 2;
+   
+	// Since the upper bit of a sysex byte cannot be set, split each byte into an upper and lower nibble for transmission
+	var lowerNibble = true;
+    for (i = 0; i < byteArray.length * 2; ++i) {
+		if (lowerNibble) {
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] & 0xF;
+		} else {
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] >> 4;
+		}
+        lowerNibble = !lowerNibble;
+    }
+	message[msgPos] = 0xF7;
+
+	PrintMessage(message);			// Print contents of payload to console
+	output.send(message);
+
+
+}
+
+function BuildADCHtml(settings)
+{
+	var adcSettings = new Uint16Array(new Uint8Array(settings).buffer);
+
+	// Build html lists of settings for each drum voice
+	var html = '<div style="display: grid; grid-template-columns: 150px 300px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.3);">';
+	for (var i = 0; i < ADC_Controls.length; ++i) {
+		html += `<div class="grid-container3">${ADC_Controls[i].name}</div>` +
+				`<div style="padding-top: 12px;">
+					<input id="${ADC_Controls[i].value}" onchange="ADCChanged();" value="${adcSettings[i]}" min="0" max="65535" type="range" class="topcoat-range">	
+				 </div>`;
+	}
+
+	html += '</div>'
+
+	document.getElementById("drumEditor").innerHTML = html;
+
+	ClearButtonBar();
+	document.getElementById(`btnEditADC`).style.backgroundColor = "#737373";
+
+}
+
 
 function BuildSequenceHtml()
 {
@@ -366,16 +434,11 @@ function BuildSequenceHtml()
 		samplePickerhtml += `</select></div>`;
 	}
 
+	// Add open/closed hihat picker
 	samplePickerhtml += `<div id="hihatPickerBlock" style="display: none;">
-							<label style="padding: 5px;">Open</label>
-							<select id="hihatPicker" class="docNav" onchange="PickerChanged('hihatPicker');">
-								<option value="0">0% </option>
-								<option value="31">25% </option>
-								<option value="63">50% </option>
-								<option value="95">75%  </option>
-								<option value="127">100%  </option>
-							</select>
-						</div>`
+							<label style="padding: 5px;">Open  </label>   
+							<input id="hihatPicker" onchange="PickerChanged('hihatPicker');" value="100" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
+						</div>`;
 
 	// Note editing options (volume and note variation)
 	html += 
@@ -446,6 +509,14 @@ function RefreshConfig()
 }
 
 
+function RefreshADC()
+{
+	var message = [0xF0, requestEnum.GetADC, 0, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
+    output.send(message);
+}
+
+
 function RequestConfig(voice)
 {
 	// Creates a SysEx request for a voice's configuration
@@ -470,17 +541,25 @@ function onMIDIFailure()
 }
 
 
-function decodeSysEx(midiData, headerLen)
+function DecodeSysEx(data, headerLen)
 {
 	// As upper bit cannot be set in a SysEx byte, data is sent a nibble at a time - reconstruct into byte array
 	var decodedSysEx = [];
-	for (i = headerLen; i < midiData.length - 1; ++i) {
-		if (i % 2 != 0) {
-			decodedSysEx[Math.trunc((i - headerLen) / 2)] = midiData[i];
+	var midiData = data.slice(headerLen);
+	for (i = 0; i < midiData.length - 1; ++i) {
+		if (i % 2 == 0) {
+			decodedSysEx[Math.trunc((i) / 2)] = midiData[i];
 		} else {
-			decodedSysEx[Math.trunc((i - headerLen) / 2)] += (midiData[i] << 4);
+			decodedSysEx[Math.trunc((i) / 2)] += (midiData[i] << 4);
 		}
 	}
+	// for (i = headerLen; i < midiData.length - 1; ++i) {
+	// 	if (i % 2 != 0) {
+	// 		decodedSysEx[Math.trunc((i - headerLen) / 2)] = midiData[i];
+	// 	} else {
+	// 		decodedSysEx[Math.trunc((i - headerLen) / 2)] += (midiData[i] << 4);
+	// 	}
+	// }
 	return decodedSysEx;
 }
 
@@ -522,6 +601,12 @@ function getMIDIMessage(midiMessage)
     if (midiMessage.data[0] == 0xF0) {
 
 		switch (midiMessage.data[1]) {
+			case requestEnum.GetADC:
+				var sysEx = DecodeSysEx(midiMessage.data, 2);	// 2 is length of header
+				PrintMessage(sysEx, true);						// Print contents of payload to console
+				BuildADCHtml(sysEx);
+				break;
+
 			case requestEnum.GetStatus:
 				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
 				seqSettings.playing = midiMessage.data[2];
@@ -529,8 +614,7 @@ function getMIDIMessage(midiMessage)
 				seqSettings.playingBar = midiMessage.data[4];
 				seqSettings.playingBeat = midiMessage.data[5];
 				DisplayPosition();
-
-			break;
+				break;
 
 			case requestEnum.GetSamples:
 				PrintMessage(midiMessage.data, true);			// Print contents of payload to console
@@ -586,8 +670,8 @@ function getMIDIMessage(midiMessage)
 
 
 			case requestEnum.GetVoiceConfig:
-				var sysEx = decodeSysEx(midiMessage.data, 3);		// 3 is length of header
-				PrintMessage(sysEx, true);			// Print contents of payload to console
+				var sysEx = DecodeSysEx(midiMessage.data, 3);		// 3 is length of header
+				PrintMessage(sysEx, true);							// Print contents of payload to console
 
 				if (requestNo == 0) {
 					BuildConfigHtml();
@@ -620,6 +704,11 @@ function BytesToFloat(buff)
 	return Math.trunc(fl * 10000000) / 10000000;
 }
 
+
+function BytesToUInt16(buff) 
+{
+    return new Uint16Array(new Uint8Array(buff).buffer)[0];
+}
 
 function updateConfig(index)
 {

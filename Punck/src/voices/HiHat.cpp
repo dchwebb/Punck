@@ -21,9 +21,8 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 	// Control over decay note index sets initial level; scaled by pot - FIXME change ADC for production
 	noteRange = noteRange == 0 ? 128 : noteRange;
 	float closed = sqrt(((float)noteOffset + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
-	closed += (static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f) - 0.5f;		// pot scales +/-0.5
+	closed += (static_cast<float>(ADC_array[ADC_HiHatDecay]) / 65536.0f) - 0.5f;		// pot scales +/-0.5
 	decayScale = std::min(0.9985f + (0.0015f * closed), 0.99998f);
-	//decayScale = 0.999 + (0.0009 * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f);
 
 	for (uint8_t i = 0; i < 6; ++i) {
 		partialPeriod[i] = freqToSqPeriod / config.partialFreq[i];

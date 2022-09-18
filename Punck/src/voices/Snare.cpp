@@ -30,7 +30,7 @@ void Snare::CalcOutput()
 {
 	if (playing) {
 		float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
-		float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;		// FIXME - use dedicated ADC
+		float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
 
 		float partialOutput = 0.0f;
 		bool partialsInaudible = true;							// To calculate when to terminate note

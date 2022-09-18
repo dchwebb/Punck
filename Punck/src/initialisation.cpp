@@ -274,6 +274,15 @@ void InitAdcPins(ADC_TypeDef* ADC_No, std::initializer_list<uint8_t> channels) {
 // Settings used for both ADC1 and ADC2
 void InitADC()
 {
+	// If using web editor to control ADC settings initialise all values to halfway point
+	if (WEB_EDITOR_ADC) {
+		for (uint8_t i; i < ADC2_BUFFER_LENGTH; ++i) {
+			ADC_array[i] = 32767;
+		}
+		return;
+	}
+
+
 	// Configure clocks
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;			// GPIO port clock
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;

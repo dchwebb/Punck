@@ -36,7 +36,7 @@ private:
 	void QueueInc();
 	void ProcessSysex();
 	uint32_t ConstructSysEx(uint8_t* buffer, uint32_t len, uint8_t* headerBuffer, uint32_t headerLen, bool noSplit);
-	uint32_t ReadCfgSysEx();
+	uint32_t ReadCfgSysEx(uint8_t headerLength);
 	static constexpr bool noSplit = true;
 	static constexpr bool split = false;
 
