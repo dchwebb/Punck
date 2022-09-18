@@ -75,6 +75,48 @@ Sequencer::Sequencer()
 
 	sequence[0].bar[1].beat[14][VoiceManager::samplerA].index = 2;
 	sequence[0].bar[1].beat[14][VoiceManager::samplerA].level = 70;
+
+
+
+	// Create swingpattern for testing
+	sequence[1].info.bars = 1;
+	sequence[1].info.beatsPerBar = 24;
+
+	sequence[1].bar[0].beat[0][VoiceManager::kick].level = 127;
+	sequence[1].bar[0].beat[0][VoiceManager::hihat].level = 40;
+
+	sequence[1].bar[0].beat[2][VoiceManager::hihat].level = 20;
+
+	sequence[1].bar[0].beat[3][VoiceManager::snare].level = 110;
+
+	sequence[1].bar[0].beat[4][VoiceManager::hihat].level = 40;
+	sequence[1].bar[0].beat[4][VoiceManager::kick].level = 100;
+
+	sequence[1].bar[0].beat[6][VoiceManager::snare].level = 100;
+	sequence[1].bar[0].beat[6][VoiceManager::hihat].level = 60;
+
+	sequence[1].bar[0].beat[8][VoiceManager::hihat].level = 40;
+
+	sequence[1].bar[0].beat[10][VoiceManager::kick].level = 127;
+	sequence[1].bar[0].beat[10][VoiceManager::hihat].level = 100;
+
+	sequence[1].bar[0].beat[12][VoiceManager::kick].level = 127;
+	sequence[1].bar[0].beat[12][VoiceManager::hihat].level = 50;
+
+	sequence[1].bar[0].beat[14][VoiceManager::hihat].level = 10;
+
+	sequence[1].bar[0].beat[15][VoiceManager::snare].level = 100;
+
+	sequence[1].bar[0].beat[16][VoiceManager::kick].level = 100;
+	sequence[1].bar[0].beat[16][VoiceManager::hihat].level = 40;
+
+	sequence[1].bar[0].beat[18][VoiceManager::snare].level = 120;
+	sequence[1].bar[0].beat[18][VoiceManager::hihat].level = 80;
+
+	sequence[1].bar[0].beat[20][VoiceManager::hihat].level = 70;
+
+	sequence[1].bar[0].beat[22][VoiceManager::kick].level = 127;
+	sequence[1].bar[0].beat[22][VoiceManager::hihat].level = 50;
 }
 
 
@@ -103,8 +145,8 @@ void Sequencer::Play()
 		}
 
 		// Get tempo
-		tempo = 0.9f * tempo + 0.1f * (0.5f * ADC_array[ADC_Tempo]);
-		uint32_t beatLen = 40000.0f - tempo;
+		tempo = 0.9f * tempo + 0.1f * (0.25f * ADC_array[ADC_Tempo]);
+		uint32_t beatLen = (18000.0f - tempo) * (16.0f / (float)seq.info.beatsPerBar);
 
 		if (position == 0) {
 			for (uint32_t i = 0; i < VoiceManager::voiceCount; ++i) {

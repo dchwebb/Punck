@@ -8,9 +8,11 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 	partialpos[0] = 0.3f;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
 
+	float freq = (config.baseFreq * (static_cast<float>(ADC_array[ADC_SnareTuning]) / 65536.0f + 0.5f));
+
 	for (uint8_t i = 0; i < partialCount; ++i) {
 		partialLevel[i] = config.partialInitLevel[i];
-		partialInc[i] = FreqToInc(config.baseFreq * config.partialFreqOffset[i]);
+		partialInc[i] = FreqToInc(freq * config.partialFreqOffset[i]);
 	}
 	noiseLevel = config.noiseInitLevel;
 	velocityScale = velocity;

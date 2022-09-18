@@ -77,6 +77,7 @@ var ADC_Controls = [
 	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
 	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
 	{name: 'Snare Filter', value: 'ADC_SnareFilter'},
+	{name: 'Snare Tuning', value: 'ADC_SnareTuning'},
 ];
 
 var variationPicker = [

@@ -9,7 +9,7 @@
 extern volatile uint32_t SysTickVal;
 
 #define ADC1_BUFFER_LENGTH 4				// currently unused
-#define ADC2_BUFFER_LENGTH 7
+#define ADC2_BUFFER_LENGTH 8
 #define WEB_EDITOR_ADC true					// Web editor controls ADC settings
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
@@ -32,6 +32,7 @@ enum ADC_Controls {
 	ADC_HiHatDecay  = 4,
 	ADC_SnareDecay  = 5,
 	ADC_SnareFilter = 6,
+	ADC_SnareTuning = 7,
 };
 enum channel {left = 0, right = 1};
 
