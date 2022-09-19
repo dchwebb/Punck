@@ -101,6 +101,86 @@ var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
 
+function DownloadData()
+{
+	var fileName = `Sequence${seqSettings.seq + 1}.json`;
+	var data = SerialiseDrum();
+	//saveData(data, fileName);
+	var a = document.createElement("a");
+	var json = JSON.stringify(data),
+		blob = new Blob([json], {type: "octet/stream"}),
+		url = window.URL.createObjectURL(blob);
+	a.href = url;
+	a.download = fileName;
+	a.click();
+	window.URL.revokeObjectURL(url);
+
+	// var saveData = (function () {
+	// 	var a = document.createElement("a");
+	// 	return function (data, fileName) {
+	// 		var json = JSON.stringify(data),
+	// 			blob = new Blob([json], {type: "octet/stream"}),
+	// 			url = window.URL.createObjectURL(blob);
+	// 		a.href = url;
+	// 		a.download = fileName;
+	// 		a.click();
+	// 		window.URL.revokeObjectURL(url);
+	// 	};
+	// 	}());
+
+
+	// var fileName = `Sequence${seqSettings.seq + 1}.json`;
+	// var data = SerialiseDrum();
+	// saveData(data, fileName);
+}
+
+
+function SerialiseDrum()
+{
+	var serialData = { }; 	// main object
+	var i = 0;
+	serialData[i++] = seqSettings;
+	for (bar = 0; bar < seqSettings.bars; ++bar) {
+		for (var b = 0; b < maxBeatsPerBar; b++) {
+			for (let v in voiceEnum) {
+				var beatElement = document.getElementById(bar + v + b);
+				var level = 0;
+				var index = 0;
+				if (beatElement != null) {
+					level = parseInt(beatElement.getAttribute("level"));
+					index = parseInt(beatElement.getAttribute("index"));
+					serialData[i++] = {'pos': bar + v + b, 'level': level, 'index': index}; 
+				}
+			}
+		}
+	}
+	return serialData;
+}
+
+
+function DeserialiseDrum(data)
+{
+	var serialData = JSON.parse(data); 	// main object
+	seqSettings.bars = serialData[0].bars;
+	seqSettings.beatsPerBar = serialData[0].beatsPerBar;
+	BuildSequenceHtml();
+	var i = 1;
+	var item = serialData[1];
+	while (item != null) {
+		var beat = document.getElementById(item.pos);
+		beat.setAttribute("level", item.level);
+		beat.setAttribute("index", item.index);
+		BeatColour(beat.id);
+		item = serialData[++i];
+	}
+
+	// transmit sequence to module
+	for (var b = 0; b < seqSettings.bars; ++b) {
+		UpdateDrum(b);
+	}
+}
+
+
 function PrintMessage(message, received)
 {
 	// Print contents of payload to console
@@ -125,6 +205,8 @@ function SeqStart()
 	output.send(message);
 	StatusTimer(100);
 }
+
+
 
 
 function UpdateDrum(bar, seqStructureChanged)
@@ -178,6 +260,19 @@ function afterLoad()
 		</div>`;
 	document.getElementById("buttonBar").innerHTML = html;
 	ClearButtonBar();
+
+	// set up sequence importer
+	var importer = document.getElementById("seqImporter");
+	importer.addEventListener("change", function() {
+		if (this.files && this.files[0]) {
+			var myFile = this.files[0];
+			var reader = new FileReader();
+			reader.addEventListener('load', function(e) {
+				DeserialiseDrum(e.target.result)
+			});
+			reader.readAsBinaryString(myFile);
+		}   
+	  });
 	
     navigator.requestMIDIAccess({ sysex: true }).then(onMIDISuccess, onMIDIFailure);
 }
@@ -475,6 +570,8 @@ function BuildSequenceHtml()
 	// Update the button bar to show current sequence
 	ClearButtonBar();
 	document.getElementById(`btnSeq${seqSettings.seq}`).style.backgroundColor = "#737373";
+	document.getElementById(`barCount${seqSettings.bars}`).checked = true;
+	document.getElementById(`beatsPerBar${seqSettings.beatsPerBar}`).checked = true;
 }
 
 
@@ -586,7 +683,7 @@ function StatusTimer(wait)
 {
 	// Request playing position update periodically
 	if (wait == null) {
-		wait = seqSettings.playing ? 250 : 1500;
+		wait = seqSettings.playing ? 300 : 1500;
 	}
 	if (document.getElementById("autoUpdate").checked) {
 		setTimeout(function(){ RequestStatus(); }, wait);
@@ -646,8 +743,6 @@ function getMIDIMessage(midiMessage)
 				// If received the first drum bar build the html accordingly
 				if (requestNo == 0) {
 					BuildSequenceHtml();
-					document.getElementById(`barCount${seqSettings.bars}`).checked = true;
-					document.getElementById(`beatsPerBar${seqSettings.beatsPerBar}`).checked = true;
 				}
 
 				var index = 6;
@@ -658,7 +753,8 @@ function getMIDIMessage(midiMessage)
 							document.getElementById(seqSettings.bar+ v + b).setAttribute("index", midiMessage.data[index + 1]);
 							if (midiMessage.data[index] > 0) {
 								BeatColour(seqSettings.bar + v + b);
-							}						}
+							}						
+						}
 						index += 2;
 					}
 				}
