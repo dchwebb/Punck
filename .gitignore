@@ -1,7 +1,7 @@
 Punck/Debug/*
 Punck/Drivers/FatFs/doc/*
 
-*.html
+#*.html
 *.log
 *.bak
 *.fxp

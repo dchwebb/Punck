@@ -1,0 +1,84 @@
+<html>
+<head>
+<!--<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">-->
+<meta name="description" content="Mountjoy Modular MIDI editor">
+<title>Mountjoy Modular MIDI editor</title>
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="user-scalable=no,initial-scale = 1.0,maximum-scale = 1.0">
+<link rel="stylesheet" type="text/css" href="fonts/stylesheet.css">
+<link rel="stylesheet" type="text/css" href="css/topcoat-desktop-dark.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" type="text/css" href="css/brackets.css">
+<link rel="stylesheet" type="text/css" href="css/dropdown.css">
+<script type="text/javascript" src="MIDI.js"></script>
+
+
+<style>
+.grid-container {
+	display: grid;
+	grid-template-columns: 210px 210px;
+	padding: 10px;
+	width: 440;
+}
+
+.grid-container3 {
+	padding: 5px;
+	color: #aaaaaa;
+}
+
+.grid-container2 {
+	display: grid;
+	grid-template-columns: auto auto;
+	padding: 5px;
+	border: 0px solid rgba(0, 0, 0, 0.8);
+	color: #aaaaaa;
+}
+
+.grid-span {
+	grid-column: 1/3;
+	/* margin: auto; */
+}
+</style>
+</head>
+
+<body class="dark">
+	<div style="display: grid; grid-template-columns: 150px 100px; padding: 10px;">
+		<div>Connection Status:</div>
+		<div id="connectionStatus" style="color: #d6756a;">Unconnected</div>
+	</div>
+
+	<div id="buttonBar" style="display: grid; grid-template-columns: 140px 500px; padding: 10px;"></div>
+	</div>
+
+	<div id="drumEditor" style="padding: 10px;">
+	</div>
+
+	<div id="buttonBar" style="display: grid; grid-template-columns: 110px 200px 170px 400px; padding: 10px;">
+		<button id="btnStart" class="topcoat-button-bar__button--large" onclick="SeqStart();">Start/Stop</button>
+		
+		<label style="padding: 10px;" class="topcoat-checkbox">
+			<input id="autoUpdate" type="checkbox" onclick="StatusTimer(100);"><div class="topcoat-checkbox__checkmark"></div>
+			Auto-Update
+		</label>
+
+		<div style="text-align: right; padding: 8px;">Edit Mode </div>
+		<div style="padding: 10px;">
+			<input type="radio" id="editModeDelete" name="editMode">
+			<div class="topcoat-radio-button__checkmark"></div> 
+			<label class="topcoat-radio-button"> Add/Delete </label> 
+			<input type="radio" id="editModeSelect" name="editMode" checked>
+			<div class="topcoat-radio-button__checkmark"></div> 
+			<label class="topcoat-radio-button"> Add/Select </label> 
+		</div>
+	</div>
+	
+	<div style="padding: 10px;">
+		<button id="btnDownload" class="topcoat-button-bar__button--large" onclick="SerialiseSequence();">Download Sequence</button>
+		<label class="topcoat-button-bar__button--large">
+			<input type="file" id="seqImporter" style="display: none;">Import Sequence
+		</label>
+	</div>
+</body>
+</html>

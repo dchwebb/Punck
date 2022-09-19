@@ -101,51 +101,18 @@ var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
 
-function DownloadData()
-{
-	var fileName = `Sequence${seqSettings.seq + 1}.json`;
-	var data = SerialiseDrum();
-	//saveData(data, fileName);
-	var a = document.createElement("a");
-	var json = JSON.stringify(data),
-		blob = new Blob([json], {type: "octet/stream"}),
-		url = window.URL.createObjectURL(blob);
-	a.href = url;
-	a.download = fileName;
-	a.click();
-	window.URL.revokeObjectURL(url);
-
-	// var saveData = (function () {
-	// 	var a = document.createElement("a");
-	// 	return function (data, fileName) {
-	// 		var json = JSON.stringify(data),
-	// 			blob = new Blob([json], {type: "octet/stream"}),
-	// 			url = window.URL.createObjectURL(blob);
-	// 		a.href = url;
-	// 		a.download = fileName;
-	// 		a.click();
-	// 		window.URL.revokeObjectURL(url);
-	// 	};
-	// 	}());
-
-
-	// var fileName = `Sequence${seqSettings.seq + 1}.json`;
-	// var data = SerialiseDrum();
-	// saveData(data, fileName);
-}
-
-
 function SerialiseDrum()
 {
-	var serialData = { }; 	// main object
+	// Save a sequence to a file
+	var fileName = `Sequence${seqSettings.seq + 1}.json`;
+	var serialData = {};
+	
 	var i = 0;
 	serialData[i++] = seqSettings;
 	for (bar = 0; bar < seqSettings.bars; ++bar) {
 		for (var b = 0; b < maxBeatsPerBar; b++) {
 			for (let v in voiceEnum) {
 				var beatElement = document.getElementById(bar + v + b);
-				var level = 0;
-				var index = 0;
 				if (beatElement != null) {
 					level = parseInt(beatElement.getAttribute("level"));
 					index = parseInt(beatElement.getAttribute("index"));
@@ -154,7 +121,21 @@ function SerialiseDrum()
 			}
 		}
 	}
-	return serialData;
+
+	var a = document.createElement("a");
+	var json = JSON.stringify(serialData),
+		blob = new Blob([json], {type: "octet/stream"}),
+		url = window.URL.createObjectURL(blob);
+	a.href = url;
+	a.download = fileName;
+	a.click();
+	window.URL.revokeObjectURL(url);
+}
+
+
+function SerialiseDrum()
+{
+
 }
 
 
