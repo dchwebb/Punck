@@ -38,15 +38,10 @@ private:
 		} bar[4];
 	} sequence[6];
 
-
-
-
 	float tempo;
-
-
 	uint32_t position;
 
-
+	void ChangeSequence(uint8_t newSeq);
 };
 
 extern Sequencer sequencer;

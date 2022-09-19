@@ -170,9 +170,31 @@ void Sequencer::Play()
 }
 
 
+void Sequencer::ChangeSequence(uint8_t seq)
+{
+	// Change playing sequence to synchronise time when changing between different beats per bar
+	if (seq != activeSequence) {
+		SeqInfo& oldSeq = sequence[activeSequence].info;
+		SeqInfo& newSeq = sequence[seq].info;
+
+		if (playing && oldSeq.beatsPerBar != newSeq.beatsPerBar) {
+
+			// Normalise position
+			float oldbeatLen = (18000.0f - tempo) * (16.0f / (float)oldSeq.beatsPerBar);
+			float oldPos = (float)position + (oldbeatLen * currentBeat);
+			float newbeatLen = (18000.0f - tempo) * (16.0f / (float)newSeq.beatsPerBar);
+
+			currentBeat = std::floor(oldPos / newbeatLen);
+			position = oldPos - (currentBeat * newbeatLen);
+		}
+		activeSequence = seq;
+	}
+}
+
+
 Sequencer::SeqInfo Sequencer::GetSeqInfo(uint8_t seq)
 {
-	activeSequence = seq;				// Update active sequence so switching sequence in the editor updates playing sequence
+	ChangeSequence(seq);				// Update active sequence so switching sequence in the editor updates playing sequence
 	return sequence[seq].info;
 }
 
