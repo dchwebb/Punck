@@ -80,10 +80,12 @@ var ADC_Controls = [
 	{name: 'Snare Tuning', value: 'ADC_SnareTuning'},
 ];
 
+var pickerTypeEnum = {discrete: 0, range: 1};
+
 var variationPicker = [
-	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0'},
-	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1'},
-	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock'},
+	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0', pickerType: pickerTypeEnum.discrete},
+	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1', pickerType: pickerTypeEnum.discrete},
+	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
 ];
 
 
@@ -101,7 +103,7 @@ var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
 
-function SerialiseDrum()
+function SerialiseSequence()
 {
 	// Save a sequence to a file
 	var fileName = `Sequence${seqSettings.seq + 1}.json`;
@@ -130,12 +132,6 @@ function SerialiseDrum()
 	a.download = fileName;
 	a.click();
 	window.URL.revokeObjectURL(url);
-}
-
-
-function SerialiseDrum()
-{
-
 }
 
 
@@ -186,8 +182,6 @@ function SeqStart()
 	output.send(message);
 	StatusTimer(100);
 }
-
-
 
 
 function UpdateDrum(bar, seqStructureChanged)
@@ -290,7 +284,6 @@ function BuildConfigHtml()
 }
 
 
-
 function BeatGotFocus(button)
 {
 	// Clear border of previously selected note
@@ -321,27 +314,55 @@ function BeatGotFocus(button)
 }
 
 
+function BlendColour(lowColour, highColour, range)
+{
+	return [
+		range * (highColour[0] - lowColour[0]) +  lowColour[0],
+		range * (highColour[1] - lowColour[1]) +  lowColour[1],
+		range * (highColour[2] - lowColour[2]) +  lowColour[2]
+	];
+}
+
+
 function BeatColour(button)
 {
 	// Highlight beats according to variation (colour) and volume (brightness)
+
+	// Get Picker type - discrete pickers (eg sampler) use one colour per index, range pickers use a spread of colours for index from 0 - 127
+	for (const picker of variationPicker) {
+		if (button.includes(picker.voice)) {
+			var pt = picker.pickerType;
+		}
+	}
+
 	var beatColour = [
-		{high: [250, 81, 78], low: [100, 77, 78]},
-		{high: [14, 200, 20], low: [74, 100, 78]},
-		{high: [61, 94, 237], low: [74, 77, 100]},
-		{high: [234, 206, 49], low: [100, 100, 78]},
-		{high: [158, 100, 205], low: [80, 77, 100]},
-	]
+		{high: [250, 81, 78], low: [100, 77, 78]},			// red
+		{high: [14, 200, 20], low: [74, 100, 78]},			// green
+		{high: [61, 94, 237], low: [74, 77, 100]},			// blue
+		{high: [234, 206, 49], low: [100, 100, 78]},		// yellow
+		{high: [158, 100, 205], low: [80, 77, 100]},		// purple
+	];
 
 	beat = document.getElementById(button);
 	noteLevel = parseInt(beat.getAttribute("level"));
 	noteIndex = parseInt(beat.getAttribute("index"));
 
-	if (noteLevel > 0) {
+	var colourRange;
+	if (pt == pickerTypeEnum.discrete) {
 		var colourIndex = noteIndex < beatColour.length ? noteIndex : 0;
-		var newRed   = (noteLevel / 127) * (beatColour[colourIndex].high[0] - beatColour[colourIndex].low[0]) +  beatColour[colourIndex].low[0];
-		var newGreen = (noteLevel / 127) * (beatColour[colourIndex].high[1] - beatColour[colourIndex].low[1]) +  beatColour[colourIndex].low[1];
-		var newBlue  = (noteLevel / 127) * (beatColour[colourIndex].high[2] - beatColour[colourIndex].low[2]) +  beatColour[colourIndex].low[2];
-		beat.style.backgroundColor = `rgb(${newRed}, ${newGreen}, ${newBlue})`;
+		colourRange = beatColour[colourIndex];
+	} else 	if (pt == pickerTypeEnum.range) {
+		// Create blend of colours storing the bright and dark values so next caluculation can set level
+		hColour = BlendColour(beatColour[0].high, beatColour[2].high, noteIndex / 127);
+		lColour = BlendColour(beatColour[0].low, beatColour[2].low, noteIndex / 127);
+		colourRange = {high: hColour, low: lColour};
+	} else {
+		colourRange = beatColour[0];
+	}
+
+	if (noteLevel > 0) {
+		var newColour = BlendColour(colourRange.low, colourRange.high, (noteLevel / 127));
+		beat.style.backgroundColor = `rgb(${newColour[0]}, ${newColour[1]}, ${newColour[2]})`;
 	} else {
 		beat.style.backgroundColor = "rgb(74, 77, 78)";
 	}
