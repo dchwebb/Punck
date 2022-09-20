@@ -99,6 +99,10 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint
 	}
 	sysExOut[pos++] = 0xF7;
 
+	if (pos > sysexMaxSize) {
+		int susp = 1;
+	}
+
 	pos = ((pos + 3) / 4) * 4;				// round up output size to multiple of 4
 	return pos;
 }
@@ -130,7 +134,7 @@ void MidiHandler::ProcessSysex()
 	// Check if SysEx contains read config command
 	switch (sysEx[0]) {
 		case GetVoiceConfig:
-			if (sysEx[1] < VoiceManager::voiceCount) {
+			if (sysEx[1] < VoiceManager::Voice::count) {
 				VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
 
 				// Insert header data
@@ -147,7 +151,7 @@ void MidiHandler::ProcessSysex()
 			break;
 
 		case SetVoiceConfig:
-			if (sysEx[1] < VoiceManager::voiceCount) {
+			if (sysEx[1] < VoiceManager::Voice::count) {
 				uint32_t bytes = ReadCfgSysEx(2);
 				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
 			}

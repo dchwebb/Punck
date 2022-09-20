@@ -51,8 +51,8 @@ struct NoteMapper {
 class VoiceManager {
 	friend class CDCHandler;
 public:
-	enum Voice {kick, snare, hihat, toms, samplerA, samplerB};
-	static constexpr uint8_t voiceCount = 5;
+	enum Voice {kick, snare, hihat, toms, samplerA, samplerB, count};
+	//static constexpr uint8_t voiceCount = 5;
 
 	VoiceManager();
 	void VoiceLED(Voice v, bool on);
@@ -67,7 +67,7 @@ public:
 	HiHat hihatPlayer;
 	Toms tomsPlayer;
 
-	NoteMapper noteMapper[voiceCount];
+	NoteMapper noteMapper[Voice::count];
 private:
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};

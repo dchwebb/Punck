@@ -17,7 +17,7 @@ public:
 	NoteMapper* noteMapper;
 
 private:
-	enum class Phase {Off, Ramp1, Ramp2, Ramp3, FastSine, SlowSine} phase;
+	enum class Phase {Off, Ramp, Ramp2, Ramp3, FastSine, SlowSine} phase;
 	//Filter filter{2, LowPass, &(ADC_array[ADC_TomsFilter])};
 
 	float position;
@@ -26,14 +26,13 @@ private:
 
 	float slowSinInc;
 	float slowSinLevel;
+	float pitchScale;
 
 	struct Config {
 		float ramp1Inc = 0.22f;					// Initial steep ramp
-		float ramp2Inc = 0.015f;				// Second slower ramp
-		float ramp3Inc = 0.3f;					// Steep Discontinuity leading to fast sine
-		float fastSinInc = 0.017f;				// Higher frequency of fast sine section
-		float initSlowSinInc = 0.009f;			// Initial frequency of gradually decreasing slow sine wave
-		float sineSlowDownRate = 0.999985f;		// Rate at which slow sine wave frequency decreases
+		float fastSinInc = 0.1f;				// Higher frequency of fast sine section
+		float initSlowSinInc = 0.04f;			// Initial frequency of gradually decreasing slow sine wave
+		float sineSlowDownRate = 0.9995f;		// Rate at which slow sine wave frequency decreases
 	} config;
 
 };

@@ -31,8 +31,6 @@ var kickSettings = [
 
 var tomsSettings = [
 	{name: 'Ramp 1 Inc', value: 'tmRamp1Inc'},
-	{name: 'Ramp 2 Inc', value: 'tmRamp2Inc'},
-	{name: 'Ramp 3 Inc', value: 'tmRamp3Inc'},
 
 	{name: 'Fast Sine Inc', value: 'tmFastSinInc'},
 	{name: 'Slow Sine Inc', value: 'tmInitSlowSinInc'},
@@ -97,14 +95,15 @@ var variationPicker = [
 	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0', pickerType: pickerTypeEnum.discrete},
 	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1', pickerType: pickerTypeEnum.discrete},
 	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
+	{voice: 'Toms', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
 ];
 
 
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
+	{heading: "Toms Settings", id: voiceEnum.Toms, settings: tomsSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
 	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings},
-	{heading: "Toms Settings", id: voiceEnum.Toms, settings: tomsSettings},
 ]
 
 // Settings related to drum sequence editing

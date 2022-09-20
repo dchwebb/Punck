@@ -8,11 +8,12 @@ void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
-	phase = Phase::Ramp1;
+	phase = Phase::Ramp;
 	position = 0.0f;
 	currentLevel = 0.0f;
 	noteMapper->led.On();
 	velocityScale = velocity;
+	pitchScale = 1.0f + (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
 }
 
 
@@ -26,41 +27,24 @@ void Toms::Play(uint8_t voice, uint32_t index)
 void Toms::CalcOutput()
 {
 	switch (phase) {
-	case Phase::Ramp1:
+	case Phase::Ramp:
 		currentLevel = currentLevel + (config.ramp1Inc * (1.0f - currentLevel));
-
-		if (currentLevel > 0.6f) {
-			phase = Phase::Ramp2;
-			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
-		}
-		break;
-
-	case Phase::Ramp2:
-		currentLevel = currentLevel + (config.ramp2Inc * (1.0f - currentLevel));
-
-		if (currentLevel > 0.82f) {
-			currentLevel = 0.78f;				// discontinuity sharply falls at first
-			phase = Phase::Ramp3;
-			GPIOG->ODR &= ~GPIO_ODR_OD11;
-		}
-		break;
-
-	case Phase::Ramp3:
-		currentLevel = currentLevel + (config.ramp3Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.93f) {
 			position = 2.0f;
 			phase = Phase::FastSine;
-
+			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		}
 		break;
 
 	case Phase::FastSine:
+		GPIOG->ODR &= ~GPIO_ODR_OD11;
+
 		position += config.fastSinInc;
 		currentLevel = std::sin(position);
 
 		if (position >= 1.5f * pi) {
-			slowSinInc = config.initSlowSinInc;
+			slowSinInc = config.initSlowSinInc * pitchScale;
 			slowSinLevel = 1.0f;
 			phase = Phase::SlowSine;
 		}

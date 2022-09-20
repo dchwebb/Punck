@@ -34,7 +34,7 @@ private:
 				uint8_t level;		// Volume of note (0-127)
 				uint8_t index;		// Note index (eg for voices with multiple channels like the sampler)
 
-			} beat[maxBeatsPerBar][VoiceManager::voiceCount];
+			} beat[maxBeatsPerBar][VoiceManager::Voice::count];
 		} bar[4];
 	} sequence[6];
 

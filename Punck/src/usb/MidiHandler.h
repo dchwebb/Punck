@@ -73,7 +73,7 @@ private:
 
 	constexpr static uint32_t sysexMaxSize = 512;
 	uint8_t sysEx[sysexMaxSize];
-	uint8_t sysExCount = 0;
+	uint32_t sysExCount = 0;
 	bool partialSysEx;
 
 	MidiData tx;

@@ -149,7 +149,7 @@ void Sequencer::Play()
 		uint32_t beatLen = (18000.0f - tempo) * (16.0f / (float)seq.info.beatsPerBar);
 
 		if (position == 0) {
-			for (uint32_t i = 0; i < VoiceManager::voiceCount; ++i) {
+			for (uint32_t i = 0; i < VoiceManager::Voice::count; ++i) {
 				auto& b = seq.bar[currentBar].beat[currentBeat][i];
 				if (b.level > 0) {
 					auto& note = voiceManager.noteMapper[i];
