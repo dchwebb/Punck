@@ -10,7 +10,7 @@ var requestNo = 0;         // Config is retrieved in chunks - this holds index o
 
 // enum from c++ code to match voice
 var voiceEnum = {
-    Kick: 0, Snare: 1, HiHat: 2, Sampler_A: 3, Sampler_B: 4
+    Kick: 0, Snare: 1, HiHat: 2, Toms: 3, Sampler_A: 4, Sampler_B: 5
 };
 
 var requestEnum = {
@@ -27,6 +27,17 @@ var kickSettings = [
 	{name: 'Slow Sine Inc', value: 'kiInitSlowSinInc'},
 	
 	{name: 'sineSlowDownRate', value: 'kiSineSlowDownRate'},
+];
+
+var tomsSettings = [
+	{name: 'Ramp 1 Inc', value: 'tmRamp1Inc'},
+	{name: 'Ramp 2 Inc', value: 'tmRamp2Inc'},
+	{name: 'Ramp 3 Inc', value: 'tmRamp3Inc'},
+
+	{name: 'Fast Sine Inc', value: 'tmFastSinInc'},
+	{name: 'Slow Sine Inc', value: 'tmInitSlowSinInc'},
+	
+	{name: 'sineSlowDownRate', value: 'tmSineSlowDownRate'},
 ];
 
 var snareSettings = [
@@ -92,7 +103,8 @@ var variationPicker = [
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
-	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings}
+	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings},
+	{heading: "Toms Settings", id: voiceEnum.Toms, settings: tomsSettings},
 ]
 
 // Settings related to drum sequence editing

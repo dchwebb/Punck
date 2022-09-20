@@ -1,10 +1,10 @@
-#include <Kick.h>
+#include <Toms.h>
 #include <cmath>
 #include "Filter.h"
 #include "VoiceManager.h"
 
 
-void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
@@ -16,14 +16,14 @@ void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 }
 
 
-void Kick::Play(uint8_t voice, uint32_t index)
+void Toms::Play(uint8_t voice, uint32_t index)
 {
 	// Called when button is pressed
 	Play(0, 0, 0, 1.0f);
 }
 
 
-void Kick::CalcOutput()
+void Toms::CalcOutput()
 {
 	switch (phase) {
 	case Phase::Ramp1:
@@ -69,7 +69,8 @@ void Kick::CalcOutput()
 	case Phase::SlowSine: {
 		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
 		position += slowSinInc;					// Set current poition in sine wave
-		float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
+		//float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_TomsDecay]) / 65536.0f;
+		float decaySpeed = 0.9999f;
 		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
 
@@ -86,19 +87,20 @@ void Kick::CalcOutput()
 	}
 
 	if (phase != Phase::Off) {
-		outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
+		//outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
+		outputLevel[0] = velocityScale * currentLevel;
 		outputLevel[1] = outputLevel[0];
 	}
 }
 
 
-void Kick::UpdateFilter()
+void Toms::UpdateFilter()
 {
-	filter.Update();
+	//filter.Update();
 }
 
 
-uint32_t Kick::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Toms::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
 	*buff = (uint8_t*)&config;
 	//memcpy(buff, &config, sizeof(config));
@@ -106,7 +108,7 @@ uint32_t Kick::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 }
 
 
-void Kick::StoreConfig(uint8_t* buff, uint32_t len)
+void Toms::StoreConfig(uint8_t* buff, uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

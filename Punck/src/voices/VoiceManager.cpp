@@ -30,7 +30,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& k = noteMapper[Voice::kick];
 	kickPlayer.noteMapper = &k;
 	k.drumVoice = &kickPlayer;
-	k.btn = {GPIOC, 6};
+	//k.btn = {GPIOC, 6};
 	k.led = {GPIOB, 14};				// PB14: Red LED nucleo
 	k.midiLow = 84;
 	k.midiHigh = 84;
@@ -51,6 +51,13 @@ VoiceManager::VoiceManager()
 	hh.midiLow = 78;
 	hh.midiHigh = 82;
 
+	NoteMapper& t = noteMapper[Voice::toms];
+	tomsPlayer.noteMapper = &k;
+	t.drumVoice = &tomsPlayer;
+	t.btn = {GPIOC, 6};
+	t.led = {GPIOB, 14};				// PB14: Red LED nucleo
+	t.midiLow = 48;
+	t.midiHigh = 52;
 }
 
 

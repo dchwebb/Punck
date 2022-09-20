@@ -6,6 +6,7 @@
 #include "Kick.h"
 #include "Snare.h"
 #include "HiHat.h"
+#include "Toms.h"
 #include <cstring>
 
 struct NoteMapper {
@@ -50,7 +51,7 @@ struct NoteMapper {
 class VoiceManager {
 	friend class CDCHandler;
 public:
-	enum Voice {kick, snare, hihat, samplerA, samplerB};
+	enum Voice {kick, snare, hihat, toms, samplerA, samplerB};
 	static constexpr uint8_t voiceCount = 5;
 
 	VoiceManager();
@@ -64,6 +65,7 @@ public:
 	Snare snarePlayer;
 	Samples samples;
 	HiHat hihatPlayer;
+	Toms tomsPlayer;
 
 	NoteMapper noteMapper[voiceCount];
 private:
