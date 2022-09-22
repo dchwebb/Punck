@@ -13,7 +13,13 @@ void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 	currentLevel = 0.0f;
 	noteMapper->led.On();
 	velocityScale = velocity;
-	pitchScale = 1.0f + (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
+	pitchScale = 1.0f + 1.5f * (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
+	sineInc = FreqToInc(config.initSineFreq) * pitchScale;
+	sineInc2 = config.sineFreq2scale * sineInc;
+	sineLevel2 = config.sineLevel2;
+	sineLevel = 1.0f;
+	position = 2.0f;
+	position2 = 2.0f;
 }
 
 
@@ -28,43 +34,32 @@ void Toms::CalcOutput()
 {
 	switch (phase) {
 	case Phase::Ramp:
-		currentLevel = currentLevel + (config.ramp1Inc * (1.0f - currentLevel));
+		currentLevel = currentLevel + (config.rampInc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.93f) {
-			position = 2.0f;
-			phase = Phase::FastSine;
-			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
+
+			phase = Phase::Sine;
 		}
 		break;
 
-	case Phase::FastSine:
-		GPIOG->ODR &= ~GPIO_ODR_OD11;
-
-		position += config.fastSinInc;
-		currentLevel = std::sin(position);
-
-		if (position >= 1.5f * pi) {
-			slowSinInc = config.initSlowSinInc * pitchScale;
-			slowSinLevel = 1.0f;
-			phase = Phase::SlowSine;
-		}
-		break;
-
-	case Phase::SlowSine: {
-		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
-		position += slowSinInc;					// Set current poition in sine wave
+	case Phase::Sine:
+	{
+		sineInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
+		sineInc2 *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
+		position += sineInc;							// Set current poition in sine wave
+		position2 += sineInc2;							// Set current poition in sine wave
 		//float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_TomsDecay]) / 65536.0f;
-		float decaySpeed = 0.9999f;
-		slowSinLevel = slowSinLevel * decaySpeed;
-		currentLevel = std::sin(position) * slowSinLevel;
+		sineLevel = sineLevel * config.decaySpeed;
+		sineLevel2 = sineLevel2 * config.decaySpeed2;
+		currentLevel = std::sin(position) * sineLevel + std::sin(position2) * sineLevel2;
 
-		if (slowSinLevel <= 0.00001f) {
+		if (sineLevel <= 0.00001f) {
 			playing = false;
 			phase = Phase::Off;
 			noteMapper->led.Off();
 		}
-	}
 		break;
+	}
 
 	default:
 		break;

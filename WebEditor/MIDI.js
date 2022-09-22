@@ -4,9 +4,10 @@ if (navigator.requestMIDIAccess) {
     console.log('WebMIDI is not supported in this browser.');
 }
 
-var midi = null;           // global MIDIAccess object
+var midi = null;			// global MIDIAccess object
 var output = null;
-var requestNo = 0;         // Config is retrieved in chunks - this holds index of current chunk of data being recovered
+var requestNo = 0;			// Config is retrieved in chunks - this holds index of current chunk of data being recovered
+var barClip = null;			// Clipboard for copying and pasting bars
 
 // enum from c++ code to match voice
 var voiceEnum = {
@@ -30,10 +31,13 @@ var kickSettings = [
 ];
 
 var tomsSettings = [
-	{name: 'Ramp 1 Inc', value: 'tmRamp1Inc'},
+	{name: 'Decay', value: 'tmDecay'},
+	{name: 'Decay 2', value: 'tmDecay2'},
+	{name: 'Ramp Inc', value: 'tmRampInc'},
 
-	{name: 'Fast Sine Inc', value: 'tmFastSinInc'},
-	{name: 'Slow Sine Inc', value: 'tmInitSlowSinInc'},
+	{name: 'Init Sine Freq', value: 'tmFastSinInc'},
+	{name: 'Sine 2 freq scale', value: 'tmInitSlowSinInc'},
+	{name: 'Sine 2 level', value: 'tmSine2Level'},
 	
 	{name: 'sineSlowDownRate', value: 'tmSineSlowDownRate'},
 ];
@@ -95,7 +99,7 @@ var variationPicker = [
 	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0', pickerType: pickerTypeEnum.discrete},
 	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1', pickerType: pickerTypeEnum.discrete},
 	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
-	{voice: 'Toms', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
+	{voice: 'Toms', picker: 'tomsPicker', pickerBlock: 'tomsPickerBlock', pickerType: pickerTypeEnum.range},
 ];
 
 
@@ -143,6 +147,51 @@ function SerialiseSequence()
 	a.download = fileName;
 	a.click();
 	window.URL.revokeObjectURL(url);
+}
+
+
+function CopyBar(bar)
+{
+	// Store bar in 'clipboard'
+	barClip = {};
+	
+	var i = 0;
+	for (var b = 0; b < maxBeatsPerBar; b++) {
+		for (let v in voiceEnum) {
+			var beatElement = document.getElementById(bar + v + b);
+			if (beatElement != null) {
+				level = parseInt(beatElement.getAttribute("level"));
+				index = parseInt(beatElement.getAttribute("index"));
+				barClip[i++] = {'v': v, 'b': b, 'level': level, 'index': index}; 
+			}
+		}
+	}
+}
+
+
+function PasteBar(bar)
+{
+	// Store bar in 'clipboard'
+	if (barClip == null) {
+		return;
+	}
+	
+	var i = 0;
+	var beat = barClip[i];
+	while (beat != null) {
+		var beatElement = document.getElementById(bar + barClip[i].v + barClip[i].b);
+		if (beatElement != null) {
+			beatElement.setAttribute("level", barClip[i].level);
+			beatElement.setAttribute("index", barClip[i].index);
+			BeatColour(beatElement.id);
+		}
+		beat = barClip[++i];
+	}
+
+	// transmit sequence to module
+	for (var b = 0; b < seqSettings.bars; ++b) {
+		UpdateDrum(b);
+	}
 }
 
 
@@ -543,11 +592,15 @@ function BuildSequenceHtml()
 		samplePickerhtml += `</select></div>`;
 	}
 
-	// Add open/closed hihat picker
+	// Add option pickers for hihat and toms
 	samplePickerhtml += `<div id="hihatPickerBlock" style="display: none;">
 							<label style="padding: 5px;">Open  </label>   
-							<input id="hihatPicker" onchange="PickerChanged('hihatPicker');" value="100" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
-						</div>`;
+							<input id="hihatPicker" onchange="PickerChanged('hihatPicker');" value="0" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
+						 </div>
+						 <div id="tomsPickerBlock" style="display: none;">
+							<label style="padding: 5px;">Pitch  </label>   
+							<input id="tomsPicker" onchange="PickerChanged('tomsPicker');" value="0" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
+						 </div>`;
 
 	// Note editing options (volume and note variation)
 	html += 
@@ -564,7 +617,7 @@ function BuildSequenceHtml()
 
 
 	for (var bar = 0; bar < seqSettings.bars; ++bar) {
-		html += `<div id="bar${bar}" style="display: grid; width: fit-content; margin-bottom: 6px; grid-template-columns: 100px 160px 160px 160px 160px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.3);">`;
+		html += `<div id="bar${bar}" style="display: grid; width: fit-content; margin-bottom: 6px; grid-template-columns: 100px 160px 160px 160px 160px 180px; padding: 5px; border: 1px solid rgba(0, 0, 0, 0.3);">`;
 		for (let v in voiceEnum) {
 			html += `<div class="grid-container3">${v}</div><div class="grid-container3">`;
 			for (var beat = 0; beat < seqSettings.beatsPerBar; beat++) {
@@ -575,6 +628,16 @@ function BuildSequenceHtml()
 				html += `<button id="${bar + v + beat}" class="topcoat-button" onclick="DrumClicked(${bar}, \'${v + beat}\');" onfocusin="BeatGotFocus('${bar + v + beat}');" style="background-color: rgb(74, 77, 78);">&nbsp;</button> `;
 			}
 			html += "</div>";
+
+			// add copy/paste option to first row
+			if (voiceEnum[v] == 0) {
+				html += `<div class="grid-container3">
+							<button class="topcoat-button-bar__button--large" onclick="CopyBar(${bar});">Copy</button>
+							<button class="topcoat-button-bar__button--large" onclick="PasteBar(${bar});">Paste</button>
+						 </div>`;
+			} else {
+				html += `<div></div>`;
+			}
 		}
 		html += '</div>';
 	}

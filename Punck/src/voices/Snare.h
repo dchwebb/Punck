@@ -5,10 +5,7 @@
 
 class NoteMapper;
 
-constexpr float FreqToInc(float frequency)
-{
-	return frequency * (2 * pi) / systemSampleRate;
-}
+
 
 class Snare : public DrumVoice {
 public:
