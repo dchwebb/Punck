@@ -33,7 +33,7 @@ private:
 		float rampInc = 0.2f;									// Initial wave steep ramp
 		float baseFreq = 60.0f;									// Initial frequency of sine wave
 		float sineFreqScale[partialCount] = {1.0f, 1.588f};		// Relative frequencies of partials
-		float sineInitLevel[partialCount] = {1.0f, 0.7f};		// Initial volume level
+		float sineInitLevel[partialCount] = {1.0f, 0.0f};		// Initial volume level
 		float sineSlowDownRate = 0.99995f;						// Rate of decrease of sine frequency
 	} config;
 

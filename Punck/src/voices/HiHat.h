@@ -23,9 +23,14 @@ private:
 
 		float hpInitCutoff = 0.07f;			// HP filter ramps from 1.68kHz to 6.48kHz
 		float hpFinalCutoff = 0.27f;
+		float hpCutoffInc = 1.01f;
+
+		float lpInitCutoff = 0.5f;
+		float lpFinalCutoff = 0.1f;
+		float lpCutoffInc = 0.99998f;
 
 		float noiseInitLevel = 0.99f;		// Initial level of noise component
-		float noiseDecay = 0.99985f;
+		float noiseDecay = 0.9998f;
 
 		// Relative level and frequency of 6 signal partials
 		float partialScale[6] = {0.8f, 0.5f, 0.4f, 0.4f, 0.5f, 0.4f};
@@ -36,7 +41,7 @@ private:
 	} config;
 
 	Filter hpFilter{2, HighPass, nullptr};
-	//Filter lpFilter{2, LowPass, nullptr};
+	Filter lpFilter{2, LowPass, nullptr};
 
 	float velocityScale;
 	float decayScale;
@@ -45,6 +50,7 @@ private:
 	float noiseScale;
 
 	float hpFilterCutoff;
+	float lpFilterCutoff;
 
 	// multiplier to convert frequency to half a period of a square wave
 	static constexpr uint32_t freqToSqPeriod = systemSampleRate / 2;

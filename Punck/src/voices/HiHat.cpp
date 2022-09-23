@@ -18,6 +18,10 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 	hpFilterCutoff = config.hpInitCutoff;
 	hpFilter.SetCutoff(hpFilterCutoff);
 
+	lpFilter.Init();
+	lpFilterCutoff = config.lpInitCutoff;
+	lpFilter.SetCutoff(lpFilterCutoff);
+
 	// Control over decay note index sets initial level; scaled by pot - FIXME change ADC for production
 	noteRange = noteRange == 0 ? 128 : noteRange;
 	float closed = sqrt(((float)noteOffset + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
@@ -66,10 +70,16 @@ void HiHat::CalcOutput()
 
 		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
 		if (hpFilterCutoff < config.hpFinalCutoff) {
-			hpFilterCutoff *= 1.01f;
+			hpFilterCutoff *= config.hpCutoffInc;
 			hpFilter.SetCutoff(hpFilterCutoff);
 		}
 
+
+		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
+		if (lpFilterCutoff > config.lpFinalCutoff) {
+			lpFilterCutoff *= config.lpCutoffInc;
+			lpFilter.SetCutoff(lpFilterCutoff);
+		}
 
 		// Add a burst of noise at the beginning of the note (both channels use the sample partials, but different noise)
 		noiseScale *= config.noiseDecay;
@@ -101,8 +111,8 @@ void HiHat::CalcOutput()
 		}
 
 		// Filter and scale the output levels
-		outputLevel[0] = envScale * hpFilter.CalcFilter(currentLevel[left], left) - 0.0001f;
-		outputLevel[1] = envScale * hpFilter.CalcFilter(currentLevel[right], right) - 0.0001f;;
+		outputLevel[0] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[left], left), left) - 0.0001f;
+		outputLevel[1] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[right], right), right) - 0.0001f;;
 	}
 
 }

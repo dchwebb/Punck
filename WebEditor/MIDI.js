@@ -60,8 +60,15 @@ var snareSettings = [
 var hihatSettings = [
 	{name: 'Attack'}, 
 	{name: 'Decay'},
+	
 	{name: 'HP Initial Cutoff'},
 	{name: 'HP Final Cutoff'},
+	{name: 'HP Cutoff  Inc'},
+	{name: 'LP Initial Cutoff'},
+	{name: 'LP Final Cutoff'},
+	{name: 'LP Cutoff  Inc'},
+
+
 	{name: 'Noise level'},
 	{name: 'Noise Decay'},
 

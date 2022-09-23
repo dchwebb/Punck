@@ -9,12 +9,11 @@ void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
 	phase = Phase::Ramp;
+	noteMapper->led.On();
 
 	currentLevel = 0.0f;
-	noteMapper->led.On();
 	velocityScale = velocity;
 	pitchScale = 1.0f + 1.5f * (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
-
 
 	for (uint8_t i = 0; i < partialCount; ++i) {
 		position[i] = 2.0f;
@@ -47,7 +46,7 @@ void Toms::CalcOutput()
 		currentLevel = 0;
 		for (uint8_t i = 0; i < partialCount; ++i) {
 			sineInc[i] *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
-			position[i] += sineInc[i];							// Set current poition in sine wave
+			position[i] += sineInc[i];						// Set current poition in sine wave
 			sineLevel[i] *= config.decaySpeed[i];
 			currentLevel += std::sin(position[i]) * sineLevel[i];
 		}
@@ -80,7 +79,6 @@ void Toms::UpdateFilter()
 uint32_t Toms::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
 	*buff = (uint8_t*)&config;
-	//memcpy(buff, &config, sizeof(config));
 	return sizeof(config);
 }
 
