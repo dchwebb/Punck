@@ -20,65 +20,64 @@ var requestEnum = {
 
 
 var kickSettings = [
-	{name: 'Ramp 1 Inc', value: 'kiRamp1Inc'},
-	{name: 'Ramp 2 Inc', value: 'kiRamp2Inc'},
-	{name: 'Ramp 3 Inc', value: 'kiRamp3Inc'},
-
-	{name: 'Fast Sine Inc', value: 'kiFastSinInc'},
-	{name: 'Slow Sine Inc', value: 'kiInitSlowSinInc'},
-	
-	{name: 'sineSlowDownRate', value: 'kiSineSlowDownRate'},
+	{name: 'Ramp 1 Inc'},
+	{name: 'Ramp 2 Inc'},
+	{name: 'Ramp 3 Inc'},
+	{name: 'Fast Sine Inc'},
+	{name: 'Slow Sine Inc'},
+	{name: 'sineSlowDownRate'},
 ];
 
 var tomsSettings = [
-	{name: 'Decay', value: 'tmDecay'},
-	{name: 'Decay 2', value: 'tmDecay2'},
-	{name: 'Ramp Inc', value: 'tmRampInc'},
-
-	{name: 'Init Sine Freq', value: 'tmFastSinInc'},
-	{name: 'Sine 2 freq scale', value: 'tmInitSlowSinInc'},
-	{name: 'Sine 2 level', value: 'tmSine2Level'},
-	
-	{name: 'sineSlowDownRate', value: 'tmSineSlowDownRate'},
+	{name: 'Decay Partial 1'},
+	{name: 'Decay Partial 2'},
+	{name: 'Ramp Inc'},
+	{name: 'Init Sine Freq'},
+	{name: 'Sine 1 freq scale'},
+	{name: 'Sine 2 freq scale'},
+	{name: 'Sine 1 level'},
+	{name: 'Sine 2 level'},
+	{name: 'sineSlowDownRate'},
 ];
 
 var snareSettings = [
-	{name: 'Noise level', value: 'snNoiseInitLevel'},
-	{name: 'Noise Decay', value: 'snNoiseDecay'},
+	{name: 'Noise level'},
+	{name: 'Noise Decay'},
 
-	{name: 'Base Frequency', value: 'snBaseFreq'},
-	{name: 'Partial Decay', value: 'snPartialDecay'},
+	{name: 'Base Frequency'},
+	{name: 'Base Start Position'},
+	{name: 'Partial Decay'},
 	
-	{name: 'Partial 0 Level', value: 'snPartial0Level'},
-	{name: 'Partial 1 Level', value: 'snPartial1Level'},
-	{name: 'Partial 2 Level', value: 'snPartial2Level'},
+	{name: 'Partial 0 Level'},
+	{name: 'Partial 1 Level'},
+	{name: 'Partial 2 Level'},
 	
-	{name: 'Partial 0 Freq Offset', value: 'snFreq0'},
-	{name: 'Partial 1 Freq Offset', value: 'snFreq1'},
-	{name: 'Partial 2 Freq Offset', value: 'snFreq2'},
+	{name: 'Partial 0 Freq Offset'},
+	{name: 'Partial 1 Freq Offset'},
+	{name: 'Partial 2 Freq Offset'},
 ];
 
 var hihatSettings = [
-	{name: 'Attack', value: 'hhAttackInc'}, 
-	{name: 'Decay', value: 'hhDecay'},
-	{name: 'HP Initial Cutoff', value: 'hhHPInitCutoff'},
-	{name: 'HP Final Cutoff', value: 'hhHPFinalCutoff'},
-	{name: 'Noise level', value: 'hhNoiseInitLevel'},
-	{name: 'Noise Decay', value: 'hhNoiseDecay'},
+	{name: 'Attack'}, 
+	{name: 'Decay'},
+	{name: 'HP Initial Cutoff'},
+	{name: 'HP Final Cutoff'},
+	{name: 'Noise level'},
+	{name: 'Noise Decay'},
 
-	{name: 'Partial 0 Level', value: 'hhPLevel0'},
-	{name: 'Partial 1 Level', value: 'hhPLevel1'},
-	{name: 'Partial 2 Level', value: 'hhPLevel2'},
-	{name: 'Partial 3 Level', value: 'hhPLevel3'},
-	{name: 'Partial 4 Level', value: 'hhPLevel4'},
-	{name: 'Partial 5 Level', value: 'hhPLevel5'},
+	{name: 'Partial 0 Level'},
+	{name: 'Partial 1 Level'},
+	{name: 'Partial 2 Level'},
+	{name: 'Partial 3 Level'},
+	{name: 'Partial 4 Level'},
+	{name: 'Partial 5 Level'},
 
-	{name: 'Partial 0 Frequency', value: 'hhPFreq0'},
-	{name: 'Partial 1 Frequency', value: 'hhPFreq1'},
-	{name: 'Partial 2 Frequency', value: 'hhPFreq2'},
-	{name: 'Partial 3 Frequency', value: 'hhPFreq3'},
-	{name: 'Partial 4 Frequency', value: 'hhPFreq4'},
-	{name: 'Partial 5 Frequency', value: 'hhPFreq5'},
+	{name: 'Partial 0 Frequency'},
+	{name: 'Partial 1 Frequency'},
+	{name: 'Partial 2 Frequency'},
+	{name: 'Partial 3 Frequency'},
+	{name: 'Partial 4 Frequency'},
+	{name: 'Partial 5 Frequency'},
 ];
 
 
@@ -332,7 +331,7 @@ function BuildConfigHtml()
 		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">${drumSettings[i].heading}</div>`;
 		for (var s = 0; s < drumSettings[i].settings.length; s++) {
 	 		html += `<div class="grid-container3">${drumSettings[i].settings[s].name}</div>` +
-					`<div class="grid-container3"><input type="text" id="${drumSettings[i].settings[s].value}" onchange="updateConfig(${i});"></div>`;
+					`<div class="grid-container3"><input type="text" id="drumSettings${i}${s}" onchange="updateConfig(${i});"></div>`;		//id="${drumSettings[i].settings[s].value}"
 		}
 	}
 	html += '</div>'
@@ -855,7 +854,8 @@ function getMIDIMessage(midiMessage)
 					if (drumSettings[i].id == midiMessage.data[2]) {
 						for (var s = 0; s < drumSettings[i].settings.length; s++) {
 							// Store the values encoded in the SysEx data into the html fields
-							document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
+							document.getElementById(`drumSettings${i}${s}`).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
+							//document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
 						}
 					}
 				}
@@ -874,7 +874,7 @@ function getMIDIMessage(midiMessage)
 function BytesToFloat(buff) 
 {
     var fl = new Float32Array(new Uint8Array(buff).buffer)[0];
-	return Math.trunc(fl * 10000000) / 10000000;
+	return Math.trunc(fl * 1000000) / 1000000;
 }
 
 
@@ -888,7 +888,7 @@ function updateConfig(index)
 	// Copy the values of the html fields into a float array for serialisation
 	var floatArray = new Float32Array(drumSettings[index].settings.length)
 	for (var s = 0; s < floatArray.length; s++) {
-		floatArray[s] = document.getElementById(drumSettings[index].settings[s].value).value;
+		floatArray[s] = document.getElementById(`drumSettings${index}${s}`).value;
 	}
     var byteArray = new Uint8Array(floatArray.buffer);   			// use the buffer of Float32Array view
 

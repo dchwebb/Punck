@@ -5,8 +5,9 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	partialInc[0] = FreqToInc(config.baseFreq);		// First Mode 0,1 frequency
-	partialpos[0] = 0.3f;						// Create discontinuity to create initial click
+	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
+	partialpos[2] = 0.0f;
 
 	float freq = (config.baseFreq * (static_cast<float>(ADC_array[ADC_SnareTuning]) / 65536.0f + 0.5f));
 

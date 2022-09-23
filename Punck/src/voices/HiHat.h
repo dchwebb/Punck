@@ -36,6 +36,7 @@ private:
 	} config;
 
 	Filter hpFilter{2, HighPass, nullptr};
+	//Filter lpFilter{2, LowPass, nullptr};
 
 	float velocityScale;
 	float decayScale;

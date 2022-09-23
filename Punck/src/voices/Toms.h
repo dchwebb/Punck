@@ -18,25 +18,23 @@ public:
 
 private:
 	enum class Phase {Off, Ramp, Sine} phase;
-	//Filter filter{2, LowPass, &(ADC_array[ADC_TomsFilter])};
+	static constexpr uint8_t partialCount = 2;
 
-	float position;
+	float position[partialCount];
 	float currentLevel;
 	float velocityScale;
 
-	float sineInc;
-	float sineLevel;
-	float position2, sineInc2, sineLevel2;
-	float pitchScale;
+	float sineInc[partialCount];
+	float sineLevel[partialCount];
+	float pitchScale;						// Note index allows different frequency notes
 
 	struct Config {
-		float decaySpeed = 0.9996f;
-		float decaySpeed2 = 0.9998f;
-		float rampInc = 0.22f;					// Initial steep ramp
-		float initSineFreq = 145.0f;			// Initial frequency of gradually decreasing sine wave
-		float sineFreq2scale = 1.588f;			// Initial frequency of gradually decreasing sine wave
-		float sineLevel2 = 0.6f;
-		float sineSlowDownRate = 0.9998f;		// Rate at which sine wave frequency decreases
+		float decaySpeed[partialCount] = {0.9995f, 0.9993f};	// Volume decay speed
+		float rampInc = 0.2f;									// Initial wave steep ramp
+		float baseFreq = 60.0f;									// Initial frequency of sine wave
+		float sineFreqScale[partialCount] = {1.0f, 1.588f};		// Relative frequencies of partials
+		float sineInitLevel[partialCount] = {1.0f, 0.7f};		// Initial volume level
+		float sineSlowDownRate = 0.99995f;						// Rate of decrease of sine frequency
 	} config;
 
 };
