@@ -12,7 +12,10 @@ void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 	position = 0.0f;
 	currentLevel = 0.0f;
 	noteMapper->led.On();
-	velocityScale = velocity;
+	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_KickLevel]) / 32768.0f);
+	fastSinInc = FreqToInc(config.fastSinFreq);
+	slowSinInc = FreqToInc(config.initSlowSinFreq);
+	slowSinLevel = 1.0f;
 }
 
 
@@ -56,17 +59,16 @@ void Kick::CalcOutput()
 		break;
 
 	case Phase::FastSine:
-		position += config.fastSinInc;
+		position += fastSinInc;
 		currentLevel = std::sin(position);
 
 		if (position >= 1.5f * pi) {
-			slowSinInc = config.initSlowSinInc;
-			slowSinLevel = 1.0f;
 			phase = Phase::SlowSine;
 		}
 		break;
 
-	case Phase::SlowSine: {
+	case Phase::SlowSine:
+	{
 		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
 		position += slowSinInc;					// Set current poition in sine wave
 		float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
@@ -78,8 +80,8 @@ void Kick::CalcOutput()
 			phase = Phase::Off;
 			noteMapper->led.Off();
 		}
-	}
 		break;
+	}
 
 	default:
 		break;
@@ -100,8 +102,7 @@ void Kick::UpdateFilter()
 
 uint32_t Kick::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
 {
-	*buff = (uint8_t*)&config;
-	//memcpy(buff, &config, sizeof(config));
+	*buff = reinterpret_cast<uint8_t*>(&config);
 	return sizeof(config);
 }
 

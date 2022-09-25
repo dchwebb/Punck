@@ -6,42 +6,33 @@
 #include <cstring>
 #include <cmath>
 
+Samples::Samples()
+{
+	sampler[playerA].tuningADC = &ADC_array[ADC_SampleASpeed];
+	sampler[playerB].tuningADC = &ADC_array[ADC_SampleBSpeed];
+
+}
 
 void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float velocity)
 {
 	if (fatTools.noFileSystem) {
 		return;
 	}
-	// Get sample from sorted bank list based on player and note offset
-	if (noteOffset < sampler[sp].bankLen) {
-		sampler[sp].sample = sampler[sp].bank[noteOffset].s;
-	} else {
-		sampler[sp].sample = sampler[sp].bank[0].s;
-	}
-
 	sampler[sp].playing = true;
-	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
-	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
-	sampler[sp].sampleVoice = noteOffset;
 	sampler[sp].velocityScale = velocity;
-
 	sampler[sp].noteMapper->led.On();
+
+	// Get sample from sorted bank list based on player and note offset
+	noteOffset = (noteOffset < sampler[sp].bankLen) ? noteOffset : 0;		// If there are no samples at that index just use first sample in bank
+	sampler[sp].sample = sampler[sp].bank[noteOffset].s;
+	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
+	sampler[sp].playbackSpeed = static_cast<float>(sampler[sp].sample->sampleRate) / systemSampleRate;
 }
 
 
 void Samples::Play(uint8_t sp, uint32_t index)
 {
-	if (fatTools.noFileSystem) {
-		return;
-	}
-	sampler[sp].playing = true;
-	sampler[sp].sample = sampler[sp].bank[index].s;		//&sampleList[index];
-	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
-	sampler[sp].playbackSpeed = (float)sampler[sp].sample->sampleRate / systemSampleRate;
-	sampler[sp].velocityScale = 1.0f;
-
-	sampler[sp].noteMapper->led.On();
-
+	Play(sp, index, 0, 1.0f);
 }
 
 
@@ -71,7 +62,7 @@ void Samples::CalcOutput()
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
-			float adjSpeed = 0.5f + (float)ADC_array[ADC_SampleSpeed] / 65536.0f;		// FIXME - separate ADCs for each sampler
+			float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;		// FIXME - separate ADCs for each sampler
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;

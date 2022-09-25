@@ -103,7 +103,7 @@ void HiHat::CalcOutput()
 
 
 		// End when note volume is 0
-		if (velocityScale < 0.0001f) {
+		if (velocityScale < 0.001f) {
 			playing = false;
 			currentLevel[left] = 0.0f;
 			currentLevel[right] = 0.0f;

@@ -69,6 +69,8 @@ public:
 
 	NoteMapper noteMapper[Voice::count];
 private:
+	float FastTanh(float x);
+
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};
 	ButtonMode buttonMode;

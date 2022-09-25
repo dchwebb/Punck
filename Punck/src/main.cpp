@@ -14,10 +14,7 @@ extern uint32_t SystemCoreClock;
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC2_BUFFER_LENGTH];
 
 // TODO:
-// Drum pattern editor/player
 // Sample panning (naming? web interface?)
-// Use web interface for parameter adjustment
-// Generically handle filter updates from NoteHandler::IdleTasks()
 
 
 USB usb;

@@ -37,15 +37,15 @@ public:
 		const uint8_t* sampleAddress;
 		float playbackSpeed;				// Multiplier to allow faster or slow playback (and compensate for non 48k samples)
 		float fractionalPosition;			// When playing sample at varying rate store how far through the current sample playback is
-		uint32_t sampleVoice;
 		int32_t currentSamples[2] = {};		// Left/right sample levels for mixing
-		uint32_t bankLen;
+		uint32_t bankLen;					// Number of samples in bank
 		std::array<Bank, 40> bank;			// Store pointer to Bank samples sorted by index
 		NoteMapper* noteMapper;
 		float velocityScale;
+		volatile uint16_t* tuningADC;
 	} sampler[2];
 
-
+	Samples();
 	void Play(uint8_t player, uint32_t noteOffset, uint32_t noteRange, float velocity);
 	void Play(uint8_t player, uint32_t sampleNo);
 	void CalcOutput();
@@ -54,5 +54,8 @@ public:
 	uint32_t SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex);
 	uint32_t SerialiseConfig(uint8_t** buff, uint8_t voiceIndex);
 	void StoreConfig(uint8_t* buff, uint32_t len);
+
+private:
+
 };
 

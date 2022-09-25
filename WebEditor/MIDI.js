@@ -23,9 +23,9 @@ var kickSettings = [
 	{name: 'Ramp 1 Inc'},
 	{name: 'Ramp 2 Inc'},
 	{name: 'Ramp 3 Inc'},
-	{name: 'Fast Sine Inc'},
-	{name: 'Slow Sine Inc'},
-	{name: 'sineSlowDownRate'},
+	{name: 'Fast Sine Freq'},
+	{name: 'Slow Sine Freq'},
+	{name: 'Sine Slow Down Rate'},
 ];
 
 var tomsSettings = [
@@ -68,7 +68,6 @@ var hihatSettings = [
 	{name: 'LP Final Cutoff'},
 	{name: 'LP Cutoff  Inc'},
 
-
 	{name: 'Noise level'},
 	{name: 'Noise Decay'},
 
@@ -89,14 +88,17 @@ var hihatSettings = [
 
 
 var ADC_Controls = [
-	{name: 'Sample Speed', value: 'ADC_SampleSpeed'},
-	{name: 'Kick Decay', value: 'ADC_KickDecay'},
-	{name: 'Kick Filter', value: 'ADC_KickFilter'},
 	{name: 'Tempo', value: 'ADC_Tempo'},
-	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
-	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
+	{name: 'Kick Level', value: 'ADC_KickLevel'},
+	{name: 'Kick Attack', value: 'ADC_KickFilter'},
+	{name: 'Kick Decay', value: 'ADC_KickDecay'},
 	{name: 'Snare Filter', value: 'ADC_SnareFilter'},
+	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
 	{name: 'Snare Tuning', value: 'ADC_SnareTuning'},
+	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
+	{name: 'Sample A Speed', value: 'ADC_SampleASpeed'},
+	{name: 'Sample B Speed', value: 'ADC_SampleBSpeed'},
+	
 ];
 
 var pickerTypeEnum = {discrete: 0, range: 1};

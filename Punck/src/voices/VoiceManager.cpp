@@ -99,6 +99,10 @@ void VoiceManager::Output()
 	if (std::abs(combinedOutput[left])  > 1.0f) { ++leftOverflow; }		// Debug
 	if (std::abs(combinedOutput[right]) > 1.0f) { ++rightOverflow; }
 
+	// Apply some soft clipping
+	combinedOutput[right] = FastTanh(combinedOutput[left]);
+	combinedOutput[right] = FastTanh(combinedOutput[right]);
+
 	float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);
 	SPI2->TXDR = (int32_t)((combinedOutput[right] + adjOffset) * outputScale);
@@ -108,6 +112,16 @@ void VoiceManager::Output()
 			nm.drumVoice->CalcOutput();
 		}
 	}
+}
+
+
+// Algorithm source: https://varietyofsound.wordpress.com/2011/02/14/efficient-tanh-computation-using-lamberts-continued-fraction/
+float VoiceManager::FastTanh(float x)
+{
+	float x2 = x * x;
+	float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+	float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+	return a / b;
 }
 
 

@@ -47,7 +47,7 @@
   .type  Reset_Handler, %function
 Reset_Handler:
   // Check for instruction to jump to STM bootloader
- ldr r0, =0x20000000
+  ldr r0, =0x20000000
   ldr r1, =0xDEADBEEF
   ldr r2, [r0, #0]			// load the value stored at 0x20000000 into register r2
   ldr r3, =0x1FF09800		// ROM address of boot loader for H7: 0x1FF09800 (M4 F7 etc 0x1FF00000) */
