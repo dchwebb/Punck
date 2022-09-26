@@ -43,6 +43,7 @@ public:
 		NoteMapper* noteMapper;
 		float velocityScale;
 		volatile uint16_t* tuningADC;
+		volatile uint16_t* levelADC;
 	} sampler[2];
 
 	Samples();

@@ -12,7 +12,7 @@ void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 	noteMapper->led.On();
 
 	currentLevel = 0.0f;
-	velocityScale = velocity;
+	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_TomsLevel]) / 32768.0f);
 	pitchScale = 1.0f + 1.5f * (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
 
 	for (uint8_t i = 0; i < partialCount; ++i) {

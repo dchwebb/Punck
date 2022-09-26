@@ -89,16 +89,25 @@ var hihatSettings = [
 
 var ADC_Controls = [
 	{name: 'Tempo', value: 'ADC_Tempo'},
+
 	{name: 'Kick Level', value: 'ADC_KickLevel'},
 	{name: 'Kick Attack', value: 'ADC_KickFilter'},
 	{name: 'Kick Decay', value: 'ADC_KickDecay'},
+
+	{name: 'Snare Level', value: 'ADC_SnareLevel'},
 	{name: 'Snare Filter', value: 'ADC_SnareFilter'},
 	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
 	{name: 'Snare Tuning', value: 'ADC_SnareTuning'},
-	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
-	{name: 'Sample A Speed', value: 'ADC_SampleASpeed'},
-	{name: 'Sample B Speed', value: 'ADC_SampleBSpeed'},
 	
+	{name: 'HiHat Level', value: 'ADC_HiHatLevel'},
+	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
+
+	{name: 'Sample A Level', value: 'ADC_SampleALevel'},
+	{name: 'Sample A Speed', value: 'ADC_SampleASpeed'},
+	{name: 'Sample B Level', value: 'ADC_SampleBLevel'},
+	{name: 'Sample B Speed', value: 'ADC_SampleBSpeed'},
+
+	{name: 'Toms Level', value: 'ADC_TomsLevel'},
 ];
 
 var pickerTypeEnum = {discrete: 0, range: 1};

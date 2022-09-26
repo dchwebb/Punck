@@ -52,7 +52,6 @@ class VoiceManager {
 	friend class CDCHandler;
 public:
 	enum Voice {kick, snare, hihat, toms, samplerA, samplerB, count};
-	//static constexpr uint8_t voiceCount = 5;
 
 	VoiceManager();
 	void VoiceLED(Voice v, bool on);

@@ -16,7 +16,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 		partialInc[i] = FreqToInc(freq * config.partialFreqOffset[i]);
 	}
 	noiseLevel = config.noiseInitLevel;
-	velocityScale = velocity;
+	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
 	playing = true;
 	noteMapper->led.On();
 }

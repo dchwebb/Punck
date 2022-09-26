@@ -9,7 +9,7 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 	playing = true;
 	noteMapper->led.On();
 
-	velocityScale = velocity;
+	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_HiHatLevel]) / 32768.0f);
 	attack = true;
 	attackLevel = 0.0f;
 	noiseScale = intToFloatMult * config.noiseInitLevel;		// noise uses RND peripheral: scale 32 bit value to -1.0 to +1.0

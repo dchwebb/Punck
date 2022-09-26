@@ -10,6 +10,8 @@ Samples::Samples()
 {
 	sampler[playerA].tuningADC = &ADC_array[ADC_SampleASpeed];
 	sampler[playerB].tuningADC = &ADC_array[ADC_SampleBSpeed];
+	sampler[playerA].levelADC = &ADC_array[ADC_SampleALevel];
+	sampler[playerB].levelADC = &ADC_array[ADC_SampleBLevel];
 
 }
 
@@ -19,7 +21,7 @@ void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float ve
 		return;
 	}
 	sampler[sp].playing = true;
-	sampler[sp].velocityScale = velocity;
+	sampler[sp].velocityScale = velocity * (static_cast<float>(*sampler[sp].levelADC) / 32768.0f);
 	sampler[sp].noteMapper->led.On();
 
 	// Get sample from sorted bank list based on player and note offset
