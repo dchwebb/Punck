@@ -1,3 +1,4 @@
+
 #include "USB.h"
 #include "MSCHandler.h"
 #include "ExtFlash.h"
@@ -477,6 +478,11 @@ int8_t MSCHandler::SCSI_TestUnitReady()
 	// Tests if the storage device is ready to receive commands; called continuously in Windows every second or so
 	if (cbw.dDataLength != 0) {
 		SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
+		return -1;
+	}
+
+	if (extFlash.flashCorrupt || fatTools.noFileSystem) {
+		SCSI_SenseCode(HARDWARE_ERROR, MEDIUM_NOT_PRESENT);
 		return -1;
 	}
 

@@ -6,7 +6,7 @@
 // FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 
 
-const uint8_t* flashAddress = (uint8_t*)0x90000000;		// Location that Flash storage will be accessed in memory mapped mode
+const uint8_t* flashAddress = (uint8_t*)0x90000000;			// Location that Flash storage will be accessed in memory mapped mode
 ExtFlash extFlash;											// Singleton external flash handler
 
 
@@ -15,7 +15,8 @@ void ExtFlash::Init()
 	InitQSPI();												// Initialise hardware
 
 	// Quad SPI mode enable
-	if ((ReadStatus(readStatusReg2) & 2) == 0) {			// QuadSPI not enabled
+	uint8_t statusReg2 = ReadStatus(readStatusReg2);
+	if ((statusReg2 & 2) == 0) {			// QuadSPI not enabled
 		WriteEnable();
 
 		QUADSPI->CR |= QUADSPI_CR_EN;						// Enable QSPI
@@ -87,6 +88,45 @@ uint8_t ExtFlash::ReadStatus(qspiRegister r)
 	return ret;
 }
 
+
+uint16_t ExtFlash::GetID()
+{
+	// Return manufacturer and Device ID
+	MemMappedOff();
+	QUADSPI->DLR = 0x1;										// Return 2 bytes
+	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+
+	QUADSPI->CCR = (QUADSPI_CCR_FMODE_0 |					// 00: Indirect write mode; *01: Indirect read mode; 10: Automatic polling mode; 11: Memory-mapped mode
+					QUADSPI_CCR_ADSIZE_1 |					// Address: 00: 8-bit ; 01: 16-bit; *10: 24-bit; 11: 32-bit
+					QUADSPI_CCR_ADMODE_0 |					// Address: 00: None; *01: One line; 10: Two lines; 11: Four lines
+					QUADSPI_CCR_DMODE_0 |					// Data: 00: None; *01: One line; 10: Two lines; 11: Four lines
+					QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
+					(manufacturerID << QUADSPI_CCR_INSTRUCTION_Pos));
+	QUADSPI->AR = 0;										// Use address 0x000000
+
+	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
+	uint16_t ret = QUADSPI->DR;
+	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+	return ret;
+}
+
+
+void ExtFlash::Reset()
+{
+	MemMappedOff();
+	CheckBusy();
+	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
+	QUADSPI->CCR = (QUADSPI_CCR_IMODE_0 |					// 00: No instruction; 01: Instruction on single line; 10: Two lines; 11: Four lines
+					(enableReset << QUADSPI_CCR_INSTRUCTION_Pos));
+	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+
+	//CheckBusy();
+	QUADSPI->CCR = (QUADSPI_CCR_IMODE_0 |					// 00: No instruction; 01: Instruction on single line; 10: Two lines; 11: Four lines
+					(resetDevice << QUADSPI_CCR_INSTRUCTION_Pos));
+	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+}
 
 void ExtFlash::WriteEnable()
 {

@@ -8,7 +8,7 @@ class ExtFlash {
 public:
 	enum qspiRegister : uint8_t {pageProgram = 0x02, quadPageProgram = 0x32, readData = 0x03, fastRead = 0x6B, fastReadIO = 0xEB, writeEnable = 0x06,
 		readStatusReg1 = 0x05, readStatusReg2 = 0x35, readStatusReg3 = 0x15, writeStatusReg2 = 0x31,
-		sectorErase = 0x20, chipErase = 0xC7};
+		sectorErase = 0x20, chipErase = 0xC7, manufacturerID = 0x90, enableReset = 0x66, resetDevice = 0x99};
 
 	void Init();
 	void MemoryMapped();
@@ -22,10 +22,12 @@ public:
 	uint32_t FastRead(uint32_t address);
 	void CheckBusy();
 	void InvalidateFATCache();
+	uint16_t GetID();
 
 	bool memMapMode = false;
+	bool flashCorrupt = false;
 private:
-
+	void Reset();
 
 };
 

@@ -74,6 +74,7 @@ void CDCHandler::ProcessCommand()
 				"info        -  Show diagnostic information\r\n"
 				"resume      -  Resume I2S after debugging\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
+				"flashid     -  Print flash manufacturer and device IDs\r\n"
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"eraseflash  -  Erase all flash data\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
@@ -141,11 +142,15 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
-		char workBuff[256];
-		strcpy(workBuff, "/");
+		if (fatTools.noFileSystem) {
+			printf("** No file System **\r\n");
+		} else {
+			char workBuff[256];
+			strcpy(workBuff, "/");
 
-		fatTools.InvalidateFatFSCache();						// Ensure that the FAT FS cache is updated
-		fatTools.PrintFiles(workBuff);
+			fatTools.InvalidateFatFSCache();					// Ensure that the FAT FS cache is updated
+			fatTools.PrintFiles(workBuff);
+		}
 
 
 	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
@@ -304,6 +309,13 @@ void CDCHandler::ProcessCommand()
 				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
 		extFlash.MemoryMapped();
+
+
+	} else if (cmd.compare("flashid\n") == 0) {					// Get manufacturer and device ID
+		uint16_t flashID = extFlash.GetID();
+		printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashID & 0xFF, flashID >> 8);
+		extFlash.MemoryMapped();
+
 
 
 	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]

@@ -9,6 +9,10 @@ FatTools fatTools;
 
 void FatTools::InitFatFS()
 {
+	if (extFlash.flashCorrupt) {
+		return;
+	}
+
 	// Set up cache area for header data
 	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
@@ -188,6 +192,11 @@ const uint8_t* FatTools::GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_
 void FatTools::PrintDirInfo(uint32_t cluster)
 {
 	// Output a detailed analysis of FAT directory structure
+	if (noFileSystem) {
+		printf("** No file System **\r\n");
+		return;
+	}
+
 	FATFileInfo* fatInfo;
 	if (cluster == 0) {
 		printf("\r\n  Attrib Cluster   Bytes    Created   Accessed Name          Clusters\r\n"
