@@ -402,6 +402,34 @@ void TriggerADC1()
 }
 */
 
+/* ADC Pins
+	PA0 ADC1_INP16
+	PA1 ADC1_INP17
+	PA2 ADC12_INP14
+	PA3 ADC12_INP15
+	[PA4 ADC12_INP18 DAC]
+	[PA5 ADC12_INP19 DAC]
+	PA6 ADC12_INP3
+	PA7 ADC12_INP7
+
+	PB0 ADC12_INP9
+	PB1 ADC12_INP5
+
+	PC0 ADC123_INP10
+	PC1 ADC123_INP11
+	PC2 ADC123_INP12
+	[PC3_C ADC3_INP1]
+	PC4 ADC12_INP4
+	PC5 ADC12_INP8
+
+	PF11 ADC1_INP2
+	PF12 ADC1_INP6
+	PF13 ADC2_INP2
+	PF14 ADC2_INP6
+
+*/
+
+
 void InitADC2()
 {
 	// Initialize ADC peripheral
@@ -447,21 +475,6 @@ void InitADC2()
 	2	PA3 ADC12_INP15
 	3 	PC0 ADC123_INP10
 
-	PA2 ADC12_INP14
-	PA3 ADC12_INP15
-	PA7 ADC12_INP7
-
-	PB0 ADC12_INP9
-
-	PC1 ADC123_INP11
-	PC4 ADC12_INP4
-	PC5 ADC12_INP8
-
-	PC2
-	PC3
-	PA4
-	PA5
-	PA6
 	*/
 	InitAdcPins(ADC2, {5, 3, 15, 10});
 
@@ -494,8 +507,8 @@ void InitI2S() {
 *	PB9  I2S2_WS
 	PB10 I2S2_CK
 	PB12 I2S2_WS
-x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working
-	PB15 I2S2_SDO
+x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working (**set for production)
+	PB15 I2S2_SDO	(set for production)
 	PC1  I2S2_SDO
 *	PC3  I2S2_SDO
 *	PD3  I2S2_CK

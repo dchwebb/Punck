@@ -13,6 +13,12 @@ ExtFlash extFlash;											// Singleton external flash handler
 void ExtFlash::Init()
 {
 	InitQSPI();												// Initialise hardware
+	Reset();
+	uint16_t id = GetID();
+	if (id == 0 || id == 255) {
+		flashCorrupt = true;
+		return;
+	}
 
 	// Quad SPI mode enable
 	uint8_t statusReg2 = ReadStatus(readStatusReg2);
@@ -20,8 +26,8 @@ void ExtFlash::Init()
 		WriteEnable();
 
 		QUADSPI->CR |= QUADSPI_CR_EN;						// Enable QSPI
-		QUADSPI->CCR = (QUADSPI_CCR_DMODE_0 |				// 00: No data; 01: Data on a single line; 10: Data on two lines; 11: Data on four lines
-						QUADSPI_CCR_IMODE_0 |				// 00: No instruction; 01: Instruction on single line; 10: Two lines; 11: Four lines
+		QUADSPI->CCR = (QUADSPI_CCR_DMODE_0 |				// 00: No data; *01: Data on a single line; 10: Data on two lines; 11: Data on four lines
+						QUADSPI_CCR_IMODE_0 |				// 00: No instruction; *01: Instruction on single line; 10: Two lines; 11: Four lines
 						(writeStatusReg2 << QUADSPI_CCR_INSTRUCTION_Pos));
 		QUADSPI->DR = 2;									// Set Quad Enable bit
 		while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
@@ -173,7 +179,7 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 		uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> 8);
 
 
-		uint32_t writeSize = remainingWords * 4;						// Size of current write in bytes
+		uint32_t writeSize = remainingWords * 4;			// Size of current write in bytes
 		if (endPage != startPage) {
 			writeSize = ((startPage + 1) << 8) - address;	// When crossing pages only write up to the 256 byte boundary
 		}
