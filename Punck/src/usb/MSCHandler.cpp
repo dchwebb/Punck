@@ -439,6 +439,11 @@ int8_t MSCHandler::SCSI_Write()
 
 		uint32_t len = scsi_blk_len * fatSectorSize;
 
+		if (extFlash.flashCorrupt) {
+			SCSI_SenseCode(NOT_READY, WRITE_PROTECTED);
+			return -1;
+		}
+
 		if (cbw.dDataLength != len) {
 			SCSI_SenseCode(ILLEGAL_REQUEST, INVALID_CDB);
 			return -1;
@@ -481,10 +486,10 @@ int8_t MSCHandler::SCSI_TestUnitReady()
 		return -1;
 	}
 
-	if (extFlash.flashCorrupt || fatTools.noFileSystem) {
-		SCSI_SenseCode(HARDWARE_ERROR, MEDIUM_NOT_PRESENT);
-		return -1;
-	}
+//	if (extFlash.flashCorrupt || fatTools.noFileSystem) {
+//		SCSI_SenseCode(HARDWARE_ERROR, MEDIUM_NOT_PRESENT);
+//		return -1;
+//	}
 
 	bot_data_length = 0;
 	return 0;

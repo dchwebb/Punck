@@ -660,7 +660,6 @@ void USB::StdDevReq()
 				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
 				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
 
-
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
 
@@ -768,14 +767,14 @@ bool USB::ReadInterrupts(uint32_t interrupt) {
 
 void USB::PauseEndpoint(USBHandler& handler)
 {
-	USBx_INEP(handler.inEP)->DIEPCTL |= USB_OTG_DIEPCTL_SNAK;
+	USBx_INEP(handler.inEP & 0xF)->DIEPCTL |= USB_OTG_DIEPCTL_SNAK;
 	USBx_OUTEP(handler.outEP)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
 }
 
 
 void USB::ResumeEndpoint(USBHandler& handler)
 {
-	USBx_INEP(handler.inEP)->DIEPCTL |= USB_OTG_DIEPCTL_CNAK;
+	USBx_INEP(handler.inEP & 0xF)->DIEPCTL |= USB_OTG_DIEPCTL_CNAK;
 	USBx_OUTEP(handler.outEP)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
 }
 

@@ -506,8 +506,8 @@ void InitI2S() {
 	PA12 I2S2_CK
 *	PB9  I2S2_WS
 	PB10 I2S2_CK
-	PB12 I2S2_WS
-x	PB13 I2S2_CK		on nucleo jumpered to Ethernet and not working (**set for production)
+	PB12 I2S2_WS	(set for production)
+x	PB13 I2S2_CK	(set for production)	*on nucleo jumpered to Ethernet and not working
 	PB15 I2S2_SDO	(set for production)
 	PC1  I2S2_SDO
 *	PC3  I2S2_SDO

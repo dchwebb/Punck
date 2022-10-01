@@ -112,6 +112,18 @@ void CDCHandler::ProcessCommand()
 			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);
 		}
 
+	} else if (cmd.compare("readreg\n") == 0) {					// Read QSPI register
+		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
+				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
+				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
+		extFlash.MemoryMapped();
+
+
+	} else if (cmd.compare("flashid\n") == 0) {					// Get manufacturer and device ID
+		uint16_t flashID = extFlash.GetID();
+		printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashID & 0xFF, flashID >> 8);
+		extFlash.MemoryMapped();
+
 
 	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
 		uint32_t pos = 0;
@@ -141,6 +153,28 @@ void CDCHandler::ProcessCommand()
 		voiceManager.samples.Play(voiceManager.samples.SamplePlayer::playerA, sn);
 
 
+	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
+		fatTools.PrintDirInfo();
+
+
+	} else if (cmd.compare(0, 5, "read:") == 0) {				// Read QSPI data (format read:A where A is address)
+		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		if (address >= 0) {
+			printf("Data Read: %#010x\r\n", (unsigned int)extFlash.FastRead(address));
+		}
+
+
+
+
+	//--------------------------------------------------------------------------------------------------
+	// All flash commands that rely on memory mapped data to follow this guard
+	} else if (extFlash.flashCorrupt) {
+		printf("** Flash Corrupt **\r\n");
+
+
+
+
+
 	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
 		if (fatTools.noFileSystem) {
 			printf("** No file System **\r\n");
@@ -152,9 +186,6 @@ void CDCHandler::ProcessCommand()
 			fatTools.PrintFiles(workBuff);
 		}
 
-
-	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
-		fatTools.PrintDirInfo();
 
 
 	} else if (cmd.compare("clusterchain\n") == 0) {			// Print used clusters with links from FAT area
@@ -240,9 +271,7 @@ void CDCHandler::ProcessCommand()
 			}
 
 		}
-
 		printf("Found %lu different bytes\r\n", count);
-
 
 
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print memory mapped data
@@ -304,20 +333,6 @@ void CDCHandler::ProcessCommand()
 		extFlash.MemoryMapped();
 
 
-	} else if (cmd.compare("readreg\n") == 0) {					// Read QSPI register
-		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
-				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
-				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
-		extFlash.MemoryMapped();
-
-
-	} else if (cmd.compare("flashid\n") == 0) {					// Get manufacturer and device ID
-		uint16_t flashID = extFlash.GetID();
-		printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashID & 0xFF, flashID >> 8);
-		extFlash.MemoryMapped();
-
-
-
 	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]
 		int sector = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (sector >= 0) {
@@ -347,12 +362,6 @@ void CDCHandler::ProcessCommand()
 			printf("Finished\r\n");
 		}
 
-
-	} else if (cmd.compare(0, 5, "read:") == 0) {				// Read QSPI data (format read:A where A is address)
-		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		if (address >= 0) {
-			printf("Data Read: %#010x\r\n", (unsigned int)extFlash.FastRead(address));
-		}
 
 
 	} else {
