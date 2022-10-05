@@ -1,4 +1,4 @@
-20199923673187086
+20201588637255520
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -50140,6 +50140,13 @@ Highly KS01-BLV LED Button
 0
 6
 6
+Custom_Footprints
+LED_Buttons_KS01-BLV
+Mounting Hole 7mm
+mounting hole 7mm
+0
+0
+0
 Custom_Footprints
 LED_D3.0mm
 LED, diameter 3.0mm, 2 pins
