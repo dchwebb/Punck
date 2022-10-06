@@ -131,6 +131,7 @@ var drumSettings = [
 var sampleList = [];			// Array of sample names
 var seqSettings = {seq: 0,	beatsPerBar: 16, bars: 2, bar: 0, playing: false, playingSeq: 0, playingBar: 0,  playingBeat:0};
 var selectedBeat = "";
+var highlitBeat = "";
 var beatOptions = [16, 24];
 var maxBeatsPerBar = 24;
 
@@ -551,6 +552,7 @@ function ADCChanged()
 
 }
 
+
 function BuildADCHtml(settings)
 {
 	var adcSettings = new Uint16Array(new Uint8Array(settings).buffer);
@@ -757,11 +759,24 @@ function DecodeSysEx(data, headerLen)
 
 function DisplayPosition()
 {
+var highlightOn = document.getElementById("autoUpdate").checked && seqSettings.playing;
+
+	// Clear border of previously selected note
+	if (highlitBeat != "" && highlitBeat != selectedBeat && document.getElementById(highlitBeat) != null) {
+		document.getElementById(highlitBeat).style.border = "1px solid #333434";		// FIXME - change to got focus colour if necessary
+	}
+
+	// Highlight currently playing beat on kick channel
+	highlitBeat = seqSettings.playingBar + "Kick" + seqSettings.playingBeat;
+	if (highlightOn && document.getElementById(highlitBeat) != null) {
+		document.getElementById(highlitBeat).style.border = "1px solid #bbbbbb";		// FIXME - change to got focus colour if necessary
+	}	
+
 	// Updates the currently playing bar - FIXME should update sequence display if changed on module
 	for (var i = 0; i < 4; ++i) {
 		var barGrid = document.getElementById("bar" + i);
 		if (barGrid != null) {
-			if (seqSettings.playing && seqSettings.playingSeq == seqSettings.seq && i == seqSettings.playingBar) {
+			if (highlightOn && seqSettings.playingSeq == seqSettings.seq && i == seqSettings.playingBar) {
 				barGrid.style.border = "1px solid rgba(255, 0, 0, 0.8)";
 			} else {
 				barGrid.style.border = "1px solid rgba(0, 0, 0, 0.3)";
@@ -780,6 +795,8 @@ function StatusTimer(wait)
 	}
 	if (document.getElementById("autoUpdate").checked) {
 		setTimeout(function(){ RequestStatus(); }, wait);
+	} else {
+		DisplayPosition();			// Clear highlight bar/beat
 	}
 }
 
