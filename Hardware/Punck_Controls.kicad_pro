@@ -383,7 +383,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "Punck_Controls.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
