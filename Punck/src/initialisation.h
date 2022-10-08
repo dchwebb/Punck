@@ -70,3 +70,4 @@ void InitMDMA();
 void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t bytes);
 void InitMidiUART();
 void InitRNG();
+void InitPWMTimer();

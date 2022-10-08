@@ -31,7 +31,8 @@ VoiceManager::VoiceManager()
 	kickPlayer.noteMapper = &k;
 	k.drumVoice = &kickPlayer;
 	//k.btn = {GPIOC, 6};
-	k.led = {GPIOB, 14};				// PB14: Red LED nucleo
+	//k.led = {GPIOB, 14};				// PC7: PWM Channel
+	k.pwmLed = {&TIM8->CCR2};
 	k.midiLow = 84;
 	k.midiHigh = 84;
 
@@ -100,7 +101,7 @@ void VoiceManager::Output()
 	if (std::abs(combinedOutput[right]) > 1.0f) { ++rightOverflow; }
 
 	// Apply some soft clipping
-	combinedOutput[right] = FastTanh(combinedOutput[left]);
+	combinedOutput[left] = FastTanh(combinedOutput[left]);
 	combinedOutput[right] = FastTanh(combinedOutput[right]);
 
 	float outputScale = 2147483648.0f * adjOutputScale;

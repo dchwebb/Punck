@@ -33,6 +33,7 @@ int main(void) {
 	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
+	InitPWMTimer();
 	InitRNG();						// Init random number generator
 	InitMidiUART();
 	InitADC();

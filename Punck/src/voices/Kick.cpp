@@ -11,7 +11,7 @@ void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 	phase = Phase::Ramp1;
 	position = 0.0f;
 	currentLevel = 0.0f;
-	noteMapper->led.On();
+	//noteMapper->led.On();
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_KickLevel]) / 32768.0f);
 	fastSinInc = FreqToInc(config.fastSinFreq);
 	slowSinInc = FreqToInc(config.initSlowSinFreq);
@@ -78,7 +78,7 @@ void Kick::CalcOutput()
 		if (slowSinLevel <= 0.00001f) {
 			playing = false;
 			phase = Phase::Off;
-			noteMapper->led.Off();
+			//noteMapper->led.Off();
 		}
 		break;
 	}
@@ -88,6 +88,7 @@ void Kick::CalcOutput()
 	}
 
 	if (phase != Phase::Off) {
+		noteMapper->pwmLed.Level(slowSinLevel);
 		outputLevel[0] = velocityScale * filter.CalcFilter(currentLevel, left);
 		outputLevel[1] = outputLevel[0];
 	}

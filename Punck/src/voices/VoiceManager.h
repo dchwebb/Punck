@@ -45,6 +45,13 @@ struct NoteMapper {
 		void On()  { gpioBank->ODR |= (1 << gpioPin); }
 		void Off() { gpioBank->ODR &= ~(1 << gpioPin); }
 	} led;
+
+	struct PWMLED {
+		//TIM_TypeDef* timerChannel;
+		volatile uint32_t* timerChannel;
+
+		void Level(float brightness)  { *timerChannel = (brightness * 4095.0f); }
+	} pwmLed;
 };
 
 

@@ -755,3 +755,38 @@ void InitRNG()
 	RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;				// Enable clock
 	RNG->CR |= RNG_CR_RNGEN;						// Enable random number generator
 }
+
+
+void InitPWMTimer()
+{
+	// TIM8: Channel 1 Output: *PC6; Channel 2: *PC7; Channel 3: *PC8; Channel 4: PC9
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
+	RCC->APB2ENR |= RCC_APB2ENR_TIM8EN;
+
+	// Enable channel 1, 2, 3 PWM output pins on PC6, PC7, PC8, PC9
+	GPIOC->MODER &= ~(GPIO_MODER_MODE7_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
+	GPIOC->AFR[0] |= (GPIO_AFRL_AFSEL7_0 | GPIO_AFRL_AFSEL7_1);			// Timer 8 Output channel is AF3
+
+	// Timing calculations: Clock = 400MHz / (PSC + 1) = 200m counts per second
+	// ARR = number of counts per PWM tick = 4096
+	// 200m / ARR = 48kHz of PWM square wave with 4096 levels of output
+	//TIM8->CCMR1 |= TIM_CCMR1_OC1PE;				// Output compare 1 preload enable
+	TIM8->CCMR1 |= TIM_CCMR1_OC2PE;					// Output compare 2 preload enable
+	//TIM8->CCMR2 |= TIM_CCMR2_OC3PE;				// Output compare 3 preload enable
+
+	//TIM8->CCMR1 |= (TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);	// 0110: PWM mode 1 - In upcounting, channel 1 active if TIMx_CNT<TIMx_CCR1
+	TIM8->CCMR1 |= (TIM_CCMR1_OC2M_1 | TIM_CCMR1_OC2M_2);	// 0110: PWM mode 1 - In upcounting, channel 2 active if TIMx_CNT<TIMx_CCR2
+	//TIM8->CCMR2 |= (TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2);	// 0110: PWM mode 1 - In upcounting, channel 3 active if TIMx_CNT<TIMx_CCR3
+
+	//TIM8->CCR1 = 0x800;							// Initialise PWM level to midpoint
+	TIM8->CCR2 = 0x000;
+	//TIM8->CCR3 = 0x800;
+
+	TIM8->ARR = 0xFFF;								// Total number of PWM ticks = 4096
+	TIM8->PSC = 1;									// Should give ~48kHz
+	TIM8->CR1 |= TIM_CR1_ARPE;						// 1: TIMx_ARR register is buffered
+	TIM8->CCER |= TIM_CCER_CC2E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+	TIM8->BDTR |= TIM_BDTR_MOE;						// Master output enable
+	TIM8->EGR |= TIM_EGR_UG;						// 1: Re-initialize the counter and generates an update of the registers
+	TIM8->CR1 |= TIM_CR1_CEN;						// Enable counter
+}
