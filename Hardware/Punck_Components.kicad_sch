@@ -7667,7 +7667,7 @@
     (uuid 10fcd67d-3f8c-4430-8de1-728b6d3c2ed4)
     (property "Reference" "C39" (id 0) (at 105.41 259.08 0))
     (property "Value" "10uF" (id 1) (at 105.41 264.16 0))
-    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (id 2) (at 107.95 261.62 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (id 2) (at 107.95 261.62 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 107.95 261.62 0)
@@ -8161,7 +8161,7 @@
     (uuid 5dfde6b0-58e2-4528-a7e0-dffdbc1a442e)
     (property "Reference" "C40" (id 0) (at 113.03 259.08 0))
     (property "Value" "10uF" (id 1) (at 113.03 264.16 0))
-    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (id 2) (at 115.57 261.62 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (id 2) (at 115.57 261.62 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 115.57 261.62 0)
@@ -9196,7 +9196,7 @@
     (uuid d2a7b285-1032-46ff-a18a-afc781d06f96)
     (property "Reference" "C38" (id 0) (at 152.4 256.54 0))
     (property "Value" "100nF" (id 1) (at 149.86 259.08 0))
-    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (id 2) (at 149.86 255.27 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (id 2) (at 149.86 255.27 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 149.86 255.27 0)
@@ -9875,13 +9875,13 @@
       (reference "C37") (unit 1) (value "47uF") (footprint "Capacitor_SMD:CP_Elec_5x5.8")
     )
     (path "/d2a7b285-1032-46ff-a18a-afc781d06f96"
-      (reference "C38") (unit 1) (value "100nF") (footprint "Resistor_SMD:R_0805_2012Metric")
+      (reference "C38") (unit 1) (value "100nF") (footprint "Capacitor_SMD:C_0805_2012Metric")
     )
     (path "/10fcd67d-3f8c-4430-8de1-728b6d3c2ed4"
-      (reference "C39") (unit 1) (value "10uF") (footprint "Resistor_SMD:R_0805_2012Metric")
+      (reference "C39") (unit 1) (value "10uF") (footprint "Capacitor_SMD:C_0805_2012Metric")
     )
     (path "/5dfde6b0-58e2-4528-a7e0-dffdbc1a442e"
-      (reference "C40") (unit 1) (value "10uF") (footprint "Resistor_SMD:R_0805_2012Metric")
+      (reference "C40") (unit 1) (value "10uF") (footprint "Capacitor_SMD:C_0805_2012Metric")
     )
     (path "/00000000-0000-0000-0000-00005f1d3990"
       (reference "C41") (unit 1) (value "22uF") (footprint "Capacitor_SMD:CP_Elec_4x5.8")
