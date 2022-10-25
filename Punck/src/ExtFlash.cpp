@@ -21,7 +21,7 @@ void ExtFlash::Init()
 	}
 
 	// Quad SPI mode enable
-	uint8_t statusReg2 = ReadStatus(readStatusReg2);
+	const uint8_t statusReg2 = ReadStatus(readStatusReg2);
 	if ((statusReg2 & 2) == 0) {			// QuadSPI not enabled
 		WriteEnable();
 
@@ -88,7 +88,7 @@ uint8_t ExtFlash::ReadStatus(qspiRegister r)
 					(r << QUADSPI_CCR_INSTRUCTION_Pos));	// Read status register
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	uint8_t ret = QUADSPI->DR;
+	const uint8_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	return ret;
@@ -111,7 +111,7 @@ uint16_t ExtFlash::GetID()
 	QUADSPI->AR = 0;										// Use address 0x000000
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	uint16_t ret = QUADSPI->DR;
+	const uint16_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	return ret;
@@ -133,6 +133,7 @@ void ExtFlash::Reset()
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 }
+
 
 void ExtFlash::WriteEnable()
 {
@@ -175,8 +176,8 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 		WriteEnable();
 
 		// Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)
-		uint32_t startPage = (address >> 8);
-		uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> 8);
+		const uint32_t startPage = (address >> 8);
+		const uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> 8);
 
 
 		uint32_t writeSize = remainingWords * 4;			// Size of current write in bytes
@@ -215,7 +216,7 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 }
 
 
-void ExtFlash::BlockErase(uint32_t address)
+void ExtFlash::BlockErase(const uint32_t address)
 {
 	WriteEnable();
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
@@ -243,7 +244,7 @@ void ExtFlash::FullErase()
 }
 
 
-uint8_t ExtFlash::ReadData(uint32_t address)
+uint8_t ExtFlash::ReadData(const uint32_t address)
 {
 	// Read a single byte of data
 	QUADSPI->DLR = 0;										// Return 1 byte
@@ -258,15 +259,17 @@ uint8_t ExtFlash::ReadData(uint32_t address)
 	QUADSPI->AR = address;
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	uint8_t ret = QUADSPI->DR;
+	const uint8_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	return ret;
 }
 
 
-uint32_t ExtFlash::FastRead(uint32_t address)
+uint32_t ExtFlash::FastRead(const uint32_t address)
 {
+	const bool memoryMapped = memMapMode;
+	MemMappedOff();
 	QUADSPI->DLR = 0x3;										// Return 4 bytes
 	QUADSPI->ABR = 0xFF;									// Use alternate bytes to pad the address with a dummy byte of 0xFF
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
@@ -282,9 +285,13 @@ uint32_t ExtFlash::FastRead(uint32_t address)
 	QUADSPI->AR = address;									// Address needs to be four bytes with a dummy byte of 0xFF
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	uint32_t ret = QUADSPI->DR;
+	const uint32_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
+
+	if (memoryMapped) {										// Switch back into memory mapped mode
+		MemoryMapped();
+	}
 	return ret;
 }
 

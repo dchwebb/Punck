@@ -104,7 +104,7 @@ void VoiceManager::Output()
 	combinedOutput[left] = FastTanh(combinedOutput[left]);
 	combinedOutput[right] = FastTanh(combinedOutput[right]);
 
-	float outputScale = 2147483648.0f * adjOutputScale;
+	const float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);
 	SPI2->TXDR = (int32_t)((combinedOutput[right] + adjOffset) * outputScale);
 
@@ -119,9 +119,9 @@ void VoiceManager::Output()
 // Algorithm source: https://varietyofsound.wordpress.com/2011/02/14/efficient-tanh-computation-using-lamberts-continued-fraction/
 float VoiceManager::FastTanh(float x)
 {
-	float x2 = x * x;
-	float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
-	float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+	const float x2 = x * x;
+	const float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+	const float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
 	return a / b;
 }
 
@@ -145,8 +145,8 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 		// Locate voice
 		for (auto& note : noteMapper) {
 			if (midiNote.noteValue >= note.midiLow && midiNote.noteValue <= note.midiHigh) {
-				uint32_t noteOffset = midiNote.noteValue - note.midiLow;
-				uint32_t noteRange = note.midiHigh - note.midiLow + 1;
+				const uint32_t noteOffset = midiNote.noteValue - note.midiLow;
+				const uint32_t noteRange = note.midiHigh - note.midiLow + 1;
 
 				if (note.drumVoice) {
 					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange, static_cast<float>(midiNote.velocity) / 127.0f);

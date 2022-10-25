@@ -171,7 +171,7 @@ void InitMDMA()
 }
 
 
-void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, uint32_t bytes)
+void MDMATransfer(const uint8_t* srcAddr, const uint8_t* destAddr, const uint32_t bytes)
 {
 	MDMA_Channel0->CTCR |= ((bytes - 1) << MDMA_CTCR_TLEN_Pos);	// Transfer length in bytes - 1
 	MDMA_Channel0->CBNDTR |= (bytes << MDMA_CBNDTR_BNDT_Pos);	// Number of bytes in a block
@@ -243,7 +243,7 @@ void InitDAC()
 }
 
 
-void InitAdcPins(ADC_TypeDef* ADC_No, std::initializer_list<uint8_t> channels) {
+void InitAdcPins(ADC_TypeDef* ADC_No, const std::initializer_list<uint8_t> channels) {
 	uint8_t sequence = 1;
 
 	for (auto channel: channels) {
@@ -271,6 +271,7 @@ void InitAdcPins(ADC_TypeDef* ADC_No, std::initializer_list<uint8_t> channels) {
 	}
 }
 
+
 // Settings used for both ADC1 and ADC2
 void InitADC()
 {
@@ -281,7 +282,6 @@ void InitADC()
 		}
 		return;
 	}
-
 
 	// Configure clocks
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;			// GPIO port clock
@@ -684,7 +684,7 @@ void CopyToITCMRAM()
 
 
 	 * */
-	extern  unsigned char itcm_text_start;
+	extern unsigned char itcm_text_start;
 	extern const unsigned char itcm_text_end;
 	extern const unsigned char itcm_data;
 	memcpy(&itcm_text_start, &itcm_data, (int) (&itcm_text_end - &itcm_text_start));

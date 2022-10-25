@@ -72,12 +72,12 @@ public:
 	FATFileInfo* rootDirectory;			// Pointer to start of FAT directory listing
 
 	void InitFatFS();
-	void Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount);
-	const uint8_t* GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_t bufferSize);
-	const uint8_t* GetClusterAddr(uint32_t cluster, bool ignoreCache = false);
-	void Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount);
+	void Read(uint8_t* writeAddress, const uint32_t readSector, const uint32_t sectorCount);
+	const uint8_t* GetSectorAddr(const uint32_t sector, const uint8_t* buffer, const uint32_t bufferSize);
+	const uint8_t* GetClusterAddr(const uint32_t cluster, const bool ignoreCache = false);
+	void Write(const uint8_t* readBuff, const uint32_t writeSector, const uint32_t sectorCount);
 	void PrintDirInfo(uint32_t cluster = 0);
-	void PrintFiles (char* path);
+	void PrintFiles(char* path);
 	void CheckCache();
 	uint8_t FlushCache();
 	void InvalidateFatFSCache();
@@ -95,11 +95,11 @@ private:
 	int32_t writeBlock = -1;			// Keep track of which block is currently held in the write cache
 	bool writeCacheDirty = false;		// Indicates whether the data in the write cache has changes
 
-	std::string GetFileName(FATFileInfo* lfn);
-	std::string GetAttributes(FATFileInfo* fi);
-	std::string FileDate(uint16_t date);
+	std::string GetFileName(const FATFileInfo* lfn);
+	std::string GetAttributes(const FATFileInfo* fi);
+	std::string FileDate(const uint16_t date);
 	void MakeDummyFiles();
-	void LFNDirEntries(uint8_t* address, const char* sfn, const char* lfn1, const char* lfn2, uint8_t checksum, uint8_t attributes, uint16_t cluster, uint32_t size);
+	void LFNDirEntries(uint8_t* address, const char* sfn, const char* lfn1, const char* lfn2, const uint8_t checksum, const uint8_t attributes, const uint16_t cluster, const uint32_t size);
 
 };
 

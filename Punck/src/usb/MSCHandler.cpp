@@ -85,7 +85,7 @@ void MSCHandler::MSC_BOT_CBW_Decode()
 		} else if ((bot_state != BotState::DataIn) && (bot_state != BotState::DataOut) && (bot_state != BotState::LastDataIn))	{
 			if (bot_data_length > 0) {
 
-				uint32_t length = std::min(cbw.dDataLength, bot_data_length);
+				const uint32_t length = std::min(cbw.dDataLength, bot_data_length);
 
 				csw.dDataResidue -= bot_data_length;
 				csw.bStatus = CSWCmdPassed;
@@ -111,7 +111,7 @@ void MSCHandler::MSC_BOT_SendCSW(uint8_t CSW_Status)
 	csw.bStatus = CSW_Status;
 	bot_state = BotState::Idle;
 
-	inBuff = (uint8_t*)&csw;
+	inBuff = reinterpret_cast<uint8_t*>(&csw);
 	inBuffSize = cswSize;
 	inBuffCount = 0;
 
@@ -234,10 +234,11 @@ int8_t MSCHandler::SCSI_Inquiry()
 	return 0;
 }
 
+
 int8_t MSCHandler::SCSI_ReadFormatCapacity()
 {
-	uint32_t blk_nbr = fatSectorCount - 1;
-	uint32_t blk_size = fatSectorSize;
+	const uint32_t blk_nbr = fatSectorCount - 1;
+	const uint32_t blk_size = fatSectorSize;
 
 	*(uint32_t*)&bot_data = 0; 						// blank out first three bytes of bot_data as reserved
 
@@ -265,8 +266,8 @@ int8_t MSCHandler::SCSI_ReadFormatCapacity()
 
 int8_t MSCHandler::SCSI_ReadCapacity10()
 {
-	uint32_t blk_nbr = fatSectorCount - 1;
-	uint32_t blk_size = fatSectorSize;
+	const uint32_t blk_nbr = fatSectorCount - 1;
+	const uint32_t blk_size = fatSectorSize;
 
 	uint8_t* blk8 = (uint8_t*)&blk_nbr;
 
@@ -291,8 +292,8 @@ int8_t MSCHandler::SCSI_ReadCapacity10()
 
 int8_t MSCHandler::SCSI_ReadCapacity16()		// Untested
 {
-	uint32_t blk_nbr = fatSectorCount - 1;
-	uint32_t blk_size = fatSectorSize;
+	const uint32_t blk_nbr = fatSectorCount - 1;
+	const uint32_t blk_size = fatSectorSize;
 
 	bot_data_length = ((uint32_t)cbw.CB[10] << 24) |
 			((uint32_t)cbw.CB[11] << 16) |
@@ -520,10 +521,11 @@ int8_t MSCHandler::SCSI_Verify10()			// Untested
 		return -1;
 	}
 
-	bot_data_length = 0U;
+	bot_data_length = 0;
 
 	return 0;
 }
+
 
 void MSCHandler::SCSI_SenseCode(uint8_t sKey, uint8_t ASC)
 {

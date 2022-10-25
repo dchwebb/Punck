@@ -11,23 +11,23 @@ public:
 		sectorErase = 0x20, chipErase = 0xC7, manufacturerID = 0x90, enableReset = 0x66, resetDevice = 0x99};
 
 	void Init();
-	void MemoryMapped();
-	void MemMappedOff();
 	uint8_t ReadStatus(qspiRegister r);
-	void WriteEnable();
+	void MemoryMapped();
 	bool WriteData(uint32_t address, const uint32_t* data, uint32_t words);
-	void BlockErase(uint32_t address);
+	void BlockErase(const uint32_t address);
 	void FullErase();
-	uint8_t ReadData(uint32_t address);
-	uint32_t FastRead(uint32_t address);
-	void CheckBusy();
-	void InvalidateFATCache();
+	uint8_t ReadData(const uint32_t address);
+	uint32_t FastRead(const uint32_t address);
 	uint16_t GetID();
 
 	bool memMapMode = false;
 	bool flashCorrupt = false;
 private:
 	void Reset();
+	void CheckBusy();
+	void MemMappedOff();
+	void WriteEnable();
+	void InvalidateFATCache();
 
 };
 

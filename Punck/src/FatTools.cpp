@@ -16,7 +16,7 @@ void FatTools::InitFatFS()
 	// Set up cache area for header data
 	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
-	FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
+	const FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
 
 	if (res == FR_NO_FILESYSTEM) {
 		return;
@@ -50,7 +50,7 @@ void FatTools::InitFatFS()
 }
 
 
-void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorCount)
+void FatTools::Read(uint8_t* writeAddress, const uint32_t readSector, const uint32_t sectorCount)
 {
 	// If reading header data return from cache
 	const uint8_t* readAddress;
@@ -64,7 +64,7 @@ void FatTools::Read(uint8_t* writeAddress, uint32_t readSector, uint32_t sectorC
 }
 
 
-void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sectorCount)
+void FatTools::Write(const uint8_t* readBuff, const uint32_t writeSector, const uint32_t sectorCount)
 {
 	if (writeSector < fatCacheSectors) {
 		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
@@ -74,7 +74,7 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 		memcpy(writeAddress, readBuff, fatSectorSize * sectorCount);
 	} else {
 		// Check which block is being written to
-		int32_t block = writeSector / fatEraseSectors;
+		const int32_t block = writeSector / fatEraseSectors;
 		if (block != writeBlock) {
 			if (writeBlock > 0) {					// Write previously cached block to flash
 				//GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
@@ -89,7 +89,7 @@ void FatTools::Write(const uint8_t* readBuff, uint32_t writeSector, uint32_t sec
 		}
 
 		// write cache is now valid - copy newly changed values into it
-		uint32_t byteOffset = (writeSector - (block * fatEraseSectors)) * fatSectorSize;		// Offset within currently block
+		const uint32_t byteOffset = (writeSector - (block * fatEraseSectors)) * fatSectorSize;		// Offset within currently block
 		memcpy(&(writeBlockCache[byteOffset]), readBuff, fatSectorSize * sectorCount);
 		writeCacheDirty = true;
 	}
@@ -157,10 +157,10 @@ uint8_t FatTools::FlushCache()
 
 
 
-const uint8_t* FatTools::GetClusterAddr(uint32_t cluster, bool ignoreCache)
+const uint8_t* FatTools::GetClusterAddr(const uint32_t cluster, const bool ignoreCache)
 {
 	// Byte offset of the cluster start (note cluster numbers start at 2)
-	uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
+	const uint32_t offsetByte = (fatFs.database * fatSectorSize) + (fatClusterSize * (cluster - 2));
 
 	// Check if cluster is in cache or not
 	if (offsetByte < fatCacheSectors * fatSectorSize && !ignoreCache) {			// In cache
@@ -171,7 +171,7 @@ const uint8_t* FatTools::GetClusterAddr(uint32_t cluster, bool ignoreCache)
 }
 
 
-const uint8_t* FatTools::GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_t bufferSize)
+const uint8_t* FatTools::GetSectorAddr(const uint32_t sector, const uint8_t* buffer, const uint32_t bufferSize)
 {
 	// If reading header data return cache address; if reading flash address and buffer passed trigger DMA transfer and return null pointer
 	// FIXME - take into account write cache??
@@ -189,7 +189,7 @@ const uint8_t* FatTools::GetSectorAddr(uint32_t sector, uint8_t* buffer, uint32_
 }
 
 
-void FatTools::PrintDirInfo(uint32_t cluster)
+void FatTools::PrintDirInfo(const uint32_t cluster)
 {
 	// Output a detailed analysis of FAT directory structure
 	if (noFileSystem) {
@@ -212,7 +212,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 
 	while (fatInfo->name[0] != 0) {
 		if (fatInfo->attr == 0xF) {							// Long file name
-			FATLongFilename* lfn = (FATLongFilename*)fatInfo;
+			const FATLongFilename* lfn = (FATLongFilename*)fatInfo;
 			printf("%c LFN %2i                                       %-14s [0x%02x]\r\n",
 					(cluster == 0 ? ' ' : '>'),
 					lfn->order & (~0x40),
@@ -264,7 +264,7 @@ void FatTools::PrintDirInfo(uint32_t cluster)
 }
 
 
-std::string FatTools::FileDate(uint16_t date)
+std::string FatTools::FileDate(const uint16_t date)
 {
 	// Bits 0–4: Day of month, valid value range 1-31 inclusive.
 	// Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive.
@@ -283,7 +283,7 @@ std::string FatTools::FileDate(uint16_t date)
  Bits 11–15: Hours, valid value range 0–23 inclusive.
  */
 
-std::string FatTools::GetFileName(FATFileInfo* fi)
+std::string FatTools::GetFileName(const FATFileInfo* fi)
 {
 	char cs[14];
 	std::string s;
@@ -310,14 +310,14 @@ std::string FatTools::GetFileName(FATFileInfo* fi)
 }
 
 
-std::string FatTools::GetAttributes(FATFileInfo* fi)
+std::string FatTools::GetAttributes(const FATFileInfo* fi)
 {
-	char cs[6] = {(fi->attr & AM_RDO) ? 'R' : '-',
+	const char cs[6] = {(fi->attr & AM_RDO) ? 'R' : '-',
 			(fi->attr & AM_HID) ? 'H' : '-',
 			(fi->attr & AM_SYS) ? 'S' : '-',
 			(fi->attr & AM_DIR) ? 'D' : '-',
 			(fi->attr & AM_ARC) ? 'A' : '-', '\0'};
-	std::string s = std::string(cs);
+	const std::string s = std::string(cs);
 	return s;
 }
 
@@ -344,7 +344,7 @@ void FillLFN(const char* desc, uint8_t* lfn)
 }
 
 
-void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char* lfn1, const char* lfn2, uint8_t checksum, uint8_t attributes, uint16_t cluster, uint32_t size)
+void FatTools::LFNDirEntries(uint8_t* writeAddress, const char* sfn, const char* lfn1, const char* lfn2, const uint8_t checksum, const uint8_t attributes, const uint16_t cluster, const uint32_t size)
 {
 	// Quick 'n' Dirty routine to generate 2 LFN entries and main file entry for Windows dummy files
 	uint8_t dirEntries[96] = {};
@@ -431,7 +431,7 @@ void FatTools::PrintFiles(char* path)						// Start node to be scanned (also use
 				break;
 			}
 			if (fileInfo.fattrib & AM_DIR) {				// It is a directory
-				uint32_t i = strlen(path);
+				const uint32_t i = strlen(path);
 				sprintf(&path[i], "/%s", fileInfo.fname);
 				PrintFiles(path);							// Enter the directory
 				path[i] = 0;
