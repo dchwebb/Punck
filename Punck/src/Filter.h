@@ -1,26 +1,21 @@
 #pragma once
+#include "initialisation.h"
+#include <cmath>
+#include <complex>
+#include <array>
 
 /*
  * Much of the filter code gratefully taken from Iowa Hills Software
  * http://www.iowahills.com/
  */
 
-#include "initialisation.h"
-#include <cmath>
-#include <complex>
-#include <array>
-
-
-static constexpr uint32_t maxPoles = 8;		// For declaring IIR arrays
-static constexpr uint32_t maxSections = (maxPoles + 1) / 2;
-
-// For debugging
-extern bool calculatingFilter;
+typedef float iirdouble_t;			// to allow easy testing with floats or doubles
+typedef std::complex<float> complex_t;
 
 enum class filterPass {LowPass, HighPass, BandPass};
 
-typedef float iirdouble_t;			// to allow easy testing with floats or doubles
-typedef std::complex<float> complex_t;
+static constexpr uint32_t maxPoles = 8;		// For declaring IIR arrays
+static constexpr uint32_t maxSections = (maxPoles + 1) / 2;
 
 
 struct IIRRegisters {

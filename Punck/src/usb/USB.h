@@ -9,7 +9,7 @@
 #include <cstring>
 
 // Enables capturing of debug data for output over STLink UART on dev boards
-#define USB_DEBUG false
+#define USB_DEBUG true
 #if (USB_DEBUG)
 #include "uartHandler.h"
 #define USB_DEBUG_COUNT 1000
@@ -73,7 +73,7 @@ public:
 	void Init();
 	size_t SendData(const uint8_t *data, uint16_t len, uint8_t endpoint);
 	void SendString(const char* s);
-	void SendString(std::string s);
+	void SendString(const std::string s);
 	size_t SendString(const unsigned char* s, size_t len);
 	void PauseEndpoint(USBHandler& handler);
 	void ResumeEndpoint(USBHandler& handler);
@@ -86,24 +86,27 @@ public:
 	CDCHandler  cdc  = CDCHandler(this,  USB::CDC_In,  USB::CDC_Out,  CDCCmdInterface);
 	bool classPendingData= false;			// Set when class setup command received and data pending
 	DeviceState devState;
+
+	static constexpr uint8_t ep_maxPacket = 0x40;
 private:
 	enum class EP0State {Idle, Setup, DataIn, DataOut, StatusIn, StatusOut, Stall};
 
-	void ActivateEndpoint(uint8_t endpoint, Direction direction, EndPointType eptype);
+	void ActivateEndpoint(uint8_t endpoint, const Direction direction, const EndPointType eptype);
 	void ReadPacket(const uint32_t* dest, uint16_t len, uint32_t offset);
 	void WritePacket(const uint8_t* src, uint8_t endpoint, uint32_t len);
 	void GetDescriptor();
 	void StdDevReq();
-	void EPStartXfer(Direction direction, uint8_t endpoint, uint32_t xfer_len);
+	void EPStartXfer(const Direction direction, uint8_t endpoint, uint32_t xfer_len);
 	void EP0In(const uint8_t* buff, uint32_t size);
 	void CtlError();
-	bool ReadInterrupts(uint32_t interrupt);
-	void IntToUnicode(uint32_t value, uint8_t* pbuf, uint8_t len);
+	bool ReadInterrupts(const uint32_t interrupt);
+	void SerialToUnicode();
 
 	std::array<USBHandler*, 4>classesByInterface;		// Lookup tables to get appropriate class handlers
 	std::array<USBHandler*, 4>classByEP;
 
-	const uint8_t ep_maxPacket = 0x40;
+	static constexpr uint8_t usbSerialSize = 24;
+
 	EP0State ep0State;
 
 	bool transmitting;
@@ -378,11 +381,6 @@ private:
 			0x02, 0x00, 0x00, 0x00				// Link Power Management protocol is supported
 	};
 
-
-	uint8_t USBD_StringSerial[0x1A] = {
-			0x1A,								// Length
-			StringDescriptor, 					// DescriptorType
-	};
 
 	// USB lang indentifier descriptor
 	const uint8_t USBD_LangIDDesc[USB_LEN_LANGID_STR_DESC] = {

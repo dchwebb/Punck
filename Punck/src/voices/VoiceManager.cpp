@@ -117,7 +117,7 @@ void VoiceManager::Output()
 
 
 // Algorithm source: https://varietyofsound.wordpress.com/2011/02/14/efficient-tanh-computation-using-lamberts-continued-fraction/
-float VoiceManager::FastTanh(float x)
+float VoiceManager::FastTanh(const float x)
 {
 	const float x2 = x * x;
 	const float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
@@ -206,7 +206,8 @@ void VoiceManager::CheckButtons()
 void VoiceManager::IdleTasks()
 {
 	for (auto& nm : noteMapper) {
-		if (nm.drumVoice != nullptr && nm.voiceIndex == 0 && nm.drumVoice->playing) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0 && nm.drumVoice->playing) {
 			nm.drumVoice->UpdateFilter();					// Check if filter coefficients need to be updated
 		}
 	}

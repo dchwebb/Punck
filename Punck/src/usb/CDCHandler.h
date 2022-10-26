@@ -5,8 +5,6 @@
 #include <string>
 
 
-#define CDC_CMD_LEN 20
-
 class USB;
 
 class CDCHandler : public USBHandler {
@@ -23,7 +21,8 @@ public:
 	void ProcessCommand();			// Processes command received during interrupt
 
 	bool cmdPending = false;
-	char comCmd[CDC_CMD_LEN];
+	static constexpr uint32_t maxCmdLen = 40;
+	char comCmd[maxCmdLen];
 
 	struct LineCoding {
 		uint32_t bitrate;    		// Data terminal rate in bits per sec.
@@ -36,6 +35,8 @@ private:
 	enum {HtoD_Class_Interface = 0x21, DtoH_Class_Interface = 0xA1};		// A1 = [1|01|00001] Device to host | Class | Interface;
 	uint32_t xfer_buff[64];
 
-	int32_t ParseInt(const std::string cmd, const char precedingChar, const int low, const int high);
-	float ParseFloat(const std::string cmd, const char precedingChar, const float low, const float high);
+	uint32_t buffPos = 0;
+
+	int32_t ParseInt(const std::string_view cmd, const char precedingChar, const int32_t low, const int32_t high);
+	float ParseFloat(const std::string_view cmd, const char precedingChar, const float low, const float high);
 };

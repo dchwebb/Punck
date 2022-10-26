@@ -47,7 +47,6 @@ struct NoteMapper {
 	} led;
 
 	struct PWMLED {
-		//TIM_TypeDef* timerChannel;
 		volatile uint32_t* timerChannel;
 
 		void Level(float brightness)  { *timerChannel = (brightness * 4095.0f); }
@@ -75,7 +74,7 @@ public:
 
 	NoteMapper noteMapper[Voice::count];
 private:
-	float FastTanh(float x);
+	float FastTanh(const float x);
 
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};

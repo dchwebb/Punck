@@ -7,20 +7,31 @@
 #include "ff.h"
 
 uint32_t flashBuff[1024];
-uint32_t dmaTestBuffer[128];
 
 void CDCHandler::DataIn()
 {
-
+	if (inBuffSize > 0 && inBuffSize % USB::ep_maxPacket == 0) {
+		inBuffSize = 0;
+		EndPointTransfer(Direction::in, inEP, 0);				// Fixes issue transmitting an exact multiple of max packet size (n x 64)
+	}
 }
+
 
 // As this is called from an interrupt assign the command to a variable so it can be handled in the main loop
 void CDCHandler::DataOut()
 {
-	const uint32_t maxLen = std::min((uint32_t)CDC_CMD_LEN - 1, outBuffCount);
-	strncpy(comCmd, (char*)outBuff, CDC_CMD_LEN);
-	comCmd[maxLen] = '\0';
-	cmdPending = true;
+	// Check if sufficient space in command buffer
+	const uint32_t newCharCnt = std::min(outBuffCount, maxCmdLen - 1 - buffPos);
+
+	strncpy(&comCmd[buffPos], (char*)outBuff, newCharCnt);
+	buffPos += newCharCnt;
+
+	// Check if cr has been sent yet
+	if (comCmd[buffPos - 1] == 13 || comCmd[buffPos - 1] == 10 || buffPos == maxCmdLen - 1) {
+		comCmd[buffPos - 1] = '\0';
+		cmdPending = true;
+		buffPos = 0;
+	}
 }
 
 
@@ -47,14 +58,14 @@ void CDCHandler::ClassSetupData(usbRequest& req, const uint8_t* data)
 }
 
 
-int32_t CDCHandler::ParseInt(const std::string cmd, const char precedingChar, const int low = 0, const int high = 0) {
+int32_t CDCHandler::ParseInt(const std::string_view cmd, const char precedingChar, const int32_t low = 0, const int32_t high = 0) {
 	int32_t val = -1;
 	const int8_t pos = cmd.find(precedingChar);		// locate position of character preceding
-	if (pos >= 0 && std::strspn(cmd.substr(pos + 1).c_str(), "0123456789-") > 0) {
-		val = stoi(cmd.substr(pos + 1));
+	if (pos >= 0 && std::strspn(&cmd[pos + 1], "0123456789-") > 0) {
+		val = std::stoi(&cmd[pos + 1]);
 	}
 	if (high > low && (val > high || val < low)) {
-		usb->SendString("Must be a value between " + std::to_string(low) + " and " + std::to_string(high) + "\r\n");
+		printf("Must be a value between %ld and %ld\r\n", low, high);
 		return low - 1;
 	}
 	return val;
@@ -67,8 +78,9 @@ void CDCHandler::ProcessCommand()
 		return;
 	}
 
-	std::string cmd = std::string(comCmd);
-	if (cmd.compare("help\n") == 0) {
+	std::string_view cmd {comCmd};
+
+	if (cmd.compare("help") == 0) {
 		usb->SendString("Mountjoy Punck\r\n"
 				"\r\nSupported commands:\r\n"
 				"resume      -  Resume I2S after debugging\r\n"
@@ -85,12 +97,18 @@ void CDCHandler::ProcessCommand()
 				"play:NN     -  Play the sample numbered NN\r\n"
 				"clusterchain   List chain of clusters\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
-				"\r\n"
+				".."
 
 		);
 
 
-	} else if (cmd.compare("midimap\n") == 0) {					// Display MIDI note mapping
+#if (USB_DEBUG)
+	} else if (cmd.compare("usbdebug") == 0) {					// Activate USB debugging
+		extern volatile bool debugStart;
+		debugStart = true;
+#endif
+
+	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
 		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
 			case VoiceManager::kick:
@@ -112,20 +130,20 @@ void CDCHandler::ProcessCommand()
 			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);
 		}
 
-	} else if (cmd.compare("readreg\n") == 0) {					// Read QSPI register
+	} else if (cmd.compare("readreg") == 0) {					// Read QSPI register
 		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +
 				"\r\nStatus register 2: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg2)) +
 				"\r\nStatus register 3: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg3)) + "\r\n");
 		extFlash.MemoryMapped();
 
 
-	} else if (cmd.compare("flashid\n") == 0) {					// Get manufacturer and device ID
+	} else if (cmd.compare("flashid") == 0) {					// Get manufacturer and device ID
 		const uint16_t flashID = extFlash.GetID();
 		printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashID & 0xFF, flashID >> 8);
 		extFlash.MemoryMapped();
 
 
-	} else if (cmd.compare("samplelist\n") == 0) {				// Prints sample list
+	} else if (cmd.compare("samplelist") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 
 		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
@@ -148,17 +166,17 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
-		const int sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		const int32_t sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		printf("%s\r\n", voiceManager.samples.sampleList[sn].name);
 		voiceManager.samples.Play(voiceManager.samples.SamplePlayer::playerA, sn);
 
 
-	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
+	} else if (cmd.compare("dirdetails") == 0) {				// Get detailed FAT directory info
 		fatTools.PrintDirInfo();
 
 
 	} else if (cmd.compare(0, 5, "read:") == 0) {				// Read QSPI data (format read:A where A is address)
-		const int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		const int32_t address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
 			printf("Data Read: %#010lx\r\n", extFlash.FastRead(address));
 		}
@@ -175,7 +193,7 @@ void CDCHandler::ProcessCommand()
 
 
 
-	} else if (cmd.compare("dir\n") == 0) {						// Get basic FAT directory list
+	} else if (cmd.compare("dir") == 0) {						// Get basic FAT directory list
 		if (fatTools.noFileSystem) {
 			printf("** No file System **\r\n");
 		} else {
@@ -188,7 +206,7 @@ void CDCHandler::ProcessCommand()
 
 
 
-	} else if (cmd.compare("clusterchain\n") == 0) {			// Print used clusters with links from FAT area
+	} else if (cmd.compare("clusterchain") == 0) {			// Print used clusters with links from FAT area
 		printf("Cluster | Link\r\n");
 		uint32_t cluster = 0;
 		while (fatTools.clusterChain[cluster]) {
@@ -197,7 +215,7 @@ void CDCHandler::ProcessCommand()
 		}
 
 
-	} else if (cmd.compare("cacheinfo\n") == 0) {				// Basic counts of differences between cache and Flash
+	} else if (cmd.compare("cacheinfo") == 0) {				// Basic counts of differences between cache and Flash
 		for (uint32_t blk = 0; blk < (fatCacheSectors / fatEraseSectors); ++blk) {
 
 			// Check if block is actually dirty or clean
@@ -239,7 +257,7 @@ void CDCHandler::ProcessCommand()
 		}
 
 
-	} else if (cmd.compare("cachechanges\n") == 0) {			// List bytes that are different in cache to Flash
+	} else if (cmd.compare("cachechanges") == 0) {			// List bytes that are different in cache to Flash
 		uint32_t count = 0;
 		uint8_t oldCache = 0, oldFlash = 0;
 		bool skipDuplicates = false;
@@ -271,33 +289,33 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare(0, 11, "printflash:") == 0) {		// QSPI flash: print 512 byres of memory mapped data
-		const uint32_t address = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		const int32_t address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
 			const uint32_t* p = (uint32_t*)(0x90000000 + address);
 
-			for (uint8_t a = 0; a < 128; a += 4) {
+			for (uint32_t a = 0; a < 128; a += 4) {
 				printf("%6ld: %#010lx %#010lx %#010lx %#010lx\r\n", (a * 4) + address, p[a], p[a + 1], p[a + 2], p[a + 3]);
 			}
 		}
 
 
 	} else if (cmd.compare(0, 13, "printcluster:") == 0) {		// QSPI flash: print memory mapped data
-		const uint32_t cluster = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		const int32_t cluster = ParseInt(cmd, ':', 2, 0xFFFFFF);
 		if (cluster >= 2) {
 			printf("Cluster %ld:\r\n", cluster);
 
 			const uint32_t* p = (uint32_t*)(fatTools.GetClusterAddr(cluster));
 
-			for (uint8_t a = 0; a < 512; a += 4) {
+			for (uint32_t a = 0; a < 512; a += 4) {
 				printf("0x%08lx: %#010lx %#010lx %#010lx %#010lx\r\n", (a * 4) + (uint32_t)p, p[a], p[a + 1], p[a + 2], p[a + 3]);
 			}
 		}
 
 
 	} else if (cmd.compare(0, 7, "setzero") == 0) {				// Set data at address to 0 [A = address; W = num words]
-		const uint32_t address = ParseInt(cmd, 'o', 0, 0xFFFFFF);
+		const int32_t address = ParseInt(cmd, 'o', 0, 0xFFFFFF);
 		if (address >= 0) {
-			const uint32_t words = ParseInt(cmd, ':');
+			const uint32_t words = ParseInt(cmd, ':', 0, 0xFFFFFF);
 			printf("Clearing %ld words at %ld ...\r\n", words, address);
 
 			for (uint32_t a = 0; a < words; ++a) {
@@ -309,19 +327,19 @@ void CDCHandler::ProcessCommand()
 		}
 
 
-	} else if (cmd.compare("flushcache\n") == 0) {				// Flush FAT cache to Flash
+	} else if (cmd.compare("flushcache") == 0) {				// Flush FAT cache to Flash
 		const uint8_t sectors = fatTools.FlushCache();
 		printf("%i blocks flushed\r\n", sectors);
 		extFlash.MemoryMapped();
 
 
-	} else if (cmd.compare("eraseflash\n") == 0) {				// Erase all flash memory
+	} else if (cmd.compare("eraseflash") == 0) {				// Erase all flash memory
 		extFlash.FullErase();
 		usb->SendString("Flash erased\r\n");
 
 
 	} else if (cmd.compare(0, 10, "erasesect:") == 0) {			// Erase sector of flash memory
-		int address = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		int32_t address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
 			extFlash.BlockErase(address);
 			usb->SendString("Sector erased\r\n");
@@ -330,7 +348,7 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare(0, 12, "writesector:") == 0) {		// Write 1 sector of test data: format writesector:S [S = sector]
-		const uint32_t sector = ParseInt(cmd, ':', 0, 0xFFFFFF);
+		const int32_t sector = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (sector >= 0) {
 			printf("Writing to %ld ...\r\n", sector);
 
@@ -344,7 +362,7 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare(0, 5, "write") == 0) {				// Write test pattern to flash writeA:W [A = address; W = num words]
-		const uint32_t address = ParseInt(cmd, 'e', 0, 0xFFFFFF);
+		const int32_t address = ParseInt(cmd, 'e', 0, 0xFFFFFF);
 		if (address >= 0) {
 			const uint32_t words = ParseInt(cmd, ':');
 			printf("Writing %ld words to %ld ...\r\n", words, address);
@@ -356,12 +374,14 @@ void CDCHandler::ProcessCommand()
 
 			extFlash.MemoryMapped();
 			printf("Finished\r\n");
+
 		}
 
 
 
 	} else {
-		usb->SendString("Unrecognised command: " + cmd + "Type 'help' for supported commands\r\n");
+		//usb->SendString("Unrecognised command: " + cmd + "\r\nType 'help' for supported commands\r\n");
+		printf("Unrecognised command: %s\r\nType 'help' for supported commands\r\n", cmd.data());
 	}
 	cmdPending = false;
 
@@ -370,14 +390,14 @@ void CDCHandler::ProcessCommand()
 
 
 
-float CDCHandler::ParseFloat(const std::string cmd, const char precedingChar, const float low = 0.0f, const float high = 0.0f) {
+float CDCHandler::ParseFloat(const std::string_view cmd, const char precedingChar, const float low = 0.0f, const float high = 0.0f) {
 	float val = -1.0f;
 	const int8_t pos = cmd.find(precedingChar);		// locate position of character preceding
-	if (pos >= 0 && std::strspn(cmd.substr(pos + 1).c_str(), "0123456789.") > 0) {
-		val = stof(cmd.substr(pos + 1));
+	if (pos >= 0 && std::strspn(&cmd[pos + 1], "0123456789.") > 0) {
+		val = std::stof(&cmd[pos + 1]);
 	}
 	if (high > low && (val > high || val < low)) {
-		usb->SendString("Must be a value between " + std::to_string(low) + " and " + std::to_string(high) + "\r\n");
+		printf("Must be a value between %f and %f\r\n", low, high);
 		return low - 1.0f;
 	}
 	return val;

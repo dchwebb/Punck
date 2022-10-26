@@ -8,7 +8,7 @@ void OTG_FS_IRQHandler(void)
 
 }
 
-uint32_t spiUnderrun = 0;
+uint32_t spiUnderrun = 0;		// Debug
 void SPI2_IRQHandler()
 {
 	// I2S Interrupt

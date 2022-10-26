@@ -107,7 +107,7 @@ private:
 // Create struct to hold wav file header
 struct WavFile {
 	char id[4];					// 'RIFF'
-	uint32_t chunkSize;			// Ssize of the entire file in bytes minus 8 bytes
+	uint32_t chunkSize;			// Size of the entire file in bytes minus 8 bytes
 	char format[4];        		// 'WAVE'
 	char Subchunk1ID[4];   		// 'fmt '
 	uint32_t subChunk1Size;		// Sub chunk 1 size (ie 16) -effectively  header size

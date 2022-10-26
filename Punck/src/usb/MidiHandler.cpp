@@ -13,7 +13,7 @@ void MidiHandler::DataIn()
 void MidiHandler::DataOut()
 {
 	// Handle incoming midi command here
-	uint8_t* outBuffBytes = reinterpret_cast<uint8_t*>(outBuff);
+	const uint8_t* outBuffBytes = reinterpret_cast<const uint8_t*>(outBuff);
 
 	if (!partialSysEx && outBuffCount == 4) {
 		midiEvent(*outBuff);
@@ -48,7 +48,7 @@ void MidiHandler::DataOut()
 }
 
 
-uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint8_t* headerBuffer, uint32_t headerLen, bool noSplit)
+uint32_t MidiHandler::ConstructSysEx(const uint8_t* dataBuffer, uint32_t dataLen, const uint8_t* headerBuffer, const uint32_t headerLen, const bool noSplit)
 {
 	// Constructs a Sysex packet: data split into 4 byte words, each starting with appropriate sysex header byte
 	// Bytes in sysEx commands must have upper nibble = 0 (ie only 0-127 values) so double length and split bytes into nibbles (unless noSplit specified)
@@ -84,7 +84,7 @@ uint32_t MidiHandler::ConstructSysEx(uint8_t* dataBuffer, uint32_t dataLen, uint
 
 		// add 1 byte padding at the beginning of each 32 bit word to indicate length of remaining message + 0xF7 termination byte
 		if (pos % 4 == 0) {
-			uint32_t rem = dataLen - i;
+			const uint32_t rem = dataLen - i;
 
 			if (rem == 3) {
 				sysExOut[pos++] = 0x07;		// 0x7	SysEx ends with following three bytes.
@@ -138,21 +138,20 @@ void MidiHandler::ProcessSysex()
 				VoiceManager::Voice voice = (VoiceManager::Voice)sysEx[1];
 
 				// Insert header data
-				uint8_t cfgHeader[2] = {GetVoiceConfig, voice};
+				const uint8_t cfgHeader[2] = {GetVoiceConfig, voice};
 
 				uint8_t* cfgBuffer = nullptr;
 				NoteMapper& vm = voiceManager.noteMapper[voice];
-				uint32_t bytes = vm.drumVoice->SerialiseConfig(&cfgBuffer, vm.voiceIndex);
+				const uint32_t bytes = vm.drumVoice->SerialiseConfig(&cfgBuffer, vm.voiceIndex);
+				const uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, split);
 
-				uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, split);
-				//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 				usb->SendData(sysExOut, len, inEP);
 			}
 			break;
 
 		case SetVoiceConfig:
 			if (sysEx[1] < VoiceManager::Voice::count) {
-				uint32_t bytes = ReadCfgSysEx(2);
+				const uint32_t bytes = ReadCfgSysEx(2);
 				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
 			}
 			break;
@@ -170,7 +169,7 @@ void MidiHandler::ProcessSysex()
 			config.configBuffer[3] = sequencer.currentBar;     					// current bar
 			config.configBuffer[4] = sequencer.currentBeat;    					// current beat
 
-			uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
+			const uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
@@ -178,7 +177,7 @@ void MidiHandler::ProcessSysex()
 		case GetSequence:
 		{
 			uint8_t seq = sysEx[1];							// if passed 127 then requesting currently active sequence
-			uint8_t bar = sysEx[2];
+			const uint8_t bar = sysEx[2];
 			if (seq == getActiveSequence) {
 				seq = sequencer.activeSequence;
 			}
@@ -192,8 +191,8 @@ void MidiHandler::ProcessSysex()
 			config.configBuffer[4] = bar;					// bar number
 
 			uint8_t* cfgBuffer = nullptr;
-			uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
-			uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, noSplit);
+			const uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
+			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, noSplit);
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
@@ -201,10 +200,10 @@ void MidiHandler::ProcessSysex()
 		case SetSequence:
 		{
 			// Header information
-			uint32_t seq = sysEx[1];						// sequence
-			uint32_t beatsPerBar = sysEx[2];				// beats per bar
-			uint32_t bars = sysEx[3];						// bars
-			uint32_t bar = sysEx[4];						// bar number
+			const uint32_t seq = sysEx[1];						// sequence
+			const uint32_t beatsPerBar = sysEx[2];				// beats per bar
+			const uint32_t bars = sysEx[3];						// bars
+			const uint32_t bar = sysEx[4];						// bar number
 
 			sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
 			break;
@@ -212,15 +211,15 @@ void MidiHandler::ProcessSysex()
 
 		case GetSamples:
 		{
-			uint8_t samplePlayer = sysEx[1];
+			const uint8_t samplePlayer = sysEx[1];
 
 			// Insert header data
-			uint8_t cfgHeader[2] = {GetSamples, samplePlayer};
+			const uint8_t cfgHeader[2] = {GetSamples, samplePlayer};
 
 			uint8_t* cfgBuffer = nullptr;
-			uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);;
+			const uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);;
 
-			uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, noSplit);
+			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, noSplit);
 			//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
 			usb->SendData(sysExOut, len, inEP);
 			break;
@@ -231,14 +230,14 @@ void MidiHandler::ProcessSysex()
 				// Get current (virtual) ADC settings
 				config.configBuffer[0] = GetADC;
 
-				uint32_t len = ConstructSysEx((uint8_t*)ADC_array, sizeof(ADC_array), config.configBuffer, 1, split);
+				const uint32_t len = ConstructSysEx((uint8_t*)ADC_array, sizeof(ADC_array), config.configBuffer, 1, split);
 				usb->SendData(sysExOut, len, inEP);
 			}
 			break;
 
 		case SetADC:
 			{
-				uint32_t bytes = ReadCfgSysEx(1);
+				const uint32_t bytes = ReadCfgSysEx(1);
 				memcpy((uint8_t*)ADC_array, config.configBuffer, bytes);
 			}
 			break;
