@@ -47,16 +47,15 @@ public:
 	} sampler[2];
 
 	Samples();
-	void Play(uint8_t player, uint32_t noteOffset, uint32_t noteRange, float velocity);
-	void Play(uint8_t player, uint32_t sampleNo);
+	void Play(const uint8_t player, const uint32_t noteOffset, uint32_t noteRange, const float velocity);
+	void Play(const uint8_t player, const uint32_t sampleNo);
 	void CalcOutput();
 	bool UpdateSampleList();
-	bool GetSampleInfo(Sample* sample);
-	uint32_t SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex);
-	uint32_t SerialiseConfig(uint8_t** buff, uint8_t voiceIndex);
-	void StoreConfig(uint8_t* buff, uint32_t len);
+	uint32_t SerialiseSampleNames(uint8_t** buff, const uint8_t voiceIndex);
+	uint32_t SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex);
+	void StoreConfig(uint8_t* buff, const uint32_t len);
 
 private:
-
+	bool GetSampleInfo(Sample* sample);
 };
 

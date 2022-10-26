@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cmath>
 
+
 Samples::Samples()
 {
 	sampler[playerA].tuningADC = &ADC_array[ADC_SampleASpeed];
@@ -15,7 +16,7 @@ Samples::Samples()
 
 }
 
-void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
 	if (fatTools.noFileSystem) {
 		return;
@@ -32,13 +33,13 @@ void Samples::Play(uint8_t sp, uint32_t noteOffset, uint32_t noteRange, float ve
 }
 
 
-void Samples::Play(uint8_t sp, uint32_t index)
+void Samples::Play(const uint8_t sp, const uint32_t index)
 {
 	Play(sp, index, 0, 1.0f);
 }
 
 
-static inline int32_t readBytes(const uint8_t* address, uint8_t bytes)
+static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes)
 {
 	if (bytes == 3) {
 		return *(uint32_t*)(address) << 8;		// 24 bit data: Read in 32 bits and shift up 8 bits to make 32 bit value with lower byte zeroed
@@ -64,7 +65,7 @@ void Samples::CalcOutput()
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
-			float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;		// FIXME - separate ADCs for each sampler
+			const float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;		// FIXME - separate ADCs for each sampler
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;
@@ -180,7 +181,7 @@ bool Samples::UpdateSampleList()
 	sample->name[0] = 0;
 
 	// Update sorted lists of pointers
-	Bank blank = {nullptr, std::numeric_limits<uint32_t>::max()};		// Fill bank arrays with dummy values to enable sorting
+	const Bank blank = {nullptr, std::numeric_limits<uint32_t>::max()};		// Fill bank arrays with dummy values to enable sorting
 	std::fill(sampler[playerA].bank.begin(), sampler[playerA].bank.end(), blank);
 	std::fill(sampler[playerB].bank.begin(), sampler[playerB].bank.end(), blank);
 
@@ -209,7 +210,7 @@ bool Samples::UpdateSampleList()
 }
 
 
-uint32_t Samples::SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Samples::SerialiseSampleNames(uint8_t** buff, const uint8_t voiceIndex)
 {
 	// Copy the first 8 characters of each file name to the config buffer
 	uint8_t s = 0;
@@ -234,12 +235,12 @@ uint32_t Samples::SerialiseSampleNames(uint8_t** buff, uint8_t voiceIndex)
 }
 
 
-uint32_t Samples::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Samples::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 {
 	return 0;
 }
 
 
-void Samples::StoreConfig(uint8_t* buff, uint32_t len)
+void Samples::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 }

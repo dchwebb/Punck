@@ -7,12 +7,12 @@
 class NoteMapper;
 class HiHat  : public DrumVoice {
 public:
-	void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity);
-	void Play(uint8_t voice, uint32_t index);
+	void Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity);
+	void Play(const uint8_t voice, const uint32_t index);
 	void CalcOutput();
 	void UpdateFilter() override;
-	uint32_t SerialiseConfig(uint8_t** buff, uint8_t voiceIndex);
-	void StoreConfig(uint8_t* buff, uint32_t len);
+	uint32_t SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex);
+	void StoreConfig(uint8_t* buff, const uint32_t len);
 
 	NoteMapper* noteMapper;
 

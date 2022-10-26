@@ -1,7 +1,7 @@
-#include <Snare.h>
-#include <VoiceManager.h>
+#include "Snare.h"
+#include "VoiceManager.h"
 
-void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	partialInc[0] = FreqToInc(config.baseFreq);		// First Mode 0,1 frequency
@@ -9,7 +9,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 	partialpos[1] = 0.0f;
 	partialpos[2] = 0.0f;
 
-	float freq = (config.baseFreq * (static_cast<float>(ADC_array[ADC_SnareTuning]) / 65536.0f + 0.5f));
+	const float freq = (config.baseFreq * (static_cast<float>(ADC_array[ADC_SnareTuning]) / 65536.0f + 0.5f));
 
 	for (uint8_t i = 0; i < partialCount; ++i) {
 		partialLevel[i] = config.partialInitLevel[i];
@@ -22,7 +22,7 @@ void Snare::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 }
 
 
-void Snare::Play(uint8_t voice, uint32_t index)
+void Snare::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
 	Play(0, 0, 0, 1.0f);
@@ -32,8 +32,8 @@ void Snare::Play(uint8_t voice, uint32_t index)
 void Snare::CalcOutput()
 {
 	if (playing) {
-		float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
-		float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
+		const float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
+		const float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
 
 		float partialOutput = 0.0f;
 		bool partialsInaudible = true;							// To calculate when to terminate note
@@ -48,11 +48,7 @@ void Snare::CalcOutput()
 		}
 		noiseLevel *= config.noiseDecay + adcDecay;
 
-		float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
-
-		if (rand1 == rand2) {
-			volatile int susp = 1;
-		}
+		const float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
 
 		outputLevel[left]  = velocityScale * filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
 		outputLevel[right] = velocityScale * filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);
@@ -72,14 +68,14 @@ void Snare::UpdateFilter()
 }
 
 
-uint32_t Snare::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Snare::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 {
-	*buff = (uint8_t*)&config;
+	*buff = reinterpret_cast<uint8_t*>(&config);
 	return sizeof(config);
 }
 
 
-void Snare::StoreConfig(uint8_t* buff, uint32_t len)
+void Snare::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

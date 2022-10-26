@@ -4,7 +4,7 @@
 #include "VoiceManager.h"
 
 
-void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void Kick::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
@@ -19,7 +19,7 @@ void Kick::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 }
 
 
-void Kick::Play(uint8_t voice, uint32_t index)
+void Kick::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
 	Play(0, 0, 0, 1.0f);
@@ -34,7 +34,6 @@ void Kick::CalcOutput()
 
 		if (currentLevel > 0.6f) {
 			phase = Phase::Ramp2;
-			GPIOG->ODR |= GPIO_ODR_OD11;		// PG11: debug pin green
 		}
 		break;
 
@@ -44,7 +43,6 @@ void Kick::CalcOutput()
 		if (currentLevel > 0.82f) {
 			currentLevel = 0.78f;				// discontinuity sharply falls at first
 			phase = Phase::Ramp3;
-			GPIOG->ODR &= ~GPIO_ODR_OD11;
 		}
 		break;
 
@@ -71,7 +69,7 @@ void Kick::CalcOutput()
 	{
 		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
 		position += slowSinInc;					// Set current poition in sine wave
-		float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
+		const float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
 		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
 
@@ -101,14 +99,14 @@ void Kick::UpdateFilter()
 }
 
 
-uint32_t Kick::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Kick::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 {
 	*buff = reinterpret_cast<uint8_t*>(&config);
 	return sizeof(config);
 }
 
 
-void Kick::StoreConfig(uint8_t* buff, uint32_t len)
+void Kick::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

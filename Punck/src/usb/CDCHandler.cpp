@@ -97,7 +97,7 @@ void CDCHandler::ProcessCommand()
 				"play:NN     -  Play the sample numbered NN\r\n"
 				"clusterchain   List chain of clusters\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
-				".."
+				"\r\n"
 
 		);
 

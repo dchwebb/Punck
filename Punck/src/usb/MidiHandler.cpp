@@ -200,10 +200,10 @@ void MidiHandler::ProcessSysex()
 		case SetSequence:
 		{
 			// Header information
-			const uint32_t seq = sysEx[1];						// sequence
-			const uint32_t beatsPerBar = sysEx[2];				// beats per bar
-			const uint32_t bars = sysEx[3];						// bars
-			const uint32_t bar = sysEx[4];						// bar number
+			const uint32_t seq = sysEx[1];					// sequence
+			const uint32_t beatsPerBar = sysEx[2];			// beats per bar
+			const uint32_t bars = sysEx[3];					// bars
+			const uint32_t bar = sysEx[4];					// bar number
 
 			sequencer.StoreConfig(sysEx + 5, sysExCount - 5, seq, bar, beatsPerBar, bars);
 			break;
@@ -212,15 +212,12 @@ void MidiHandler::ProcessSysex()
 		case GetSamples:
 		{
 			const uint8_t samplePlayer = sysEx[1];
-
-			// Insert header data
-			const uint8_t cfgHeader[2] = {GetSamples, samplePlayer};
+			const uint8_t cfgHeader[2] = {GetSamples, samplePlayer};		// Insert header data
 
 			uint8_t* cfgBuffer = nullptr;
 			const uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);;
-
 			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, noSplit);
-			//len = ((len + 3) / 4) * 4;			// round up output size to multiple of 4
+
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}

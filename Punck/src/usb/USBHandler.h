@@ -47,13 +47,13 @@ public:
 	virtual void ClassSetupData(usbRequest& req, const uint8_t* data) = 0;
 protected:
    // Proxy functions to allow access to USB private methods
-   void EndPointTransfer(Direction d, uint8_t ep, uint32_t len);
-   void SetupIn(uint32_t size, const uint8_t* buff);
+   void EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len);
+   void SetupIn(const uint32_t size, const uint8_t* buff);
 };
 
 class EP0Handler : public USBHandler {
 public:
-	EP0Handler(USB* usb, uint8_t inEP, uint8_t outEP, int8_t interface) : USBHandler(usb, inEP, outEP, interface) {
+	EP0Handler(USB* usb, const uint8_t inEP, const uint8_t outEP, int8_t interface) : USBHandler(usb, inEP, outEP, interface) {
 		outBuff = ep0OutBuff;
 	}
 

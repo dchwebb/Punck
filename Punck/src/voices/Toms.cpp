@@ -4,7 +4,7 @@
 #include "VoiceManager.h"
 
 
-void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void Toms::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
@@ -23,7 +23,7 @@ void Toms::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float ve
 }
 
 
-void Toms::Play(uint8_t voice, uint32_t index)
+void Toms::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
 	Play(0, 0, 0, 1.0f);
@@ -76,14 +76,14 @@ void Toms::UpdateFilter()
 }
 
 
-uint32_t Toms::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t Toms::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 {
-	*buff = (uint8_t*)&config;
+	*buff = reinterpret_cast<uint8_t*>(&config);
 	return sizeof(config);
 }
 
 
-void Toms::StoreConfig(uint8_t* buff, uint32_t len)
+void Toms::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);

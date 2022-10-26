@@ -3,7 +3,7 @@
 #include <cstring>
 
 
-void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity)
+void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity)
 {
 	// Called when accessed from MIDI
 	playing = true;
@@ -36,7 +36,7 @@ void HiHat::Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float v
 }
 
 
-void HiHat::Play(uint8_t voice, uint32_t index)
+void HiHat::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
 	Play(0, 0, 0, 1.0f);
@@ -48,7 +48,7 @@ void HiHat::CalcOutput()
 {
 	if (playing) {
 
-		int32_t noise = (int32_t)RNG->DR;		// Get noise level here to give time for next noise value to be calculated
+		const int32_t noise = (int32_t)RNG->DR;		// Get noise level here to give time for next noise value to be calculated
 
 		float currentLevel[2] = {};				// Store intermediate values of sample level for each channel
 
@@ -124,15 +124,14 @@ void HiHat::UpdateFilter()
 }
 
 
-uint32_t HiHat::SerialiseConfig(uint8_t** buff, uint8_t voiceIndex)
+uint32_t HiHat::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 {
-	*buff = (uint8_t*)&config;
-	//memcpy(buff, &config, sizeof(config));
+	*buff = reinterpret_cast<uint8_t*>(&config);
 	return sizeof(config);
 }
 
 
-void HiHat::StoreConfig(uint8_t* buff, uint32_t len)
+void HiHat::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);
