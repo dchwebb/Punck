@@ -7,6 +7,7 @@
 #include "ff.h"
 
 uint32_t flashBuff[1024];
+uint32_t* heapVal;		// Debug
 
 void CDCHandler::DataIn()
 {
@@ -98,7 +99,6 @@ void CDCHandler::ProcessCommand()
 				"clusterchain   List chain of clusters\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
 				"\r\n"
-
 		);
 
 

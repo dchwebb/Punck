@@ -516,49 +516,49 @@ void USB::GetDescriptor()
 		return EP0In(USBD_FS_BOSDesc, sizeof(USBD_FS_BOSDesc));
 		break;
 
-//	case USB_DESC_TYPE_DEVICE_QUALIFIER:
-//		return EP0In(USBD_MSC_DeviceQualifierDesc, sizeof(USBD_MSC_DeviceQualifierDesc));
-//		break;
+	case DeviceQualifierDescriptor:
+		return EP0In(USBD_MSC_DeviceQualifierDesc, sizeof(USBD_MSC_DeviceQualifierDesc));
+		break;
 
 	case StringDescriptor:
 
 		switch ((uint8_t)(req.Value)) {
-		case USBD_IDX_LANGID_STR:			// 300
+		case StringIndex::LangId:				// 300
 			return EP0In(USBD_LangIDDesc, sizeof(USBD_LangIDDesc));
 			break;
 
-		case USBD_IDX_MFC_STR:				// 301
-			strSize = StringToUnicode((uint8_t*)USBD_MANUFACTURER_STRING, USBD_StrDesc);
+		case StringIndex::Manufacturer:			// 301
+			strSize = StringToUnicode(USBD_MANUFACTURER_STRING, USBD_StrDesc);
 			return EP0In(USBD_StrDesc, strSize);
 			break;
 
-		case USBD_IDX_PRODUCT_STR:			// 302
-			strSize = StringToUnicode((uint8_t*)USBD_PRODUCT_STRING, USBD_StrDesc);
+		case StringIndex::Product:				// 302
+			strSize = StringToUnicode(USBD_PRODUCT_STRING, USBD_StrDesc);
 			return EP0In(USBD_StrDesc, strSize);
 			break;
 
-		case USBD_IDX_SERIAL_STR:			// 303
+		case StringIndex::Serial:				// 303
 			SerialToUnicode();
 			return EP0In(USBD_StrDesc, USBD_StrDesc[0]);				// length is 24 bytes (x2 for unicode padding) + 2 for header
 			break;
 
-		case USBD_IDX_CFG_STR:				// 304
-	    	strSize = StringToUnicode((uint8_t*)USBD_CFG_STRING, USBD_StrDesc);
+		case StringIndex::Configuration:		// 304
+	    	strSize = StringToUnicode(USBD_CFG_STRING, USBD_StrDesc);
 	    	return EP0In(USBD_StrDesc, strSize);
 	    	break;
 
-	    case USBD_IDX_MSC_STR:				// 305
-	    	strSize = StringToUnicode((uint8_t*)USBD_MSC_STRING, USBD_StrDesc);
+	    case StringIndex::MassStorageClass:		// 305
+	    	strSize = StringToUnicode(USBD_MSC_STRING, USBD_StrDesc);
 	    	return EP0In(USBD_StrDesc, strSize);
 			break;
 
-	    case USBD_IDX_CDC_STR:				// 306
-	    	strSize = StringToUnicode((uint8_t*)USBD_CDC_STRING, USBD_StrDesc);
+	    case StringIndex::CommunicationClass:	// 306
+	    	strSize = StringToUnicode(USBD_CDC_STRING, USBD_StrDesc);
 	    	return EP0In(USBD_StrDesc, strSize);
 			break;
 
-	    case USBD_IDX_MIDI_STR:				// 307
-	    	strSize = StringToUnicode((uint8_t*)USBD_MIDI_STRING, USBD_StrDesc);
+	    case StringIndex::AudioClass:			// 307
+	    	strSize = StringToUnicode(USBD_MIDI_STRING, USBD_StrDesc);
 	    	return EP0In(USBD_StrDesc, strSize);
 			break;
 
@@ -579,18 +579,16 @@ void USB::GetDescriptor()
 }
 
 
-uint32_t USB::StringToUnicode(const uint8_t* desc, uint8_t *unicode)
+uint32_t USB::StringToUnicode(const std::string_view desc, uint8_t *unicode)
 {
 	uint32_t idx = 2;
-
-	if (desc != NULL) {
-		while (*desc != '\0') {
-			unicode[idx++] = *desc++;
-			unicode[idx++] = 0;
-		}
-		unicode[0] = idx;
-		unicode[1] = StringDescriptor;
+	for (auto c: desc) {
+		unicode[idx++] = c;
+		unicode[idx++] = 0;
 	}
+	unicode[0] = idx;
+	unicode[1] = StringDescriptor;
+
 	return idx;
 }
 
@@ -599,12 +597,12 @@ void USB::SerialToUnicode()
 {
 	const uint32_t* uidAddr = (uint32_t*)UID_BASE;			// Location in memory that holds 96 bit Unique device ID register
 
-	char uidBuff[usbSerialSize + 1];
-	snprintf(uidBuff, usbSerialSize + 1, "%08lx%08lx%08lx", uidAddr[0], uidAddr[1], uidAddr[2]);
+	char uidBuff[usbSerialNoSize + 1];
+	snprintf(uidBuff, usbSerialNoSize + 1, "%08lx%08lx%08lx", uidAddr[0], uidAddr[1], uidAddr[2]);
 
-	USBD_StrDesc[0] = usbSerialSize * 2 + 2;				// length is 24 bytes (x2 for unicode padding) + 2 for header
+	USBD_StrDesc[0] = usbSerialNoSize * 2 + 2;				// length is 24 bytes (x2 for unicode padding) + 2 for header
 	USBD_StrDesc[1] = StringDescriptor;
-	for (uint8_t i = 0; i < usbSerialSize * 2; ++i) {
+	for (uint8_t i = 0; i < usbSerialNoSize * 2; ++i) {
 		const uint8_t sumUid = uidAddr[i] + uidAddr[i + 12];
 		USBD_StrDesc[i * 2 + 2] = uidBuff[i];
 	}
@@ -721,7 +719,7 @@ void USB::EPStartXfer(const Direction direction, uint8_t endpoint, uint32_t xfer
 
 		USBx_OUTEP(endpoint)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ | USB_OTG_DOEPTSIZ_PKTCNT);
 
-		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (classByEP[endpoint]->outBuffPackets << USB_OTG_DIEPTSIZ_PKTCNT_Pos));
+		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (classByEP[endpoint]->outBuffPackets << USB_OTG_DOEPTSIZ_PKTCNT_Pos));
 		USBx_OUTEP(endpoint)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & xfer_len);
 
 		USBx_OUTEP(endpoint)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);		// EP enable
@@ -772,10 +770,6 @@ size_t USB::SendData(const uint8_t* data, const uint16_t len, uint8_t endpoint)
 {
 	endpoint &= EP_ADDR_MASK;
 	if (devState == DeviceState::Configured && !transmitting) {
-		if (len == 768) {
-			debugStart = true;
-		}
-
 		transmitting = true;
 		classByEP[endpoint]->inBuff = data;
 		classByEP[endpoint]->inBuffSize = len;

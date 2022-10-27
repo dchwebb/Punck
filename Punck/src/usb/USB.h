@@ -27,31 +27,6 @@
 #define USB_REQ_DIRECTION_MASK			0x80U
 #define USB_REQ_TYPE_MASK				0x60U
 
-// Index of string descriptors
-#define USBD_IDX_LANGID_STR				0x00U
-#define USBD_IDX_MFC_STR				0x01U
-#define USBD_IDX_PRODUCT_STR			0x02U
-#define USBD_IDX_SERIAL_STR				0x03U
-#define USBD_IDX_CFG_STR				0x04U
-#define USBD_IDX_MSC_STR				0x05U
-#define USBD_IDX_CDC_STR				0x06U
-#define USBD_IDX_MIDI_STR				0x07U
-
-#define USBD_VID						1155
-#define USBD_LANGID_STRING				1033
-#define USBD_MANUFACTURER_STRING		"Mountjoy Modular"
-#define USBD_PID_FS						0x572c
-#define USBD_PRODUCT_STRING				"Mountjoy Punck MSC"
-#define USBD_CFG_STRING					"MSC Punck Config"
-#define USBD_MSC_STRING					"MSC Punck Interface"
-#define USBD_CDC_STRING					"Mountjoy Punck CDC"
-#define USBD_MIDI_STRING				"Mountjoy Punck MIDI"
-
-#define CLASS_SPECIFIC_DESC_SIZE		50
-#define CONFIG_DESC_SIZE				175
-#define USB_LEN_LANGID_STR_DESC			4
-#define USB_LEN_DEV_QUALIFIER_DESC		10
-
 #define LOBYTE(x)  ((uint8_t)(x & 0x00FFU))
 #define HIBYTE(x)  ((uint8_t)((x & 0xFF00U) >> 8U))
 
@@ -68,6 +43,7 @@ public:
 	enum class Request {GetStatus = 0x0, SetAddress = 0x5, GetDescriptor = 0x6, SetConfiguration = 0x9};
 	enum Descriptor {DeviceDescriptor = 0x1, ConfigurationDescriptor = 0x2, StringDescriptor = 0x3, InterfaceDescriptor = 0x4, EndpointDescriptor = 0x5, DeviceQualifierDescriptor = 0x6, IadDescriptor = 0xb, BosDescriptor = 0xF, ClassSpecificInterfaceDescriptor = 0x24};
 	enum PacketStatus {GlobalOutNAK = 1, OutDataReceived = 2, OutTransferCompleted = 3, SetupTransComplete = 4, SetupDataReceived = 6};
+	static constexpr uint8_t ep_maxPacket = 0x40;
 
 	void InterruptHandler();
 	void Init();
@@ -77,19 +53,27 @@ public:
 	size_t SendString(const unsigned char* s, size_t len);
 	void PauseEndpoint(USBHandler& handler);
 	void ResumeEndpoint(USBHandler& handler);
-	uint32_t StringToUnicode(const uint8_t* desc, uint8_t* unicode);
-
+	uint32_t StringToUnicode(const std::string_view desc, uint8_t* unicode);
 
 	EP0Handler  ep0  = EP0Handler(this, 0, 0, NoInterface);
 	MidiHandler midi = MidiHandler(this, USB::Midi_In, USB::Midi_Out, MidiInterface);
 	MSCHandler  msc  = MSCHandler(this,  USB::MSC_In,  USB::MSC_Out,  MSCInterface);
 	CDCHandler  cdc  = CDCHandler(this,  USB::CDC_In,  USB::CDC_Out,  CDCCmdInterface);
-	bool classPendingData= false;			// Set when class setup command received and data pending
+	bool classPendingData = false;			// Set when class setup command received and data pending
 	DeviceState devState;
 
-	static constexpr uint8_t ep_maxPacket = 0x40;
 private:
 	enum class EP0State {Idle, Setup, DataIn, DataOut, StatusIn, StatusOut, Stall};
+	enum StringIndex {LangId = 0, Manufacturer = 1, Product = 2, Serial = 3, Configuration = 4, MassStorageClass = 5,
+		CommunicationClass = 6, AudioClass = 7};
+	static constexpr std::string_view USBD_MANUFACTURER_STRING = "Mountjoy Modular";
+	static constexpr std::string_view USBD_PRODUCT_STRING = "Mountjoy Punck MSC";
+	static constexpr std::string_view USBD_CFG_STRING = "MSC Punck Config";
+	static constexpr std::string_view USBD_MSC_STRING = "MSC Punck Interface";
+	static constexpr std::string_view USBD_CDC_STRING = "Mountjoy Punck CDC";
+	static constexpr std::string_view USBD_MIDI_STRING	= "Mountjoy Punck MIDI";
+	static constexpr uint8_t usbSerialNoSize = 24;
+
 
 	void ActivateEndpoint(uint8_t endpoint, const Direction direction, const EndPointType eptype);
 	void ReadPacket(const uint32_t* dest, uint16_t len, uint32_t offset);
@@ -104,43 +88,46 @@ private:
 
 	std::array<USBHandler*, 4>classesByInterface;		// Lookup tables to get appropriate class handlers
 	std::array<USBHandler*, 4>classByEP;
-
-	static constexpr uint8_t usbSerialSize = 24;
-
 	EP0State ep0State;
-
 	bool transmitting;
 	usbRequest req;
+	uint8_t USBD_StrDesc[128];
 
 
-	// USB standard device descriptor - in usbd_desc.c
+	// USB standard device descriptor
+	static constexpr uint16_t VendorID = 1155;	// STMicroelectronics
+	static constexpr uint16_t ProductId = 0x572c;
+
 	const uint8_t USBD_FS_DeviceDesc[0x12] = {
-			0x12,					// bLength
-			DeviceDescriptor,		// bDescriptorType
-			0x01,					// bcdUSB  - 0x01 if LPM enabled
+			0x12,								// bLength
+			DeviceDescriptor,					// bDescriptorType
+			0x01,								// bcdUSB  - 0x01 if LPM enabled
 			0x02,
-			0xEF,					// bDeviceClass: (Miscellaneous)
-			0x02,					// bDeviceSubClass (Interface Association Descriptor- with below)
-			0x01,					// bDeviceProtocol (Interface Association Descriptor)
-			ep_maxPacket,  			// bMaxPacketSize
-			LOBYTE(USBD_VID),		// idVendor
-			HIBYTE(USBD_VID),		// idVendor
-			LOBYTE(USBD_PID_FS),	// idProduct
-			HIBYTE(USBD_PID_FS),	// idProduct
-			0x00,					// bcdDevice rel. 2.00
+			0xEF,								// bDeviceClass: (Miscellaneous)
+			0x02,								// bDeviceSubClass (Interface Association Descriptor- with below)
+			0x01,								// bDeviceProtocol (Interface Association Descriptor)
+			ep_maxPacket,  						// bMaxPacketSize
+			LOBYTE(VendorID),					// idVendor
+			HIBYTE(VendorID),					// idVendor
+			LOBYTE(ProductId),					// idProduct
+			HIBYTE(ProductId),					// idProduct
+			0x00,								// bcdDevice rel. 2.00
 			0x02,
-			USBD_IDX_MFC_STR,		// Index of manufacturer  string
-			USBD_IDX_PRODUCT_STR,	// Index of product string
-			USBD_IDX_SERIAL_STR,	// Index of serial number string
-			0x01					// bNumConfigurations
+			StringIndex::Manufacturer,			// Index of manufacturer  string
+			StringIndex::Product,				// Index of product string
+			StringIndex::Serial,				// Index of serial number string
+			0x01								// bNumConfigurations
 	};
 
-	const uint8_t ConfigDesc[CONFIG_DESC_SIZE] = {
-			// Configuration Descriptor
+	// Configuration Descriptor
+	static constexpr uint8_t configDescSize = 175;
+	static constexpr uint8_t MidiClassDescSize = 50;
+
+	const uint8_t ConfigDesc[configDescSize] = {
 			0x09,								// bLength: Configuration Descriptor size
 			ConfigurationDescriptor,			// bDescriptorType: Configuration
-			LOBYTE(CONFIG_DESC_SIZE),			// wTotalLength
-			HIBYTE(CONFIG_DESC_SIZE),
+			LOBYTE(configDescSize),				// wTotalLength
+			HIBYTE(configDescSize),
 			interfaceCount,						// bNumInterfaces: 5 [1 MSC, 2 CDC, 2 MIDI]
 			0x01,								// bConfigurationValue: Configuration value
 			0x04,								// iConfiguration: Index of string descriptor describing the configuration
@@ -160,7 +147,7 @@ private:
 			0x01,								// AUDIO
 			0x01,								// AUDIO_Control
 			0x00,								// bInterfaceProtocol
-			USBD_IDX_MIDI_STR,					// string index for interface
+			StringIndex::AudioClass,			// string index for interface
 
 			// B.3.2 Class-specific AC Interface Descriptor
 			0x09,								// sizeof(usbDescrCDC_HeaderFn): length of descriptor in bytes
@@ -181,14 +168,14 @@ private:
 			0x01,								// bInterfaceClass: Audio
 			0x03,								// bInterfaceSubClass: MIDIStreaming
 			0x00,								// InterfaceProtocol
-			USBD_IDX_MIDI_STR,					// iInterface: No String Descriptor
+			StringIndex::AudioClass,			// iInterface: String Descriptor
 
 			// B.4.2 Class-specific MS Interface Descriptor
 			0x07,								// length of descriptor in bytes
 			ClassSpecificInterfaceDescriptor,	// bDescriptorType: Class Specific Interface Descriptor
 			0x01,								// header functional descriptor
 			0x0, 0x01,							// bcdADC
-			CLASS_SPECIFIC_DESC_SIZE, 0,		// wTotalLength
+			MidiClassDescSize, 0,				// wTotalLength
 
 			// B.4.3 MIDI IN Jack Descriptor (Embedded)
 			0x06,								// bLength
@@ -256,7 +243,7 @@ private:
 			0x08,								// Mass Storage
 			0x06,								// SCSI transparent command set
 			0x50,								// bInterfaceProtocol: Bulk-Only Transport
-			USBD_IDX_MSC_STR,					// string index for interface
+			StringIndex::MassStorageClass,		// string index for interface
 
 			// Bulk IN Endpoint Descriptor
 			0x07,								// bLength
@@ -286,7 +273,7 @@ private:
 			0x02,								// bFunctionClass (Communications and CDC Control)
 			0x02,								// bFunctionSubClass
 			0x01,								// bFunctionProtocol
-			USBD_IDX_CDC_STR,					// iFunction (String Descriptor 6)
+			StringIndex::CommunicationClass,	// String Descriptor
 
 			// Interface Descriptor
 			0x09,								// bLength: Interface Descriptor size
@@ -297,7 +284,7 @@ private:
 			0x02,								// bInterfaceClass: Communication Interface Class
 			0x02,								// bInterfaceSubClass: Abstract Control Model
 			0x01,								// bInterfaceProtocol: Common AT commands
-			USBD_IDX_CDC_STR,					// iInterface
+			StringIndex::CommunicationClass,	// iInterface
 
 			// Header Functional Descriptor
 			0x05,								// bLength: Endpoint Descriptor size
@@ -382,17 +369,19 @@ private:
 	};
 
 
-	// USB lang indentifier descriptor
-	const uint8_t USBD_LangIDDesc[USB_LEN_LANGID_STR_DESC] = {
-			USB_LEN_LANGID_STR_DESC,
+	// USB language indentifier descriptor
+	static constexpr uint16_t languageIDString = 1033;
+
+	const uint8_t USBD_LangIDDesc[4] = {
+			4,
 			StringDescriptor,
-			LOBYTE(USBD_LANGID_STRING),
-			HIBYTE(USBD_LANGID_STRING)
+			LOBYTE(languageIDString),
+			HIBYTE(languageIDString)
 	};
 
-	/*const uint8_t USBD_MSC_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] = {
-			USB_LEN_DEV_QUALIFIER_DESC,
-			USB_DESC_TYPE_DEVICE_QUALIFIER,
+	const uint8_t USBD_MSC_DeviceQualifierDesc[10] = {
+			10,
+			DeviceQualifierDescriptor,
 			0x00,
 			0x02,
 			0x01,
@@ -401,9 +390,8 @@ private:
 			0x40,
 			0x01,
 			0x00,
-	};*/
+	};
 
-	uint8_t USBD_StrDesc[128];
 
 public:
 #if (USB_DEBUG)
