@@ -35,7 +35,7 @@ int main(void) {
 
 	InitPWMTimer();
 	InitRNG();						// Init random number generator
-	InitMidiUART();
+//	InitMidiUART();
 	InitADC();
 	InitDAC();
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
@@ -43,15 +43,15 @@ int main(void) {
 
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise switches and LEDs
-	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
+//	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 
-	usb.Init();
-	InitI2S();						// Initialise I2S which will start main sample interrupts
+//	usb.Init();
+//	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 	while (1) {
-		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
+	//	usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
-		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
+	//	voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
 		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {

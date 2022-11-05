@@ -3,14 +3,16 @@
 #include <cstring>
 
 // Clock overview:
-// Main clock 4MHz: 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz
+// Main clock (Nucelo): 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz
+// Main clock (v1): 12MHz (HSE) / 3 (M) * 200 (N) / 2 (P) = 400MHz
 // SDRAM: 200MHz: Defaulted to D1 domain AHB prescaler (RCC_D1CFGR_HPRE_3) ie main clock /2 = 200MHz (AKA HCLK3)
 // I2S: Peripheral Clock (AKA per_ck) set to HSI = 64MHz
 // ADC: Peripheral Clock (AKA per_ck) set to HSI = 64MHz
 
 #if CPUCLOCK == 400
 // 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz
-#define PLL_M1 2
+// 12MHz (HSE) / 3 (M) * 200 (N) / 2 (P) = 400MHz
+#define PLL_M1 3
 #define PLL_N1 200
 #define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
 #define PLL_Q1 4			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 200 (N) / 4 (Q) = 200MHz

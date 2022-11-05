@@ -10,7 +10,7 @@ extern volatile uint32_t SysTickVal;
 
 #define ADC1_BUFFER_LENGTH 4				// currently unused
 #define ADC2_BUFFER_LENGTH 15
-#define WEB_EDITOR_ADC true					// Web editor controls ADC settings
+#define WEB_EDITOR_ADC false					// Web editor controls ADC settings
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400

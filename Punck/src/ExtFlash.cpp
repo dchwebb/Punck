@@ -15,7 +15,7 @@ void ExtFlash::Init()
 	InitQSPI();												// Initialise hardware
 	Reset();
 	uint16_t id = GetID();
-	if (id == 0 || id == 255) {
+	if (id == 0 || id == 255) {								// Winbond 128MB 0x17EF
 		flashCorrupt = true;
 		return;
 	}
