@@ -158,20 +158,27 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 void VoiceManager::CheckButtons()
 {
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
-	if (GPIOB->IDR & GPIO_IDR_ID3) {			// MIDI learn mode
-		//buttonMode = ButtonMode::midiLearn;
+	ButtonMode oldMode = buttonMode;
+	if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {			// PC6: Sequence Select
 		buttonMode = ButtonMode::drumPattern;
+	} else if ((GPIOE->IDR & GPIO_IDR_ID1) == 0) {	// PE1: MIDI Learn
+		buttonMode = ButtonMode::midiLearn;
 	} else {
-		if (buttonMode == ButtonMode::midiLearn) {
-			// Switch off all LEDs
-			for (auto& note : noteMapper) {
-//				if (note.led.gpioBank) {
-//					note.led.Off();
-//				}
-			}
-		}
 		buttonMode = ButtonMode::playNote;
 	}
+
+	if (oldMode != buttonMode) {
+		if (oldMode == ButtonMode::midiLearn) {
+			for (auto& note : noteMapper) {				// Switch off all LEDs
+				note.pwmLed.Level(0);
+			}
+		}
+		if (buttonMode == ButtonMode::midiLearn) {
+			// Stop active sequence
+			sequencer.StartStop(0);
+		}
+	}
+
 
 	for (auto& note : noteMapper) {
 		if (note.btn.IsOn()) {

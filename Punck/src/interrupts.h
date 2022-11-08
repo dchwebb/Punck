@@ -1,11 +1,6 @@
 void OTG_FS_IRQHandler(void)
 {
-	GPIOD->ODR |= GPIO_ODR_OD2;							// PD2: debug pin
-
 	usb.InterruptHandler();
-
-	GPIOD->ODR &= ~GPIO_ODR_OD2;
-
 }
 
 uint32_t spiUnderrun = 0;		// Debug
@@ -19,11 +14,7 @@ void SPI2_IRQHandler()
 		return;
 	}
 
-	GPIOC->ODR |= GPIO_ODR_OD11;						// PC11: debug pin
-
 	voiceManager.Output();
-
-	GPIOC->ODR &= ~GPIO_ODR_OD11;
 }
 
 

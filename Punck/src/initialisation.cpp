@@ -345,16 +345,18 @@ void InitADC1()
 
 	/* Configure ADC Channels to be converted:
 
-	PF13 ADC2_INP2   Tempo Pot
-
 	PA0 ADC1_INP16   Kick Attack
 	PA1 ADC1_INP17   Kick Decay
 	PA2 ADC12_INP14  Kick Volume
 
+	PC0 ADC123_INP10 Snare Filter
+	PA3 ADC12_INP15  Snare Tuning
+	PC4 ADC12_INP4   Snare Volume
+
 	PF11 ADC1_INP2   Sampler A Volume
 	PF12 ADC1_INP6   Sampler B Volume
 	*/
-	InitAdcPins(ADC1, {2, 16, 17, 14, 2, 6});
+	InitAdcPins(ADC1, {16, 17, 14, 10, 15, 4, 2, 6});
 
 
 	// Enable ADC
@@ -418,10 +420,7 @@ void InitADC2()
 	while ((ADC2->CR & ADC_CR_ADCAL) == ADC_CR_ADCAL) {};
 
 	/* Configure ADC Channels to be converted:
-
-	PC0 ADC123_INP10 Snare Filter
-	PA3 ADC12_INP15  Snare Tuning
-	PC4 ADC12_INP4   Snare Volume
+	PF13 ADC2_INP2   Tempo Pot
 
 	PA6 ADC12_INP3   Hihat Decay
 	PB1 ADC12_INP5   Hihat Volume
@@ -432,7 +431,7 @@ void InitADC2()
 	PA7 ADC12_INP7   Sample B Voice
 	PB0 ADC12_INP9   Sampler B Speed
 	*/
-	InitAdcPins(ADC2, {10, 15, 4, 3, 5, 11, 8, 7, 9});
+	InitAdcPins(ADC2, {2, 3, 5, 11, 8, 7, 9});
 
 	// Enable ADC
 	ADC2->CR |= ADC_CR_ADEN;
@@ -593,14 +592,12 @@ void InitIO()
 	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
 	GPIOB->MODER &= ~GPIO_MODER_MODE0_1;			// PB0: Green LED nucleo
 	GPIOE->MODER &= ~GPIO_MODER_MODE1_1;			// PE1: Yellow LED nucleo
-
-	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Sample 1 button
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// PC6 pull up
-
-	GPIOB->MODER &= ~GPIO_MODER_MODE3;				// PB3: Button mode select switch
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD3_1;				// PB3 pull down
 */
+	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Seq Select
+	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
 
+	GPIOE->MODER &= ~GPIO_MODER_MODE1;				// PE1: MIDI Learn
+	GPIOE->PUPDR |= GPIO_PUPDR_PUPD1_0;				// Pull up
 
 	GPIOB->MODER &= ~GPIO_MODER_MODE6;				// PB6: Kick button
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up

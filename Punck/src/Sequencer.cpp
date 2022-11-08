@@ -130,7 +130,11 @@ void Sequencer::StartStop(uint8_t seq)
 		currentBar = 0;
 		currentBeat = 0;
 	} else {
-		playing = false;
+		if (seq == activeSequence || seq == 0) {
+			playing = false;
+		} else {
+			ChangeSequence(seq);
+		}
 	}
 }
 

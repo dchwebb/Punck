@@ -126,7 +126,6 @@ void FatTools::CheckCache()
 		}
 		cacheUpdated = 0;
 
-		GPIOB->ODR &= ~GPIO_ODR_OD14;				// PB14: Red LED nucleo
 		busy = false;								// Current batch of writes has completed - release sample memory
 	}
 }
@@ -134,7 +133,6 @@ void FatTools::CheckCache()
 
 uint8_t FatTools::FlushCache()
 {
-	GPIOB->ODR |= GPIO_ODR_OD14;					// PB14: Red LED nucleo
 	busy = true;									// Will be reset once CheckCache has confirmed that sufficient time has elapsed since last write
 
 	// Writes any dirty data in the header cache to Flash
