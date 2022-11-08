@@ -38,13 +38,13 @@ struct NoteMapper {
 		}
 	} btn;
 
-	struct LED {
-		GPIO_TypeDef* gpioBank;
-		uint8_t gpioPin;
-
-		void On()  { gpioBank->ODR |= (1 << gpioPin); }
-		void Off() { gpioBank->ODR &= ~(1 << gpioPin); }
-	} led;
+//	struct LED {
+//		GPIO_TypeDef* gpioBank;
+//		uint8_t gpioPin;
+//
+//		void On()  { gpioBank->ODR |= (1 << gpioPin); }
+//		void Off() { gpioBank->ODR &= ~(1 << gpioPin); }
+//	} led;
 
 	struct PWMLED {
 		volatile uint32_t* timerChannel;

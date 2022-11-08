@@ -7,7 +7,7 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 {
 	// Called when accessed from MIDI
 	playing = true;
-	noteMapper->led.On();
+	//noteMapper->led.On();
 
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_HiHatLevel]) / 32768.0f);
 	attack = true;
@@ -107,12 +107,14 @@ void HiHat::CalcOutput()
 			playing = false;
 			currentLevel[left] = 0.0f;
 			currentLevel[right] = 0.0f;
-			noteMapper->led.Off();
+			//noteMapper->led.Off();
 		}
 
 		// Filter and scale the output levels
 		outputLevel[0] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[left], left), left) - 0.0001f;
 		outputLevel[1] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[right], right), right) - 0.0001f;;
+
+		noteMapper->pwmLed.Level(velocityScale);
 	}
 
 }

@@ -143,6 +143,13 @@ void CDCHandler::ProcessCommand()
 		extFlash.MemoryMapped();
 
 
+	} else if (cmd.compare("format") == 0) {					// Format Flash storage with FAT
+		printf("Formatting ...\r\n");
+		fatTools.Format();
+		printf("Formatting ...\r\n");
+
+		extFlash.MemoryMapped();
+
 	} else if (cmd.compare("samplelist") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 

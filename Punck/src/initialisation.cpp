@@ -298,35 +298,17 @@ void InitADC()
 
 	ADC12_COMMON->CCR |= ADC_CCR_PRESC_0;			// Set prescaler to ADC clock divided by 2 (if 64MHz = 32MHz)
 
-	//InitADC1();
+	InitADC1();
 	InitADC2();
 }
 
 
-/*-----------------------------------------------------------------------------------------------------------------
-ADC Channels are distributed across ADC1 and ADC2 for faster conversions. Audio channels on ADC1 for better quality.
-Both insert data into ADC_array at different offsets.
- ADC1:
-	0	PA3 ADC12_INP15		AUDIO_IN_L
-	1	PA2 ADC12_INP14		AUDIO_IN_R
-	2	PA1 ADC1_INP17		DELAY_POT_R
-	3	PA0 ADC1_INP16		DELAY_CV_SCALED_R
-ADC2:
-	0	PC5 ADC12_INP8		WET_DRY_MIX
-	1	PB1 ADC12_INP5		DELAY_POT_L
-	2	PA6 ADC12_INP3 		DELAY_CV_SCALED_L
-	3	PB0 ADC12_INP9		FEEDBACK_POT
-	4	PA7 ADC12_INP7		FEEDBACK_CV_SCALED
-	5	PC4 ADC12_INP4		FILTER_CV_SCALED
-	6	PC1 ADC123_INP11 	FILTER_POT
-*/
 
-/*
 void InitADC1()
 {
 	// Initialize ADC peripheral
 	DMA1_Stream1->CR &= ~DMA_SxCR_EN;
-//	DMA1_Stream1->CR |= DMA_SxCR_CIRC;				// Circular mode to keep refilling buffer
+	DMA1_Stream1->CR |= DMA_SxCR_CIRC;				// Circular mode to keep refilling buffer
 	DMA1_Stream1->CR |= DMA_SxCR_MINC;				// Memory in increment mode
 	DMA1_Stream1->CR |= DMA_SxCR_PSIZE_0;			// Peripheral size: 8 bit; 01 = 16 bit; 10 = 32 bit
 	DMA1_Stream1->CR |= DMA_SxCR_MSIZE_0;			// Memory size: 8 bit; 01 = 16 bit; 10 = 32 bit
@@ -350,28 +332,29 @@ void InitADC1()
 
 	ADC1->CFGR |= ADC_CFGR_CONT;					// 1: Continuous conversion mode for regular conversions
 	ADC1->CFGR |= ADC_CFGR_OVRMOD;					// Overrun Mode 1: ADC_DR register is overwritten with the last conversion result when an overrun is detected.
-	ADC1->CFGR |= ADC_CFGR_DMNGT_0;					// Data Management configuration 01: DMA One Shot Mode selected, 11: DMA Circular Mode selected
+	ADC1->CFGR |= ADC_CFGR_DMNGT;					// Data Management configuration 01: DMA One Shot Mode selected, 11: DMA Circular Mode selected
 
 	// Boost mode 1: Boost mode on. Must be used when ADC clock > 20 MHz.
 	ADC1->CR |= ADC_CR_BOOST_1;						// Note this sets reserved bit according to SFR - HAL has notes about silicon revision
-
-	// For scan mode: set number of channels to be converted
-	ADC1->SQR1 |= (ADC1_BUFFER_LENGTH - 1);
+	ADC1->SQR1 |= (ADC1_BUFFER_LENGTH - 1);			// For scan mode: set number of channels to be converted
 
 	// Start calibration
 	ADC1->CR |= ADC_CR_ADCALLIN;					// Activate linearity calibration (as well as offset calibration)
 	ADC1->CR |= ADC_CR_ADCAL;
 	while ((ADC1->CR & ADC_CR_ADCAL) == ADC_CR_ADCAL) {};
 
+	/* Configure ADC Channels to be converted:
 
-	/--------------------------------------------------------------------------------------------
-	Configure ADC Channels to be converted:
-	0	PA3 ADC12_INP15		AUDIO_IN_L
-	1	PA2 ADC12_INP14		AUDIO_IN_R
-	2	PA1 ADC1_INP17		DELAY_POT_R
-	3	PA0 ADC1_INP16		DELAY_CV_SCALED_R
-	/
-	InitAdcPins(ADC1, {15, 14, 17, 16});
+	PF13 ADC2_INP2   Tempo Pot
+
+	PA0 ADC1_INP16   Kick Attack
+	PA1 ADC1_INP17   Kick Decay
+	PA2 ADC12_INP14  Kick Volume
+
+	PF11 ADC1_INP2   Sampler A Volume
+	PF12 ADC1_INP6   Sampler B Volume
+	*/
+	InitAdcPins(ADC1, {2, 16, 17, 14, 2, 6});
 
 
 	// Enable ADC
@@ -393,43 +376,6 @@ void InitADC1()
 
 	ADC1->CR |= ADC_CR_ADSTART;						// Start ADC
 }
-
-
-
-void TriggerADC1()
-{
-	ADC1->CR |= ADC_CR_ADSTART;
-	DMA1->LIFCR |= DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1;
-	DMA1_Stream1->CR |= DMA_SxCR_EN;
-}
-*/
-
-/* ADC Pins
-	PA0 ADC1_INP16
-	PA1 ADC1_INP17
-	PA2 ADC12_INP14
-	PA3 ADC12_INP15
-	[PA4 ADC12_INP18 DAC]
-	[PA5 ADC12_INP19 DAC]
-	PA6 ADC12_INP3
-	PA7 ADC12_INP7
-
-	PB0 ADC12_INP9
-	PB1 ADC12_INP5
-
-	PC0 ADC123_INP10
-	PC1 ADC123_INP11
-	PC2 ADC123_INP12
-	[PC3_C ADC3_INP1]
-	PC4 ADC12_INP4
-	PC5 ADC12_INP8
-
-	PF11 ADC1_INP2
-	PF12 ADC1_INP6
-	PF13 ADC2_INP2
-	PF14 ADC2_INP6
-
-*/
 
 
 void InitADC2()
@@ -472,13 +418,21 @@ void InitADC2()
 	while ((ADC2->CR & ADC_CR_ADCAL) == ADC_CR_ADCAL) {};
 
 	/* Configure ADC Channels to be converted:
-	0	PB1 ADC12_INP5
-	1	PA6 ADC12_INP3
-	2	PA3 ADC12_INP15
-	3 	PC0 ADC123_INP10
 
+	PC0 ADC123_INP10 Snare Filter
+	PA3 ADC12_INP15  Snare Tuning
+	PC4 ADC12_INP4   Snare Volume
+
+	PA6 ADC12_INP3   Hihat Decay
+	PB1 ADC12_INP5   Hihat Volume
+
+	PC1 ADC123_INP11 Sampler A Voice
+	PC5 ADC12_INP8   Sampler A Speed
+
+	PA7 ADC12_INP7   Sample B Voice
+	PB0 ADC12_INP9   Sampler B Speed
 	*/
-	InitAdcPins(ADC2, {5, 3, 15, 10});
+	InitAdcPins(ADC2, {10, 15, 4, 3, 5, 11, 8, 7, 9});
 
 	// Enable ADC
 	ADC2->CR |= ADC_CR_ADEN;
@@ -489,7 +443,7 @@ void InitADC2()
 
 	DMA1_Stream2->NDTR |= ADC2_BUFFER_LENGTH;		// Number of data items to transfer (ie size of ADC buffer)
 	DMA1_Stream2->PAR = reinterpret_cast<uint32_t>(&(ADC2->DR));	// Configure the peripheral data register address 0x40022040
-	DMA1_Stream2->M0AR = reinterpret_cast<uint32_t>(ADC_array);		// Configure the memory address (note that M1AR is used for double-buffer mode) 0x24000040
+	DMA1_Stream2->M0AR = reinterpret_cast<uint32_t>(&ADC_array[ADC1_BUFFER_LENGTH]);		// Configure the memory address (note that M1AR is used for double-buffer mode) 0x24000040
 
 	DMA1_Stream2->CR |= DMA_SxCR_EN;				// Enable DMA and wait
 	wait_loop_index = (SystemCoreClock / (100000UL * 2UL));
@@ -502,37 +456,23 @@ void InitADC2()
 
 
 void InitI2S() {
-	/* Available I2S2 pins on AF5
-	PA9  I2S2_CK
-	PA11 I2S2_WS
-	PA12 I2S2_CK
-*	PB9  I2S2_WS
-	PB10 I2S2_CK
-	PB12 I2S2_WS	(set for production)
-x	PB13 I2S2_CK	(set for production)	*on nucleo jumpered to Ethernet and not working
-	PB15 I2S2_SDO	(set for production)
-	PC1  I2S2_SDO
-*	PC3  I2S2_SDO
-*	PD3  I2S2_CK
-	*/
-
 	//	Enable GPIO and SPI clocks
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port clock
+	//RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port clock
+	//RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port clock
 	RCC->APB1LENR |= RCC_APB1LENR_SPI2EN;
 
-	// PB9: I2S2_WS [alternate function AF5]
-	GPIOB->MODER &= ~GPIO_MODER_MODE9_0;			// 10: Alternate function mode
-	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL9_Pos;		// Alternate Function 5 (I2S2)
+	// PB12: I2S2_WS [alternate function AF5]
+	GPIOB->MODER &= ~GPIO_MODER_MODE12_0;			// 10: Alternate function mode
+	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL12_Pos;	// Alternate Function 5 (I2S2)
 
-	// PD3 I2S2_CK [alternate function AF5]
-	GPIOD->MODER &= ~GPIO_MODER_MODE3_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
-	GPIOD->AFR[0] |= 5 << GPIO_AFRL_AFSEL3_Pos;		// Alternate Function 5 (I2S2)
+	// PB13 I2S2_CK [alternate function AF5]
+	GPIOB->MODER &= ~GPIO_MODER_MODE13_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
+	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL13_Pos;	// Alternate Function 5 (I2S2)
 
-	// PC3 I2S2_SDO [alternate function AF5]
-	GPIOC->MODER &= ~GPIO_MODER_MODE3_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
-	GPIOC->AFR[0] |= 5 << GPIO_AFRL_AFSEL3_Pos;		// Alternate Function 5 (I2S2)
+	// PB15 I2S2_SDO [alternate function AF5]
+	GPIOB->MODER &= ~GPIO_MODER_MODE15_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
+	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL15_Pos;	// Alternate Function 5 (I2S2)
 
 
 	// Configure SPI (Shown as SPI2->CGFR in SFR)
@@ -646,6 +586,7 @@ void InitIO()
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
 	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
 
+	/*
 	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
 	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
 	GPIOG->MODER &= ~GPIO_MODER_MODE11_1;			// PG11: debug pin (SPI Underrun)
@@ -658,6 +599,23 @@ void InitIO()
 
 	GPIOB->MODER &= ~GPIO_MODER_MODE3;				// PB3: Button mode select switch
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPD3_1;				// PB3 pull down
+*/
+
+
+	GPIOB->MODER &= ~GPIO_MODER_MODE6;				// PB6: Kick button
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
+
+	GPIOB->MODER &= ~GPIO_MODER_MODE5;				// PB5: Snare button
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD5_0;				// Pull up
+
+	GPIOE->MODER &= ~GPIO_MODER_MODE11;				// PE11: HiHat button
+	GPIOE->PUPDR |= GPIO_PUPDR_PUPD11_0;			// Pull up
+
+	GPIOB->MODER &= ~GPIO_MODER_MODE7;				// PB7: Sample A button
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD7_0;				// Pull up
+
+	GPIOG->MODER &= ~GPIO_MODER_MODE13;				// PG13: Sample B button
+	GPIOG->PUPDR |= GPIO_PUPDR_PUPD13_0;			// Pull up
 
 }
 
@@ -761,34 +719,80 @@ void InitRNG()
 
 void InitPWMTimer()
 {
-	// TIM8: Channel 1 Output: *PC6; Channel 2: *PC7; Channel 3: *PC8; Channel 4: PC9
+	// TIM8: [Channel 1 Output: PC6;] Channel 2: PC7; Channel 3: PC8; Channel 4: PC9
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
 	RCC->APB2ENR |= RCC_APB2ENR_TIM8EN;
 
-	// Enable channel 1, 2, 3 PWM output pins on PC6, PC7, PC8, PC9
-	GPIOC->MODER &= ~(GPIO_MODER_MODE7_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
+	// Enable channel 1, 2, 3 PWM output pins on PC7, PC8, PC9
+	// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
+	GPIOC->MODER &= ~(GPIO_MODER_MODE7_0);
 	GPIOC->AFR[0] |= (GPIO_AFRL_AFSEL7_0 | GPIO_AFRL_AFSEL7_1);			// Timer 8 Output channel is AF3
+
+	GPIOC->MODER &= ~(GPIO_MODER_MODE8_0);
+	GPIOC->AFR[1] |= (GPIO_AFRH_AFSEL8_0 | GPIO_AFRH_AFSEL8_1);			// Timer 8 Output channel is AF3
+
+	GPIOC->MODER &= ~(GPIO_MODER_MODE9_0);
+	GPIOC->AFR[1] |= (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1);			// Timer 8 Output channel is AF3
 
 	// Timing calculations: Clock = 400MHz / (PSC + 1) = 200m counts per second
 	// ARR = number of counts per PWM tick = 4096
 	// 200m / ARR = 48kHz of PWM square wave with 4096 levels of output
-	//TIM8->CCMR1 |= TIM_CCMR1_OC1PE;				// Output compare 1 preload enable
 	TIM8->CCMR1 |= TIM_CCMR1_OC2PE;					// Output compare 2 preload enable
-	//TIM8->CCMR2 |= TIM_CCMR2_OC3PE;				// Output compare 3 preload enable
+	TIM8->CCMR2 |= TIM_CCMR2_OC3PE;					// Output compare 3 preload enable
+	TIM8->CCMR2 |= TIM_CCMR2_OC4PE;					// Output compare 4 preload enable
 
-	//TIM8->CCMR1 |= (TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);	// 0110: PWM mode 1 - In upcounting, channel 1 active if TIMx_CNT<TIMx_CCR1
 	TIM8->CCMR1 |= (TIM_CCMR1_OC2M_1 | TIM_CCMR1_OC2M_2);	// 0110: PWM mode 1 - In upcounting, channel 2 active if TIMx_CNT<TIMx_CCR2
-	//TIM8->CCMR2 |= (TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2);	// 0110: PWM mode 1 - In upcounting, channel 3 active if TIMx_CNT<TIMx_CCR3
+	TIM8->CCMR2 |= (TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2);	// 0110: PWM mode 1 - In upcounting, channel 3 active if TIMx_CNT<TIMx_CCR3
+	TIM8->CCMR2 |= (TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2);	// 0110: PWM mode 1 - In upcounting, channel 4 active if TIMx_CNT<TIMx_CCR4
 
-	//TIM8->CCR1 = 0x800;							// Initialise PWM level to midpoint
-	TIM8->CCR2 = 0x000;
-	//TIM8->CCR3 = 0x800;
+	TIM8->CCR2 = 0;									// Initialise PWM level to zero
+	TIM8->CCR3 = 0;
+	TIM8->CCR4 = 0;
 
 	TIM8->ARR = 0xFFF;								// Total number of PWM ticks = 4096
 	TIM8->PSC = 1;									// Should give ~48kHz
 	TIM8->CR1 |= TIM_CR1_ARPE;						// 1: TIMx_ARR register is buffered
 	TIM8->CCER |= TIM_CCER_CC2E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+	TIM8->CCER |= TIM_CCER_CC3E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+	TIM8->CCER |= TIM_CCER_CC4E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+
 	TIM8->BDTR |= TIM_BDTR_MOE;						// Master output enable
 	TIM8->EGR |= TIM_EGR_UG;						// 1: Re-initialize the counter and generates an update of the registers
 	TIM8->CR1 |= TIM_CR1_CEN;						// Enable counter
+
+
+
+	//******************************************************************************
+	// TIM4: Channel 3: PD14; Channel 4: PD15
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;
+	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
+
+	GPIOD->MODER &= ~(GPIO_MODER_MODE14_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
+	GPIOD->AFR[1] |= GPIO_AFRH_AFSEL14_1;			// Timer 4 Output channel is AF2
+
+	GPIOD->MODER &= ~(GPIO_MODER_MODE15_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
+	GPIOD->AFR[1] |= GPIO_AFRH_AFSEL15_1;			// Timer 8 Output channel is AF2
+
+	// Timing calculations: Clock = 400MHz / (PSC + 1) = 200m counts per second
+	// ARR = number of counts per PWM tick = 4096
+	// 200m / ARR = 48kHz of PWM square wave with 4096 levels of output
+	TIM4->CCMR2 |= TIM_CCMR2_OC3PE;					// Output compare 3 preload enable
+	TIM4->CCMR2 |= TIM_CCMR2_OC4PE;					// Output compare 4 preload enable
+
+	TIM4->CCMR2 |= (TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2);	// 0110: PWM mode 1 - In upcounting, channel 3 active if TIMx_CNT<TIMx_CCR3
+	TIM4->CCMR2 |= (TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2);	// 0110: PWM mode 1 - In upcounting, channel 4 active if TIMx_CNT<TIMx_CCR4
+
+	TIM4->CCR3 = 0;									// Initialise PWM level to zero
+	TIM4->CCR4 = 0;
+
+	TIM4->ARR = 0xFFF;								// Total number of PWM ticks = 4096
+	TIM4->PSC = 1;									// Should give ~48kHz
+	TIM4->CR1 |= TIM_CR1_ARPE;						// 1: TIMx_ARR register is buffered
+	TIM4->CCER |= TIM_CCER_CC3E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+	TIM4->CCER |= TIM_CCER_CC4E;					// Capture mode enabled / OC1 signal is output on the corresponding output pin
+
+	TIM4->BDTR |= TIM_BDTR_MOE;						// Master output enable
+	TIM4->EGR |= TIM_EGR_UG;						// 1: Re-initialize the counter and generates an update of the registers
+	TIM4->CR1 |= TIM_CR1_CEN;						// Enable counter
+
 }

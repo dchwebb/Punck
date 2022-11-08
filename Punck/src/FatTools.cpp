@@ -20,20 +20,7 @@ void FatTools::InitFatFS()
 
 	if (res == FR_NO_FILESYSTEM) {
 		return;
-//		uint8_t fsWork[fatSectorSize];						// Work buffer for the f_mkfs()
-//
-//		MKFS_PARM parms;									// Create parameter struct
-//		parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
-//		parms.n_root = 128;									// Number of root directory entries (each uses 32 bytes of storage)
-//		parms.align = 0;									// Default initialise remaining values
-//		parms.au_size = 0;
-//		parms.n_fat = 0;
-//
-//		f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
-//		res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
-//
-//		// Populate Windows spam files to prevent them being created later in unwanted locations
-//		MakeDummyFiles();
+
 	}
 
 	noFileSystem = false;
@@ -47,6 +34,29 @@ void FatTools::InitFatFS()
 
 	voiceManager.samples.UpdateSampleList();				// Updated list of samples on flash
 
+}
+
+
+bool FatTools::Format()
+{
+	uint8_t fsWork[fatSectorSize];						// Work buffer for the f_mkfs()
+
+	MKFS_PARM parms;									// Create parameter struct
+	parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
+	parms.n_root = 128;									// Number of root directory entries (each uses 32 bytes of storage)
+	parms.align = 0;									// Default initialise remaining values
+	parms.au_size = 0;
+	parms.n_fat = 0;
+
+	f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
+	FRESULT res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
+
+	// Populate Windows spam files to prevent them being created later in unwanted locations
+	MakeDummyFiles();
+	FlushCache();
+	InitFatFS();
+
+	return !extFlash.flashCorrupt;
 }
 
 

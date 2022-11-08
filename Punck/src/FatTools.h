@@ -81,6 +81,7 @@ public:
 	void CheckCache();
 	uint8_t FlushCache();
 	void InvalidateFatFSCache();
+	bool Format();
 private:
 	FATFS fatFs;						// File system object for RAM disk logical drive
 	const char fatPath[4] = "0:/";		// Logical drive path for FAT File system

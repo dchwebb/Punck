@@ -18,12 +18,11 @@ Samples::Samples()
 
 void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	if (fatTools.noFileSystem) {
+	if (fatTools.noFileSystem || (sampler[sp].bankLen == 0)) {
 		return;
 	}
 	sampler[sp].playing = true;
 	sampler[sp].velocityScale = velocity * (static_cast<float>(*sampler[sp].levelADC) / 32768.0f);
-	sampler[sp].noteMapper->led.On();
 
 	// Get sample from sorted bank list based on player and note offset
 	noteOffset = (noteOffset < sampler[sp].bankLen) ? noteOffset : 0;		// If there are no samples at that index just use first sample in bank
@@ -68,7 +67,7 @@ void Samples::CalcOutput()
 			const float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;		// FIXME - separate ADCs for each sampler
 
 			// Split the next position into an integer jump and fractional position
-			float addressJump;
+			float addressJump;			// Integral part of position
 			sp.fractionalPosition = std::modf(sp.fractionalPosition + (adjSpeed * sp.playbackSpeed), &addressJump);
 			sp.sampleAddress += (sp.sample->channels * bytes * (uint32_t)addressJump);
 
@@ -76,11 +75,14 @@ void Samples::CalcOutput()
 				sp.currentSamples[left] = 0;
 				sp.currentSamples[right] = 0;
 				sp.playing = false;
-				sp.noteMapper->led.Off();
 			}
-		} else {
-			sp.currentSamples[left] = 0;
-			sp.currentSamples[right] = 0;
+
+			// Calculate position to apply fade out to led
+			float endAddr = (float)((uint32_t)sp.sample->endAddr);
+			float startAddr = (float)((uint32_t)sp.sample->startAddr);
+			float currAddr = (float)((uint32_t)sp.sampleAddress);
+			sp.noteMapper->pwmLed.Level(1.0f - (currAddr - startAddr) / (endAddr - startAddr));
+
 		}
 	}
 

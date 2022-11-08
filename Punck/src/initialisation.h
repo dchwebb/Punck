@@ -8,8 +8,8 @@
 
 extern volatile uint32_t SysTickVal;
 
-#define ADC1_BUFFER_LENGTH 4				// currently unused
-#define ADC2_BUFFER_LENGTH 15
+#define ADC1_BUFFER_LENGTH 6				// currently unused
+#define ADC2_BUFFER_LENGTH 9
 #define WEB_EDITOR_ADC false					// Web editor controls ADC settings
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
@@ -20,31 +20,32 @@ constexpr float intToFloatMult = 1.0f / std::pow(2.0f, 31.0f);		// Multiple to c
 static constexpr uint32_t systemSampleRate = 48000;
 static constexpr float systemMaxFreq = 22000.0f;
 
-extern volatile uint16_t ADC_array[ADC2_BUFFER_LENGTH];
+extern volatile uint16_t ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 extern int32_t adcZeroOffset[2];
 
 // Define ADC array positions of various controls
 enum ADC_Controls {
 	ADC_Tempo 			= 0,
 
-	ADC_KickLevel		= 1,
-	ADC_KickAttack		= 2,
-	ADC_KickDecay		= 3,
+	ADC_KickAttack		= 1,
+	ADC_KickDecay		= 2,
+	ADC_KickLevel		= 3,
 
-	ADC_SnareLevel	 	= 4,
-	ADC_SnareFilter 	= 5,
-	ADC_SnareDecay  	= 6,
+	ADC_SampleALevel	= 4,
+	ADC_SampleBLevel	= 5,
+
+	ADC_SnareFilter 	= 6,
 	ADC_SnareTuning		= 7,
+	ADC_SnareLevel	 	= 8,
 
-	ADC_HiHatLevel  	= 8,
 	ADC_HiHatDecay  	= 9,
+	ADC_HiHatLevel  	= 10,
 
-	ADC_SampleALevel	= 10,
-	ADC_SampleASpeed	= 11,
-	ADC_SampleBLevel	= 12,
-	ADC_SampleBSpeed	= 13,
+	ADC_SampleAVoice	= 11,
+	ADC_SampleASpeed	= 12,
+	ADC_SampleBVoice	= 13,
+	ADC_SampleBSpeed	= 14,
 
-	ADC_TomsLevel		= 14,
 };
 enum channel {left = 0, right = 1};
 

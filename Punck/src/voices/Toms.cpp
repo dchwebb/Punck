@@ -9,10 +9,9 @@ void Toms::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t n
 	// Called when accessed from MIDI (different note offsets for different tuning?)
 	playing = true;
 	phase = Phase::Ramp;
-	noteMapper->led.On();
 
 	currentLevel = 0.0f;
-	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_TomsLevel]) / 32768.0f);
+	velocityScale = velocity; // * (static_cast<float>(ADC_array[ADC_TomsLevel]) / 32768.0f);
 	pitchScale = 1.0f + 1.5f * (float)noteOffset / (noteRange == 0 ? 128 : noteRange);
 
 	for (uint8_t i = 0; i < partialCount; ++i) {
@@ -54,7 +53,6 @@ void Toms::CalcOutput()
 		if (sineLevel[0] <= 0.00001f) {
 			playing = false;
 			phase = Phase::Off;
-			noteMapper->led.Off();
 		}
 		break;
 	}

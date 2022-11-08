@@ -18,7 +18,7 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t 
 	noiseLevel = config.noiseInitLevel;
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
 	playing = true;
-	noteMapper->led.On();
+	//noteMapper->led.On();
 }
 
 
@@ -33,31 +33,36 @@ void Snare::CalcOutput()
 {
 	if (playing) {
 		const float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
-		const float adcDecay = 0.00055f * static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
+		const float adcDecay = 0.00055f * 0.5;//static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
+
+		noiseLevel *= config.noiseDecay + adcDecay;
+		float maxLevel = noiseLevel;
 
 		float partialOutput = 0.0f;
-		bool partialsInaudible = true;							// To calculate when to terminate note
 		for (uint8_t i = 0; i < partialCount; ++i) {
 			partialpos[i] += partialInc[i];						// Set current poition in sine wave
 			partialLevel[i] *= config.partialDecay + adcDecay;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
-			if (partialLevel[i] > 0.00001f) {
-				partialsInaudible = false;
+			if (partialLevel[i] > maxLevel) {
+				maxLevel = partialLevel[i];
 			}
 		}
-		noiseLevel *= config.noiseDecay + adcDecay;
 
 		const float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
 
 		outputLevel[left]  = velocityScale * filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
 		outputLevel[right] = velocityScale * filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);
 
-		if (partialsInaudible) {
+		if (maxLevel < 0.00001f) {
 			playing = false;
-			noteMapper->led.Off();
+			//noteMapper->led.Off();
 		}
+
+		noteMapper->pwmLed.Level(maxLevel);
 	}
+
+
 
 }
 

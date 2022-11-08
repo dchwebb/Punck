@@ -10,12 +10,42 @@ VoiceManager::VoiceManager()
 		noteMapper[i].voice = i;
 	}
 
+	NoteMapper& k = noteMapper[Voice::kick];
+	kickPlayer.noteMapper = &k;
+	k.drumVoice = &kickPlayer;
+	k.btn = {GPIOB, 6};
+	k.pwmLed = {&TIM8->CCR4};			// PC9: Blue
+	k.midiLow = 84;
+	k.midiHigh = 84;
+
+	NoteMapper& s = noteMapper[Voice::snare];
+	snarePlayer.noteMapper = &s;
+	s.drumVoice = &snarePlayer;
+	s.btn = {GPIOB, 5};
+	s.pwmLed = {&TIM8->CCR3};			// PC8: Red
+	s.midiLow = 83;
+	s.midiHigh = 83;
+
+	NoteMapper& hh = noteMapper[Voice::hihat];
+	hihatPlayer.noteMapper = &hh;
+	hh.drumVoice = &hihatPlayer;
+	hh.btn = {GPIOE, 11};
+	hh.pwmLed = {&TIM8->CCR2};			// PC7: White
+	hh.midiLow = 78;
+	hh.midiHigh = 82;
+
+	NoteMapper& t = noteMapper[Voice::toms];
+	tomsPlayer.noteMapper = &k;
+	t.drumVoice = &tomsPlayer;
+	t.midiLow = 48;
+	t.midiHigh = 52;
+
 	NoteMapper& sa = noteMapper[samplerA];
 	samples.sampler[0].noteMapper = &sa;
 	sa.drumVoice = &samples;
 	sa.voiceIndex = 0;
-//	sa.btn = {GPIOC, 6};
-	sa.led = {GPIOB, 0};				// PB0: Green
+	sa.btn = {GPIOB, 7};
+	sa.pwmLed = {&TIM4->CCR3};			// PD14: Green
 	sa.midiLow = 72;
 	sa.midiHigh = 77;
 
@@ -23,42 +53,10 @@ VoiceManager::VoiceManager()
 	samples.sampler[1].noteMapper = &sb;
 	sb.drumVoice = &samples;
 	sb.voiceIndex = 1;
-	sb.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
+	sb.btn = {GPIOG, 13};
+	sb.pwmLed = {&TIM4->CCR4};			// PD15: Yellow
 	sb.midiLow = 60;
 	sb.midiHigh = 67;
-
-	NoteMapper& k = noteMapper[Voice::kick];
-	kickPlayer.noteMapper = &k;
-	k.drumVoice = &kickPlayer;
-	//k.btn = {GPIOC, 6};
-	//k.led = {GPIOB, 14};				// PC7: PWM Channel
-	k.pwmLed = {&TIM8->CCR2};
-	k.midiLow = 84;
-	k.midiHigh = 84;
-
-	NoteMapper& s = noteMapper[Voice::snare];
-	snarePlayer.noteMapper = &s;
-	s.drumVoice = &snarePlayer;
-	//s.btn = {GPIOC, 6};
-	s.led = {GPIOB, 14};				// PB14: Red LED nucleo
-	s.midiLow = 83;
-	s.midiHigh = 83;
-
-	NoteMapper& hh = noteMapper[Voice::hihat];
-	hihatPlayer.noteMapper = &hh;
-	hh.drumVoice = &hihatPlayer;
-	//hh.btn = {GPIOC, 6};
-	hh.led = {GPIOE, 1};				// PE1: Yellow LED nucleo
-	hh.midiLow = 78;
-	hh.midiHigh = 82;
-
-	NoteMapper& t = noteMapper[Voice::toms];
-	tomsPlayer.noteMapper = &k;
-	t.drumVoice = &tomsPlayer;
-	t.btn = {GPIOC, 6};
-	t.led = {GPIOB, 14};				// PB14: Red LED nucleo
-	t.midiLow = 48;
-	t.midiHigh = 52;
 }
 
 
@@ -139,7 +137,7 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 			if (n.midiLow > n.midiHigh) {
 				std::swap(n.midiLow, n.midiHigh);
 			}
-			n.led.Off();		// FIXME - logic to jump to next voice for midi learn
+			//n.led.Off();		// FIXME - logic to jump to next voice for midi learn
 		}
 	} else {
 		// Locate voice
@@ -167,9 +165,9 @@ void VoiceManager::CheckButtons()
 		if (buttonMode == ButtonMode::midiLearn) {
 			// Switch off all LEDs
 			for (auto& note : noteMapper) {
-				if (note.led.gpioBank) {
-					note.led.Off();
-				}
+//				if (note.led.gpioBank) {
+//					note.led.Off();
+//				}
 			}
 		}
 		buttonMode = ButtonMode::playNote;
@@ -187,7 +185,7 @@ void VoiceManager::CheckButtons()
 					}
 					break;
 				case ButtonMode::midiLearn:
-					note.led.On();
+					//note.led.On();
 					midiLearnState = MidiLearnState::lowNote;
 					midiLearnVoice = note.voice;
 					break;
