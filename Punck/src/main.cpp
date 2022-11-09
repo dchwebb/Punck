@@ -15,10 +15,9 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // Sample panning (naming? web interface?)
-// Midi learn to use PWM LEDs
+// Midi learn functionality to use PWM LEDs
 // Snare decay previously mapped to ADC
 // Web editor not refreshing correctly
-// Connect Sequence and MIDI learn buttons
 // Connect Trigger inputs
 // Tempo clock out
 // Store sequences to flash memory

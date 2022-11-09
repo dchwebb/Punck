@@ -17,12 +17,10 @@ void FatTools::InitFatFS()
 	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
 	const FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
-
 	if (res == FR_NO_FILESYSTEM) {
 		return;
 
 	}
-
 	noFileSystem = false;
 
 	// Store the address of the cluster chain for speed in future lookups

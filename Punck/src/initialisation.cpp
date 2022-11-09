@@ -585,20 +585,14 @@ void InitIO()
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
 	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
 
-	/*
-	GPIOD->MODER &= ~GPIO_MODER_MODE2_1;			// PD2: debug pin (Write)
-	GPIOC->MODER &= ~GPIO_MODER_MODE11_1;			// PC11: debug pin (Flush cache)
-	GPIOG->MODER &= ~GPIO_MODER_MODE11_1;			// PG11: debug pin (SPI Underrun)
-	GPIOB->MODER &= ~GPIO_MODER_MODE14_1;			// PB14: Red LED nucleo
-	GPIOB->MODER &= ~GPIO_MODER_MODE0_1;			// PB0: Green LED nucleo
-	GPIOE->MODER &= ~GPIO_MODER_MODE1_1;			// PE1: Yellow LED nucleo
-*/
+	// Switch
 	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Seq Select
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
 
 	GPIOE->MODER &= ~GPIO_MODER_MODE1;				// PE1: MIDI Learn
 	GPIOE->PUPDR |= GPIO_PUPDR_PUPD1_0;				// Pull up
 
+	// Buttons
 	GPIOB->MODER &= ~GPIO_MODER_MODE6;				// PB6: Kick button
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
 
@@ -613,6 +607,16 @@ void InitIO()
 
 	GPIOG->MODER &= ~GPIO_MODER_MODE13;				// PG13: Sample B button
 	GPIOG->PUPDR |= GPIO_PUPDR_PUPD13_0;			// Pull up
+
+	// Trigger inputs
+	GPIOD->MODER &= ~GPIO_MODER_MODE1;				// PD1 Kick
+	GPIOD->MODER &= ~GPIO_MODER_MODE3;				// PD3 Snare
+	GPIOG->MODER &= ~GPIO_MODER_MODE10;				// PG10 Closed Hihat
+	GPIOD->MODER &= ~GPIO_MODER_MODE7;				// PD7 Open Hihat
+	GPIOE->MODER &= ~GPIO_MODER_MODE14;				// PE14 Sampler A
+	GPIOE->MODER &= ~GPIO_MODER_MODE15;				// PE15 Sampler B
+
+	// Tempo out
 
 }
 

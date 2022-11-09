@@ -17,14 +17,18 @@ struct NoteMapper {
 	uint8_t midiLow;
 	uint8_t midiHigh;
 
-	struct Btn {
-		GPIO_TypeDef* gpioBank;
-		uint8_t gpioPin;
+	struct Trigger {
+		GPIO_TypeDef* btnGpioBank;
+		uint8_t btnGpioPin;
+		GPIO_TypeDef* trgGpioBank;
+		uint8_t trgGpioPin;
+
 		uint8_t debounce = 0;
 		bool buttonOn;
 
 		bool IsOn()  {
-			if (gpioBank && (gpioBank->IDR & (1 << gpioPin)) == 0) {
+			if ((btnGpioBank && (btnGpioBank->IDR & (1 << btnGpioPin)) == 0) ||
+			    (trgGpioBank && (trgGpioBank->IDR & (1 << trgGpioPin)) == 0)) {
 				if (debounce == 0) {
 					debounce = 20;
 					return true;
@@ -36,7 +40,7 @@ struct NoteMapper {
 			}
 			return false;
 		}
-	} btn;
+	} trigger;
 
 	struct PWMLED {
 		volatile uint32_t* timerChannel;

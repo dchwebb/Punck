@@ -4,6 +4,8 @@
 VoiceManager voiceManager;
 
 
+
+
 VoiceManager::VoiceManager()
 {
 	for (uint8_t i = 0; i < 9; ++i) {
@@ -13,7 +15,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& k = noteMapper[Voice::kick];
 	kickPlayer.noteMapper = &k;
 	k.drumVoice = &kickPlayer;
-	k.btn = {GPIOB, 6};
+	k.trigger = {GPIOB, 6, GPIOD, 1};
 	k.pwmLed = {&TIM8->CCR4};			// PC9: Blue
 	k.midiLow = 84;
 	k.midiHigh = 84;
@@ -21,7 +23,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& s = noteMapper[Voice::snare];
 	snarePlayer.noteMapper = &s;
 	s.drumVoice = &snarePlayer;
-	s.btn = {GPIOB, 5};
+	s.trigger = {GPIOB, 5, GPIOD, 3};
 	s.pwmLed = {&TIM8->CCR3};			// PC8: Red
 	s.midiLow = 83;
 	s.midiHigh = 83;
@@ -29,7 +31,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
 	hh.drumVoice = &hihatPlayer;
-	hh.btn = {GPIOE, 11};
+	hh.trigger = {GPIOE, 11, GPIOG, 10};			// FIXME - open hats PD7
 	hh.pwmLed = {&TIM8->CCR2};			// PC7: White
 	hh.midiLow = 78;
 	hh.midiHigh = 82;
@@ -44,7 +46,7 @@ VoiceManager::VoiceManager()
 	samples.sampler[0].noteMapper = &sa;
 	sa.drumVoice = &samples;
 	sa.voiceIndex = 0;
-	sa.btn = {GPIOB, 7};
+	sa.trigger = {GPIOB, 7, GPIOE, 14};
 	sa.pwmLed = {&TIM4->CCR3};			// PD14: Green
 	sa.midiLow = 72;
 	sa.midiHigh = 77;
@@ -53,11 +55,13 @@ VoiceManager::VoiceManager()
 	samples.sampler[1].noteMapper = &sb;
 	sb.drumVoice = &samples;
 	sb.voiceIndex = 1;
-	sb.btn = {GPIOG, 13};
+	sb.trigger = {GPIOG, 13, GPIOE, 15};
 	sb.pwmLed = {&TIM4->CCR4};			// PD15: Yellow
 	sb.midiLow = 60;
 	sb.midiHigh = 67;
 }
+
+
 
 
 uint32_t leftOverflow = 0, rightOverflow = 0;	// Debug
@@ -159,11 +163,11 @@ void VoiceManager::CheckButtons()
 {
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
 	ButtonMode oldMode = buttonMode;
-	if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {			// PC6: Sequence Select
-		buttonMode = ButtonMode::drumPattern;
-	} else if ((GPIOE->IDR & GPIO_IDR_ID1) == 0) {	// PE1: MIDI Learn
+	if ((GPIOE->IDR & GPIO_IDR_ID1) == 0) {				// PE1: MIDI Learn
 		buttonMode = ButtonMode::midiLearn;
-	} else {
+	} else if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {		// PC6: Sequence Select
+		buttonMode = ButtonMode::drumPattern;
+	} else  {
 		buttonMode = ButtonMode::playNote;
 	}
 
@@ -174,16 +178,14 @@ void VoiceManager::CheckButtons()
 			}
 		}
 		if (buttonMode == ButtonMode::midiLearn) {
-			// Stop active sequence
-			sequencer.StartStop(0);
+			sequencer.playing = false;					// Stop active sequence
 		}
 	}
 
-
 	for (auto& note : noteMapper) {
-		if (note.btn.IsOn()) {
-			if (!note.btn.buttonOn) {
-				note.btn.buttonOn = true;
+		if (note.trigger.IsOn()) {
+			if (!note.trigger.buttonOn) {
+				note.trigger.buttonOn = true;
 
 				switch (buttonMode) {
 				case ButtonMode::playNote:
@@ -202,7 +204,7 @@ void VoiceManager::CheckButtons()
 				}
 			}
 		} else {
-			note.btn.buttonOn = false;
+			note.trigger.buttonOn = false;
 		}
 	}
 }
