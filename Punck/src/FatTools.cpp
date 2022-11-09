@@ -16,7 +16,7 @@ void FatTools::InitFatFS()
 	// Set up cache area for header data
 	memcpy(headerCache, flashAddress, fatSectorSize * fatCacheSectors);
 
-	const FRESULT res = f_mount(&fatFs, fatPath, 1) ;				// Register the file system object to the FatFs module
+	const FRESULT res = f_mount(&fatFs, fatPath, 1) ;		// Register the file system object to the FatFs module
 	if (res == FR_NO_FILESYSTEM) {
 		return;
 
@@ -37,22 +37,22 @@ void FatTools::InitFatFS()
 
 bool FatTools::Format()
 {
-	uint8_t fsWork[fatSectorSize];						// Work buffer for the f_mkfs()
+	uint8_t fsWork[fatSectorSize];							// Work buffer for the f_mkfs()
 
-	MKFS_PARM parms;									// Create parameter struct
-	parms.fmt = FM_FAT | FM_SFD;						// format as FAT12/16 using SFD (Supper Floppy Drive)
-	parms.n_root = 128;									// Number of root directory entries (each uses 32 bytes of storage)
-	parms.align = 0;									// Default initialise remaining values
+	MKFS_PARM parms;										// Create parameter struct
+	parms.fmt = FM_FAT | FM_SFD;							// format as FAT12/16 using SFD (Supper Floppy Drive)
+	parms.n_root = 128;										// Number of root directory entries (each uses 32 bytes of storage)
+	parms.align = 0;										// Default initialise remaining values
 	parms.au_size = 0;
 	parms.n_fat = 0;
 
-	f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));	// Mount FAT file system on External Flash
-	FRESULT res = f_mount(&fatFs, fatPath, 1);					// Register the file system object to the FatFs module
+	f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));		// Mount FAT file system on External Flash
+	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
 
 	// Populate Windows spam files to prevent them being created later in unwanted locations
 	MakeDummyFiles();
-	FlushCache();
 	InitFatFS();
+	FlushCache();
 
 	return !extFlash.flashCorrupt;
 }
@@ -85,9 +85,7 @@ void FatTools::Write(const uint8_t* readBuff, const uint32_t writeSector, const 
 		const int32_t block = writeSector / fatEraseSectors;
 		if (block != writeBlock) {
 			if (writeBlock > 0) {					// Write previously cached block to flash
-				//GPIOD->ODR |= GPIO_ODR_OD2;			// PD2: debug pin
 				FlushCache();
-				//GPIOD->ODR &= ~GPIO_ODR_OD2;
 			}
 
 			// Load cache with current flash values
@@ -212,7 +210,7 @@ void FatTools::PrintDirInfo(const uint32_t cluster)
 		fatInfo = (FATFileInfo*)GetClusterAddr(cluster);
 	}
 
-	if (fatInfo->fileSize == 0xFFFFFFFF && (uint32_t)fatInfo->name == 0xFFFFFFFF) {		// Handle corrupt subdirectory (where flash has not been initialised
+	if (fatInfo->fileSize == 0xFFFFFFFF && *(uint32_t*)fatInfo->name == 0xFFFFFFFF) {		// Handle corrupt subdirectory (where flash has not been initialised
 		return;
 	}
 

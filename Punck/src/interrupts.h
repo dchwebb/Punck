@@ -8,6 +8,8 @@ void SPI2_IRQHandler()
 {
 	// I2S Interrupt
 
+	GPIOD->ODR |= GPIO_ODR_OD9;							// PD9: use tempo out as debug pin
+
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		SPI2->IFCR |= SPI_IFCR_UDRC;					// Clear underrun condition
 		++spiUnderrun;
@@ -15,6 +17,8 @@ void SPI2_IRQHandler()
 	}
 
 	voiceManager.Output();
+
+	GPIOD->ODR &= ~GPIO_ODR_OD9;						// PD9: use tempo out as debug pin
 }
 
 

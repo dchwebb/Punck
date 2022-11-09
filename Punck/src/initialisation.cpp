@@ -616,7 +616,8 @@ void InitIO()
 	GPIOE->MODER &= ~GPIO_MODER_MODE14;				// PE14 Sampler A
 	GPIOE->MODER &= ~GPIO_MODER_MODE15;				// PE15 Sampler B
 
-	// Tempo out
+	// Tempo out PD9
+	GPIOD->MODER &= ~GPIO_MODER_MODE9_1;
 
 }
 
@@ -664,6 +665,8 @@ void InitQSPI()
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
 
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
+
+	// Flash 1
 	GPIOB->MODER &= ~GPIO_MODER_MODE2_0;			// PB2: CLK
 	GPIOD->MODER &= ~GPIO_MODER_MODE11_0;			// PD11: IO0
 	GPIOD->MODER &= ~GPIO_MODER_MODE12_0;			// PD12: IO1
@@ -678,9 +681,24 @@ void InitQSPI()
 	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
 	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
 
+	// Flash 2
+	GPIOE->MODER &= ~GPIO_MODER_MODE7_0;			// PE7: IO0
+	GPIOE->MODER &= ~GPIO_MODER_MODE8_0;			// PE8: IO1
+	GPIOE->MODER &= ~GPIO_MODER_MODE9_0;			// PE9: IO2
+	GPIOE->MODER &= ~GPIO_MODER_MODE10_0;			// PE10: IO3
+	GPIOC->MODER &= ~GPIO_MODER_MODE11_0;			// PC11: NCS
+
+	GPIOE->AFR[0] |= 10 << GPIO_AFRL_AFSEL7_Pos;	// Alternate function 10
+	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL8_Pos;	// Alternate function 10
+	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL9_Pos;	// Alternate function 10
+	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL10_Pos;	// Alternate function 10
+	GPIOC->AFR[1] |= 9 << GPIO_AFRH_AFSEL11_Pos;	// Alternate function 9
+
 	// FIXME - slowed down as having problems on dev setup
 	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
 	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
+
+	QUADSPI->CR |= QUADSPI_CR_FSEL;
 }
 
 
