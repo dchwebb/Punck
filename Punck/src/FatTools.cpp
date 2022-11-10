@@ -7,10 +7,10 @@
 FatTools fatTools;
 
 
-void FatTools::InitFatFS()
+bool FatTools::InitFatFS()
 {
 	if (extFlash.flashCorrupt) {
-		return;
+		return false;
 	}
 
 	// Set up cache area for header data
@@ -18,7 +18,7 @@ void FatTools::InitFatFS()
 
 	const FRESULT res = f_mount(&fatFs, fatPath, 1) ;		// Register the file system object to the FatFs module
 	if (res == FR_NO_FILESYSTEM) {
-		return;
+		return false;
 
 	}
 	noFileSystem = false;
@@ -32,13 +32,17 @@ void FatTools::InitFatFS()
 
 	voiceManager.samples.UpdateSampleList();				// Updated list of samples on flash
 
+	return true;
 }
 
 
 bool FatTools::Format()
 {
-	uint8_t fsWork[fatSectorSize];							// Work buffer for the f_mkfs()
+	printf("Erasing flash ...\r\n");
+	extFlash.FullErase();
 
+	printf("Mounting File System ...\r\n");
+	uint8_t fsWork[fatSectorSize];							// Work buffer for the f_mkfs()
 	MKFS_PARM parms;										// Create parameter struct
 	parms.fmt = FM_FAT | FM_SFD;							// format as FAT12/16 using SFD (Supper Floppy Drive)
 	parms.n_root = 128;										// Number of root directory entries (each uses 32 bytes of storage)
@@ -46,15 +50,22 @@ bool FatTools::Format()
 	parms.au_size = 0;
 	parms.n_fat = 0;
 
-	f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));		// Mount FAT file system on External Flash
-	FRESULT res = f_mount(&fatFs, fatPath, 1);				// Register the file system object to the FatFs module
+	f_mkfs(fatPath, &parms, fsWork, sizeof(fsWork));		// Make file system in header cache (via diskio.cpp helper functions)
+	f_mount(&fatFs, fatPath, 1) ;							// Mount the file system (needed to set up FAT locations for next functions)
 
-	// Populate Windows spam files to prevent them being created later in unwanted locations
-	MakeDummyFiles();
-	InitFatFS();
+	printf("Creating system files ...\r\n");
+	MakeDummyFiles();										// Create Windows index files to force them to be created in header cache
+
+	printf("Flushing cache ...\r\n");
 	FlushCache();
 
-	return !extFlash.flashCorrupt;
+	if (InitFatFS()) {										// Mount FAT file system and initialise directory pointers
+		printf("Successfully formatted drive\r\n");
+		return true;
+	} else {
+		printf("Failed to format drive\r\n");
+		return false;
+	}
 }
 
 
@@ -410,6 +421,11 @@ void FatTools::MakeDummyFiles()
 	LFNDirEntries(cluster2Addr + 160, "WPSETT~1DAT", "t", "WPSettings.da", 0xce, AM_ARC, 4, 12);
 	uint32_t file[3] = {0x0000000c, 0x5e3739ac, 0x0b1690d4};				// This random file is just what it creates on my PC - undocumented
 	memcpy(cluster3Addr + fatClusterSize, file, 12);
+
+	// Mark clusters 2 and 3 cache as dirty
+	uint32_t writeBlock = fatFs.database;		////dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
+	dirtyCacheBlocks |= (1 << (5 / 1));
+//	dirtyCacheBlocks |= (1 << (40 / 1));
 }
 
 

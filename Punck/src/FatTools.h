@@ -71,7 +71,7 @@ public:
 	uint16_t* clusterChain;				// Pointer to beginning of cluster chain (AKA FAT)
 	FATFileInfo* rootDirectory;			// Pointer to start of FAT directory listing
 
-	void InitFatFS();
+	bool InitFatFS();
 	void Read(uint8_t* writeAddress, const uint32_t readSector, const uint32_t sectorCount);
 	const uint8_t* GetSectorAddr(const uint32_t sector, const uint8_t* buffer, const uint32_t bufferSize);
 	const uint8_t* GetClusterAddr(const uint32_t cluster, const bool ignoreCache = false);
