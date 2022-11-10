@@ -129,10 +129,13 @@ void Sequencer::StartStop(uint8_t seq)
 		position = 0;
 		currentBar = 0;
 		currentBeat = 0;
+		voiceManager.noteMapper[activeSequence].pwmLed.setMinLevel(currSeqBrightness);		// Specify minimum brightness level of led to show currently playing sequence
 	} else {
+		voiceManager.noteMapper[activeSequence].pwmLed.setMinLevel(0);
 		if (seq == activeSequence) {
 			playing = false;
 		} else {
+			voiceManager.noteMapper[seq].pwmLed.setMinLevel(currSeqBrightness);
 			ChangeSequence(seq);
 		}
 	}

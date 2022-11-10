@@ -7,7 +7,6 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 {
 	// Called when accessed from MIDI
 	playing = true;
-	//noteMapper->led.On();
 
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_HiHatLevel]) / 32768.0f);
 	attack = true;
@@ -48,7 +47,7 @@ void HiHat::CalcOutput()
 {
 	if (playing) {
 
-		const int32_t noise = (int32_t)RNG->DR;		// Get noise level here to give time for next noise value to be calculated
+		const int32_t noise = static_cast<int32_t>(RNG->DR);		// Get noise level here to give time for next noise value to be calculated
 
 		float currentLevel[2] = {};				// Store intermediate values of sample level for each channel
 
@@ -107,7 +106,6 @@ void HiHat::CalcOutput()
 			playing = false;
 			currentLevel[left] = 0.0f;
 			currentLevel[right] = 0.0f;
-			//noteMapper->led.Off();
 		}
 
 		// Filter and scale the output levels

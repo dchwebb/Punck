@@ -212,7 +212,7 @@ void FatTools::PrintDirInfo(const uint32_t cluster)
 		return;
 	}
 
-	FATFileInfo* fatInfo;
+	const FATFileInfo* fatInfo;
 	if (cluster == 0) {
 		printf("\r\n  Attrib Cluster   Bytes    Created   Accessed Name          Clusters\r\n"
 				   "  ------------------------------------------------------------------\r\n");

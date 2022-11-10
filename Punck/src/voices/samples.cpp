@@ -44,18 +44,12 @@ static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes, con
 	switch (bytes) {
 	case 1:										// 8 bit data
 		return (uint32_t)(*(uint8_t*)address << 24);
-		break;
-
 	case 2:										// 16 bit data
 		return *(uint16_t*)address << 16;
-		break;
-
 	case 3:										// 24 bit data: Read in 32 bits and shift up 8 bits to make 32 bit value with lower byte zeroed
 		return *(uint32_t*)address << 8;
-		break;
-
 	case 4:
-		if (format == 3) {						// 1 = PCM int; 3 = float
+		if (format == 3) {						// 1 = PCM integer; 3 = float
 			return (uint32_t)(*(float*)address * floatToIntMult);
 		} else {
 			return *(uint32_t*)address;			// 32 bit data
@@ -93,13 +87,12 @@ void Samples::CalcOutput()
 				sp.currentSamples[left] = 0;
 				sp.currentSamples[right] = 0;
 				sp.playing = false;
+				sp.noteMapper->pwmLed.Level(0.0f);
+			} else {
+				// Apply fade out to led based on position in sample
+				const float samplePos = (float)((uint32_t)(sp.sampleAddress - sp.sample->startAddr));
+				sp.noteMapper->pwmLed.Level(1.0f - samplePos / sp.sample->dataSize);		// FIXME - could precompute 1 / dataSize and use multiply instead of divide
 			}
-
-			// Calculate position to apply fade out to led
-			float endAddr = (float)((uint32_t)sp.sample->endAddr);
-			float startAddr = (float)((uint32_t)sp.sample->startAddr);
-			float currAddr = (float)((uint32_t)sp.sampleAddress);
-			sp.noteMapper->pwmLed.Level(1.0f - (currAddr - startAddr) / (endAddr - startAddr));
 
 		}
 	}
@@ -130,7 +123,7 @@ bool Samples::GetSampleInfo(Sample* sample)
 	}
 
 	// Jump through chunks looking for 'fmt' chunk
-	uint32_t pos = 12;				// First chunk ID at 12 byte (4 word) offset
+	uint32_t pos = 12;											// First chunk ID at 12 byte (4 word) offset
 	while (*(uint32_t*)&(wavHeader[pos]) != 0x20746D66) {		// Look for string 'fmt '
 		pos += (8 + *(uint32_t*)&(wavHeader[pos + 4]));			// Each chunk title is followed by the size of that chunk which can be used to locate the next one
 		if  (pos > 1000) {

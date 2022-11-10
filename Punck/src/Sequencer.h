@@ -40,6 +40,7 @@ private:
 
 	float tempo;
 	uint32_t position;
+	static const uint32_t currSeqBrightness = 50;	// brightness of led indicating playing sequence
 
 	void ChangeSequence(uint8_t newSeq);
 };

@@ -4,7 +4,7 @@
 void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
 	// Called when accessed from MIDI (different note offsets for different tuning?)
-	partialInc[0] = FreqToInc(config.baseFreq);		// First Mode 0,1 frequency
+	partialInc[0] = FreqToInc(config.baseFreq);			// First Mode 0,1 frequency
 	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
 	partialpos[2] = 0.0f;
@@ -18,7 +18,6 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t 
 	noiseLevel = config.noiseInitLevel;
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
 	playing = true;
-	//noteMapper->led.On();
 }
 
 
@@ -40,7 +39,7 @@ void Snare::CalcOutput()
 
 		float partialOutput = 0.0f;
 		for (uint8_t i = 0; i < partialCount; ++i) {
-			partialpos[i] += partialInc[i];						// Set current poition in sine wave
+			partialpos[i] += partialInc[i];							// Set current poition in sine wave
 			partialLevel[i] *= config.partialDecay + adcDecay;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
@@ -56,7 +55,6 @@ void Snare::CalcOutput()
 
 		if (maxLevel < 0.00001f) {
 			playing = false;
-			//noteMapper->led.Off();
 		}
 
 		noteMapper->pwmLed.Level(maxLevel);

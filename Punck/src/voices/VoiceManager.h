@@ -44,8 +44,15 @@ struct NoteMapper {
 
 	struct PWMLED {
 		volatile uint32_t* timerChannel;
+		uint32_t minLevel = 0;
 
-		void Level(float brightness)  { *timerChannel = (brightness * 4095.0f); }
+		void Level(float brightness)  {
+			*timerChannel = std::max(minLevel, static_cast<uint32_t>(brightness * 4095.0f));
+		}
+		void setMinLevel(uint32_t level) {		// Sets LED current/minimum brightness: to display currently playing sequence with dimly illuminated button
+			minLevel = level;
+			*timerChannel = level;
+		}
 	} pwmLed;
 };
 

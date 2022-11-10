@@ -165,21 +165,16 @@ void VoiceManager::CheckButtons()
 	ButtonMode oldMode = buttonMode;
 	if ((GPIOE->IDR & GPIO_IDR_ID1) == 0) {				// PE1: MIDI Learn
 		buttonMode = ButtonMode::midiLearn;
+		if (oldMode != buttonMode) {
+			sequencer.playing = false;					// Stop active sequence
+			for (auto& note : noteMapper) {				// Switch off all LEDs
+				note.pwmLed.setMinLevel(0);
+			}
+		}
 	} else if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {		// PC6: Sequence Select
 		buttonMode = ButtonMode::drumPattern;
 	} else  {
 		buttonMode = ButtonMode::playNote;
-	}
-
-	if (oldMode != buttonMode) {
-		if (oldMode == ButtonMode::midiLearn) {
-			for (auto& note : noteMapper) {				// Switch off all LEDs
-				note.pwmLed.Level(0);
-			}
-		}
-		if (buttonMode == ButtonMode::midiLearn) {
-			sequencer.playing = false;					// Stop active sequence
-		}
 	}
 
 	for (auto& note : noteMapper) {
@@ -199,6 +194,7 @@ void VoiceManager::CheckButtons()
 					midiLearnVoice = note.voice;
 					break;
 				case ButtonMode::drumPattern:
+					noteMapper[sequencer.activeSequence].pwmLed.Level((uint32_t)0);
 					sequencer.StartStop(note.voice);
 					break;
 				}
@@ -207,6 +203,7 @@ void VoiceManager::CheckButtons()
 			note.trigger.buttonOn = false;
 		}
 	}
+
 }
 
 
