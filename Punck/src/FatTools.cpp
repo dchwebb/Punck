@@ -423,9 +423,8 @@ void FatTools::MakeDummyFiles()
 	memcpy(cluster3Addr + fatClusterSize, file, 12);
 
 	// Mark clusters 2 and 3 cache as dirty
-	uint32_t writeBlock = fatFs.database;		////dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
-	dirtyCacheBlocks |= (1 << (5 / 1));
-//	dirtyCacheBlocks |= (1 << (40 / 1));
+	uint32_t blockCount = fatFs.database / fatEraseSectors;
+	dirtyCacheBlocks |= (1 << (blockCount / 1));
 }
 
 

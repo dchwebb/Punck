@@ -20,6 +20,7 @@ public:
 		uint32_t sampleCount;				// Number of samples (stereo samples only counted once)
 		uint32_t sampleRate;
 		uint8_t byteDepth;
+		uint16_t dataFormat;				// 1 = PCM; 3 = Float
 		uint8_t channels;					// 1 = mono, 2 = stereo
 		SamplePlayer bank;					// Bank A or B (indicated by sample name eg A1xxx.wav or B2xx.wav)
 		uint8_t bankIndex;					// The index of the sample in the bank

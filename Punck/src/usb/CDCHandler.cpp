@@ -154,12 +154,13 @@ void CDCHandler::ProcessCommand()
 		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
 
 		while (voiceManager.samples.sampleList[pos].name[0] != 0) {
-			printf("%3lu %.11s %7lu %7lu %4u %8u %s     0x%08x %.3f\r\n",
+			printf("%3lu %.11s %7lu %7lu %3u%1s %8u %s     0x%08x %.3f\r\n",
 					pos,
 					voiceManager.samples.sampleList[pos].name,
 					voiceManager.samples.sampleList[pos].size,
 					voiceManager.samples.sampleList[pos].sampleRate,
 					voiceManager.samples.sampleList[pos].byteDepth * 8,
+					voiceManager.samples.sampleList[pos].dataFormat == 3 ? "f" : " ",		// floating point format
 					voiceManager.samples.sampleList[pos].channels,
 					voiceManager.samples.sampleList[pos].valid ? "Y" : " ",
 					(unsigned int)voiceManager.samples.sampleList[pos].startAddr,

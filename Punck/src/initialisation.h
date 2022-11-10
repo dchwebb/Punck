@@ -10,12 +10,13 @@ extern volatile uint32_t SysTickVal;
 
 #define ADC1_BUFFER_LENGTH 8				// currently unused
 #define ADC2_BUFFER_LENGTH 7
-#define WEB_EDITOR_ADC false					// Web editor controls ADC settings
+#define WEB_EDITOR_ADC false				// Web editor controls ADC settings
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
 constexpr double pi = 3.14159265358979323846;
 constexpr float intToFloatMult = 1.0f / std::pow(2.0f, 31.0f);		// Multiple to convert 32 bit int to -1.0 - 1.0 float
+constexpr float floatToIntMult = std::pow(2.0f, 31.0f);				// Multiple to convert -1.0 - 1.0 float to 32 bit int
 
 static constexpr uint32_t systemSampleRate = 48000;
 static constexpr float systemMaxFreq = 22000.0f;

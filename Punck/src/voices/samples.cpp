@@ -38,12 +38,30 @@ void Samples::Play(const uint8_t sp, const uint32_t index)
 }
 
 
-static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes)
+static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes, const uint16_t format)
 {
-	if (bytes == 3) {
-		return *(uint32_t*)(address) << 8;		// 24 bit data: Read in 32 bits and shift up 8 bits to make 32 bit value with lower byte zeroed
-	} else {
-		return *(uint16_t*)(address) << 16;		// assume 16 bit data
+	// where data size is less than 32 bit, shift left to zero out lower bytes
+	switch (bytes) {
+	case 1:										// 8 bit data
+		return (uint32_t)(*(uint8_t*)address << 24);
+		break;
+
+	case 2:										// 16 bit data
+		return *(uint16_t*)address << 16;
+		break;
+
+	case 3:										// 24 bit data: Read in 32 bits and shift up 8 bits to make 32 bit value with lower byte zeroed
+		return *(uint32_t*)address << 8;
+		break;
+
+	case 4:
+		if (format == 3) {						// 1 = PCM int; 3 = float
+			return (uint32_t)(*(float*)address * floatToIntMult);
+		} else {
+			return *(uint32_t*)address;			// 32 bit data
+		}
+	default:
+		return 0;
 	}
 }
 
@@ -55,16 +73,16 @@ void Samples::CalcOutput()
 		if (sp.playing) {
 			auto& bytes = sp.sample->byteDepth;
 
-			sp.currentSamples[left] = readBytes(sp.sampleAddress, bytes);
+			sp.currentSamples[left] = readBytes(sp.sampleAddress, bytes, sp.sample->dataFormat);
 
 			if (sp.sample->channels == 2) {
-				sp.currentSamples[right] = readBytes(sp.sampleAddress + bytes, bytes);
+				sp.currentSamples[right] = readBytes(sp.sampleAddress + bytes, bytes, sp.sample->dataFormat);
 			} else {
 				sp.currentSamples[right] = sp.currentSamples[left];		// Duplicate left channel to right for mono signal
 			}
 
 			// Get sample speed from ADC - want range 0.5 - 1.5
-			const float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;		// FIXME - separate ADCs for each sampler
+			const float adjSpeed = 0.5f + static_cast<float>(*sp.tuningADC) / 65536.0f;
 
 			// Split the next position into an integer jump and fractional position
 			float addressJump;			// Integral part of position
@@ -120,6 +138,7 @@ bool Samples::GetSampleInfo(Sample* sample)
 		}
 	}
 
+	sample->dataFormat = *(uint16_t*)&(wavHeader[pos + 8]);
 	sample->sampleRate = *(uint32_t*)&(wavHeader[pos + 12]);
 	sample->channels   = *(uint16_t*)&(wavHeader[pos + 10]);
 	sample->byteDepth  = *(uint16_t*)&(wavHeader[pos + 22]) / 8;
