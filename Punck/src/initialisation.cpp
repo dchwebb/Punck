@@ -1,5 +1,6 @@
 #include "stm32h743xx.h"
 #include "initialisation.h"
+#include "extFlash.h"
 #include <cstring>
 
 // Clock overview:
@@ -698,7 +699,11 @@ void InitQSPI()
 	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
 	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 
-	QUADSPI->CR |= QUADSPI_CR_FSEL;
+	if (dualFlashMode) {
+		QUADSPI->CR |= QUADSPI_CR_DFM;				// Enable dual flash mode
+	} else {
+		QUADSPI->CR |= QUADSPI_CR_FSEL;				// Flash memory selection: 0: FLASH 1 selected; 1: FLASH 2 selected
+	}
 }
 
 

@@ -90,6 +90,7 @@ void CDCHandler::ProcessCommand()
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"printcluster:A Print 2048 bytes of cluster address A (>=2)\r\n"
 				"eraseflash  -  Erase all flash data\r\n"
+				"eraseblock:A   Erase block of memory (8192 bytes in dual flash mode)\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
 				"dir         -  Print list of all files and their directories\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
@@ -138,9 +139,31 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("flashid") == 0) {					// Get manufacturer and device ID
-		const uint16_t flashID = extFlash.GetID();
-		printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashID & 0xFF, flashID >> 8);
+		const uint32_t flashID = extFlash.GetID();
+		auto flashBytes = reinterpret_cast<const uint8_t*>(&flashID);
+		if (dualFlashMode) {
+			// In dual flash mode results from each device are interleaved
+			printf("Flash 1: Manufacturer ID: %#04x; Device ID: %#04x\r\n"
+				   "Flash 2: Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashBytes[0], flashBytes[2], flashBytes[1], flashBytes[3]);
+		} else {
+			printf("Manufacturer ID: %#04x; Device ID: %#04x\r\n", flashBytes[0], flashBytes[1]);
+		}
 		extFlash.MemoryMapped();
+
+
+	} else if (cmd.compare("switchflash") == 0) {				// Switch Flash Device
+		const uint16_t flashBank = (QUADSPI->CR & QUADSPI_CR_FSEL) == 0 ? 2 : 1;
+		QUADSPI->CR &= ~QUADSPI_CR_EN;
+		uint32_t now = SysTickVal;
+		while (now + 2 > SysTickVal) {};
+		if (flashBank == 2) {
+			QUADSPI->CR |= QUADSPI_CR_FSEL;
+		} else {
+			QUADSPI->CR &= ~QUADSPI_CR_FSEL;
+		}
+		QUADSPI->CR |= QUADSPI_CR_EN;
+		extFlash.Init(false);
+		printf("Flash bank switched to %d\r\n", flashBank);
 
 
 	} else if (cmd.compare("format") == 0) {					// Format Flash storage with FAT
@@ -340,15 +363,20 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("eraseflash") == 0) {				// Erase all flash memory
+		printf("Erasing flash. Pleae wait ...\r\n");
 		extFlash.FullErase();
-		usb->SendString("Flash erased\r\n");
+		printf("Flash erased\r\n");
 
 
-	} else if (cmd.compare(0, 10, "erasesect:") == 0) {			// Erase sector of flash memory
+	} else if (cmd.compare(0, 11, "eraseblock:") == 0) {		// Erase block of flash memory
 		int32_t address = ParseInt(cmd, ':', 0, 0xFFFFFF);
 		if (address >= 0) {
+			address = address & ~(fatEraseSectors - 1);
+			extFlash.BlockErase(address);		// Force address to 4096 byte (8192 in dual flash mode) boundary
+
 			extFlash.BlockErase(address);
-			usb->SendString("Sector erased\r\n");
+			SCB_InvalidateDCache_by_Addr((uint32_t*)(flashAddress + address), fatEraseSectors * fatSectorSize);	// Ensure cache is refreshed after write or erase
+			printf("Block at address 0x%08lx erased\r\n", address);
 		}
 		extFlash.MemoryMapped();
 

@@ -3,7 +3,7 @@
 #include <string>
 #include <array>
 #include "ff.h"
-
+#include "ExtFlash.h"
 
 /* FAT16 Structure on 128 MBit Flash device:
 
@@ -26,7 +26,7 @@ Cluster 2: 20480, Cluster 3: 22528, Cluster 4: 24576, Cluster 5: 26624, Cluster 
 static constexpr uint32_t fatSectorSize = 512;			// Sector size used by FAT
 static constexpr uint32_t fatSectorCount = 31250;		// 31250 sectors of 512 bytes = 16 MBytes
 static constexpr uint32_t fatClusterSize = 2048;		// Cluster size used by FAT (ie block size in data section)
-static constexpr uint32_t fatEraseSectors = 8;			// Number of sectors in an erase block (4096 bytes)
+static constexpr uint32_t fatEraseSectors = 8 * (dualFlashMode ? 2 : 1);			// Number of sectors in an erase block (4096 bytes per device)
 static constexpr uint32_t fatHeaderSectors = 40;		// Number of sectors in all header regions [1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory]
 static constexpr uint32_t fatCacheSectors = 72;			// Header + extra for testing
 

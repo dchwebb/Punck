@@ -1,5 +1,4 @@
 #include "FatTools.h"
-#include "ExtFlash.h"
 #include "VoiceManager.h"
 #include <cstring>
 #include "usb.h"
@@ -148,7 +147,7 @@ uint8_t FatTools::FlushCache()
 	while (dirtyCacheBlocks != 0) {
 		if (dirtyCacheBlocks & (1 << blockPos)) {
 			uint32_t byteOffset = blockPos * fatEraseSectors * fatSectorSize;
-			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), 1024)) {
+			if (extFlash.WriteData(byteOffset, (uint32_t*)&(headerCache[byteOffset]), (fatEraseSectors * fatSectorSize) / 4)) {
 				++count;
 			}
 			dirtyCacheBlocks &= ~(1 << blockPos);

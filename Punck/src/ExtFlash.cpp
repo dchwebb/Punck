@@ -2,26 +2,26 @@
 #include "FatTools.h"
 #include <cstring>
 
-// FIXME - caching currently disabled for testing; in memory mapped mode will want caching enabled and disabled for writes/erases
-// FIXME - Writing: store cache data before erasing so any unwritten data can be restored; also check if multiple sectors need to be erased
 
-
-const uint8_t* flashAddress = (uint8_t*)0x90000000;			// Location that Flash storage will be accessed in memory mapped mode
 ExtFlash extFlash;											// Singleton external flash handler
 
-
-void ExtFlash::Init()
+void ExtFlash::Init(bool hwInit)
 {
-	InitQSPI();												// Initialise hardware
+	if (hwInit) {
+		InitQSPI();											// Initialise hardware
+	} else {
+		SCB_InvalidateDCache_by_Addr((uint32_t*)flashAddress, fatSectorCount * fatSectorSize);		// Ensure cache is refreshed
+	}
+
 	Reset();
-	uint16_t id = GetID();
+	uint32_t id = GetID();
 	if (id == 0 || id == 255) {								// Winbond 128MB 0x17EF
 		flashCorrupt = true;
 		return;
 	}
 
 	// Quad SPI mode enable
-	const uint8_t statusReg2 = ReadStatus(readStatusReg2);
+	const uint16_t statusReg2 = ReadStatus(readStatusReg2);
 	if ((statusReg2 & 2) == 0) {			// QuadSPI not enabled
 		WriteEnable();
 
@@ -77,9 +77,10 @@ void ExtFlash::MemMappedOff()
 }
 
 
-uint8_t ExtFlash::ReadStatus(qspiRegister r)
+uint16_t ExtFlash::ReadStatus(qspiRegister r)
 {
 	MemMappedOff();
+	QUADSPI->DLR = dualFlashMode ? 1 : 0;					// Return 1 byte for each flash used
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
 	QUADSPI->CCR = (QUADSPI_CCR_FMODE_0 |					// 00: Indirect write mode; 01: Indirect read mode; 10: Automatic polling mode; 11: Memory-mapped mode
@@ -88,18 +89,18 @@ uint8_t ExtFlash::ReadStatus(qspiRegister r)
 					(r << QUADSPI_CCR_INSTRUCTION_Pos));	// Read status register
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	const uint8_t ret = QUADSPI->DR;
+	const uint16_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	return ret;
 }
 
 
-uint16_t ExtFlash::GetID()
+uint32_t ExtFlash::GetID()
 {
 	// Return manufacturer and Device ID
 	MemMappedOff();
-	QUADSPI->DLR = 0x1;										// Return 2 bytes
+	QUADSPI->DLR = dualFlashMode ? 3 : 1;					// Return 2 bytes for each flash used
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
 	QUADSPI->CCR = (QUADSPI_CCR_FMODE_0 |					// 00: Indirect write mode; *01: Indirect read mode; 10: Automatic polling mode; 11: Memory-mapped mode
@@ -111,7 +112,7 @@ uint16_t ExtFlash::GetID()
 	QUADSPI->AR = 0;										// Use address 0x000000
 
 	while ((QUADSPI->SR & QUADSPI_SR_TCF) == 0) {};			// Wait until transfer complete
-	const uint16_t ret = QUADSPI->DR;
+	const uint32_t ret = QUADSPI->DR;
 	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	return ret;
@@ -168,7 +169,7 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 	}
 
 	if (eraseRequired) {
-		BlockErase(address & ~(fatEraseSectors - 1));		// Force address to 4096 byte boundary
+		BlockErase(address & ~(fatEraseSectors - 1));		// Force address to 4096 byte (8192 in dual flash mode) boundary
 	}
 
 	uint32_t remainingWords = words;
