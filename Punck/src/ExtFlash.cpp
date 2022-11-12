@@ -176,14 +176,16 @@ bool ExtFlash::WriteData(uint32_t address, const uint32_t* writeBuff, uint32_t w
 	do {
 		WriteEnable();
 
-		// Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)
-		const uint32_t startPage = (address >> 8);
-		const uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> 8);
+		// Mandated by Flash chip: Can write 256 bytes (64 words) at a time, and must be aligned to page boundaries (256 bytes)
+		// In Dual Flash mode these numbers are doubled
+		constexpr uint32_t pageShift = dualFlashMode ? 9 : 8;		// Will divide words into pages 256 bytes for single flash, 512 for dual
+		const uint32_t startPage = (address >> pageShift);
+		const uint32_t endPage = (((address + (remainingWords * 4)) - 1) >> pageShift);
 
 
 		uint32_t writeSize = remainingWords * 4;			// Size of current write in bytes
 		if (endPage != startPage) {
-			writeSize = ((startPage + 1) << 8) - address;	// When crossing pages only write up to the 256 byte boundary
+			writeSize = ((startPage + 1) << pageShift) - address;	// When crossing pages only write up to the 256 byte boundary
 		}
 
 		QUADSPI->DLR = writeSize - 1;						// number of bytes - 1 to transmit
@@ -234,14 +236,22 @@ void ExtFlash::BlockErase(const uint32_t address)
 
 void ExtFlash::FullErase()
 {
+	printf("Erasing Flash ");
 	WriteEnable();
 	QUADSPI->CR |= QUADSPI_CR_EN;							// Enable QSPI
 
 	QUADSPI->CCR = (QUADSPI_CCR_IMODE_0 |					// Instruction: 00: None; *01: One line; 10: Two lines; 11: Four lines
 					(chipErase << QUADSPI_CCR_INSTRUCTION_Pos));
-	while (QUADSPI->SR & QUADSPI_SR_BUSY) {};
+	uint32_t tick = SysTickVal;
+	while (QUADSPI->SR & QUADSPI_SR_BUSY) {
+		if (tick + 1000 > SysTickVal) {
+			printf(".");
+			tick = SysTickVal;
+		}
+	}
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
 	MemoryMapped();
+	printf("\r\n");
 }
 
 
@@ -301,8 +311,8 @@ void ExtFlash::CheckBusy()
 {
 	// Use Automatic Polling mode to wait until Flash Busy flag is cleared
 	QUADSPI->CR &= ~QUADSPI_CR_EN;							// Disable QSPI
-	QUADSPI->DLR = 0;										// Return 1 byte
-	QUADSPI->PSMKR = 0b00000001;							// Mask on bit 1 (Busy)
+	QUADSPI->DLR = dualFlashMode ? 1 : 0;					// Return 1 byte for each flash used
+	QUADSPI->PSMKR = dualFlashMode ? 0x0101 : 0x01;			// Mask on bit 1 (Busy) of each byte
 	QUADSPI->PSMAR = 0b00000000;							// Match Busy = 0
 	QUADSPI->PIR = 0x10;									// Polling interval in clock cycles
 	QUADSPI->CR |= QUADSPI_CR_APMS;							// Set the 'auto-stop' bit to end transaction after a match.

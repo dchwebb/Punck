@@ -30,6 +30,7 @@ static constexpr uint32_t fatEraseSectors = 8 * (dualFlashMode ? 2 : 1);			// Nu
 static constexpr uint32_t fatHeaderSectors = 40;		// Number of sectors in all header regions [1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory]
 static constexpr uint32_t fatCacheSectors = 72;			// Header + extra for testing
 
+extern uint8_t headerCacheDebug[fatSectorSize * fatCacheSectors];
 
 // Struct to hold regular 32 byte directory entries (SFN)
 struct FATFileInfo {
@@ -88,7 +89,8 @@ private:
 
 	// Create cache for header part of FAT [Header consists of 1 sector boot sector; 31 sectors FAT; 8 sectors Root Directory + extra]
 	uint32_t cacheUpdated = 0;			// Store the systick time the cache was last updated so separate timer can periodically clean up cache
-	uint8_t headerCache[fatSectorSize * fatCacheSectors];	//
+	//uint8_t headerCache[fatSectorSize * fatCacheSectors];	// Cache for storing the header section of the Flash FAT drive
+	uint8_t* headerCache = (uint8_t*)&headerCacheDebug;
 	uint32_t dirtyCacheBlocks = 0;		// Bit array containing dirty blocks in header cache
 
 	// Initialise Write Cache - this is used to cache write data into blocks for safe erasing when overwriting existing data

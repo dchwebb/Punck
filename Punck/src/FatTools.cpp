@@ -4,7 +4,7 @@
 #include "usb.h"
 
 FatTools fatTools;
-
+uint8_t __attribute__((section (".ram_d1_data"))) headerCacheDebug[fatSectorSize * fatCacheSectors];
 
 bool FatTools::InitFatFS()
 {
@@ -37,8 +37,7 @@ bool FatTools::InitFatFS()
 
 bool FatTools::Format()
 {
-	printf("Erasing flash ...\r\n");
-	extFlash.FullErase();
+	//extFlash.FullErase();
 
 	printf("Mounting File System ...\r\n");
 	uint8_t fsWork[fatSectorSize];							// Work buffer for the f_mkfs()

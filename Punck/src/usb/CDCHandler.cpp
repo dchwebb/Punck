@@ -6,7 +6,7 @@
 #include "VoiceManager.h"
 #include "ff.h"
 
-uint32_t flashBuff[1024];
+uint32_t flashBuff[8192];
 uint32_t* heapVal;		// Debug
 
 void CDCHandler::DataIn()
@@ -322,7 +322,7 @@ void CDCHandler::ProcessCommand()
 		if (address >= 0) {
 			const uint32_t* p = (uint32_t*)(0x90000000 + address);
 
-			for (uint32_t a = 0; a < 128; a += 4) {
+			for (uint32_t a = 0; a < 256; a += 4) {
 				printf("%6ld: %#010lx %#010lx %#010lx %#010lx\r\n", (a * 4) + address, p[a], p[a + 1], p[a + 2], p[a + 3]);
 			}
 		}
@@ -374,7 +374,6 @@ void CDCHandler::ProcessCommand()
 			address = address & ~(fatEraseSectors - 1);
 			extFlash.BlockErase(address);		// Force address to 4096 byte (8192 in dual flash mode) boundary
 
-			extFlash.BlockErase(address);
 			SCB_InvalidateDCache_by_Addr((uint32_t*)(flashAddress + address), fatEraseSectors * fatSectorSize);	// Ensure cache is refreshed after write or erase
 			printf("Block at address 0x%08lx erased\r\n", address);
 		}
@@ -386,10 +385,11 @@ void CDCHandler::ProcessCommand()
 		if (sector >= 0) {
 			printf("Writing to %ld ...\r\n", sector);
 
-			for (uint32_t a = 0; a < fatSectorSize; ++a) {
+			for (uint32_t a = 0; a < 8192; ++a) {
 				flashBuff[a] = a + 1;
 			}
-			fatTools.Write((uint8_t*)flashBuff, sector, 1);
+			fatTools.Write((uint8_t*)flashBuff, sector, 16);
+			fatTools.FlushCache();
 
 			printf("Finished\r\n");
 		}
