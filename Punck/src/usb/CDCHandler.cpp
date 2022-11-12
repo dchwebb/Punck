@@ -96,7 +96,6 @@ void CDCHandler::ProcessCommand()
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"cacheinfo   -  Show all bytes changed in header cache\r\n"
 				"samplelist  -  Show details of all samples found in flash\r\n"
-				"play:NN     -  Play the sample numbered NN\r\n"
 				"clusterchain   List chain of clusters\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
 				"\r\n"
@@ -193,11 +192,6 @@ void CDCHandler::ProcessCommand()
 		}
 		printf("\r\n");
 
-
-	} else if (cmd.compare(0, 5, "play:") == 0) {				// Play sample
-		const int32_t sn = ParseInt(cmd, ':', 0, 0xFFFFFF);
-		printf("%s\r\n", voiceManager.samples.sampleList[sn].name);
-		voiceManager.samples.Play(voiceManager.samples.SamplePlayer::playerA, sn);
 
 
 	} else if (cmd.compare("dirdetails") == 0) {				// Get detailed FAT directory info

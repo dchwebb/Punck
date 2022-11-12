@@ -43,6 +43,7 @@ public:
 		std::array<Bank, 40> bank;			// Store pointer to Bank samples sorted by index
 		NoteMapper* noteMapper;
 		float velocityScale;
+		volatile uint16_t* voiceADC;
 		volatile uint16_t* tuningADC;
 		volatile uint16_t* levelADC;
 	} sampler[2];

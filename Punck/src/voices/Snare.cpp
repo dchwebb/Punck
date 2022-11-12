@@ -3,7 +3,7 @@
 
 void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI (different note offsets for different tuning?)
+	// Called when accessed from MIDI
 	partialInc[0] = FreqToInc(config.baseFreq);			// First Mode 0,1 frequency
 	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;

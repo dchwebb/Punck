@@ -9,6 +9,8 @@
 
 Samples::Samples()
 {
+	sampler[playerA].voiceADC = &ADC_array[ADC_SampleAVoice];
+	sampler[playerB].voiceADC = &ADC_array[ADC_SampleBVoice];
 	sampler[playerA].tuningADC = &ADC_array[ADC_SampleASpeed];
 	sampler[playerB].tuningADC = &ADC_array[ADC_SampleBSpeed];
 	sampler[playerA].levelADC = &ADC_array[ADC_SampleALevel];
@@ -32,8 +34,11 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 }
 
 
-void Samples::Play(const uint8_t sp, const uint32_t index)
+void Samples::Play(const uint8_t sp, uint32_t index)
 {
+	// Samples played from button: use voice pot to determine note
+	index =  (sampler[sp].bankLen * *sampler[sp].voiceADC) / 65536;
+
 	Play(sp, index, 0, 1.0f);
 }
 

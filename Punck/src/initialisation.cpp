@@ -203,7 +203,7 @@ void InitCache()
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
 
-
+/*
 	MPU->RNR = 1;									// Memory region number
 	MPU->RBAR = 0x90000000; 						// Address of the QSPI Flash
 
@@ -215,7 +215,7 @@ void InitCache()
 				(17    << MPU_RASR_SIZE_Pos) |		// 256KB - D2 is actually 288K (size is log 2(mem size) - 1 ie 2^18 = 256k)
 				(1     << MPU_RASR_ENABLE_Pos);		// Enable MPU region
 
-
+*/
 	MPU->CTRL |= (1 << MPU_CTRL_PRIVDEFENA_Pos) |	// Enable PRIVDEFENA - this allows use of default memory map for memory areas other than those specific regions defined above
 				 (1 << MPU_CTRL_ENABLE_Pos);		// Enable the MPU
 
@@ -697,11 +697,12 @@ void InitQSPI()
 
 	// FIXME - slowed down as having problems on dev setup
 	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
-	QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;	// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 
 	if (dualFlashMode) {
+		QUADSPI->DCR |= 24 << QUADSPI_DCR_FSIZE_Pos;// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^25 = 32 Mbytes
 		QUADSPI->CR |= QUADSPI_CR_DFM;				// Enable dual flash mode
 	} else {
+		QUADSPI->DCR |= 23 << QUADSPI_DCR_FSIZE_Pos;// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^24 = 16 Mbytes
 		QUADSPI->CR |= QUADSPI_CR_FSEL;				// Flash memory selection: 0: FLASH 1 selected; 1: FLASH 2 selected
 	}
 }

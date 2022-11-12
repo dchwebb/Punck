@@ -21,9 +21,9 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 	lpFilterCutoff = config.lpInitCutoff;
 	lpFilter.SetCutoff(lpFilterCutoff);
 
-	// Control over decay note index sets initial level; scaled by pot - FIXME change ADC for production
+	// Control over decay note index sets initial level; scaled by pot
 	noteRange = noteRange == 0 ? 128 : noteRange;
-	float closed = sqrt(((float)noteOffset + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
+	float closed = sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
 	closed += (static_cast<float>(ADC_array[ADC_HiHatDecay]) / 65536.0f) - 0.5f;		// pot scales +/-0.5
 	decayScale = std::min(0.9985f + (0.0015f * closed), 0.99998f);
 

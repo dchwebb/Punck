@@ -6,12 +6,11 @@
 
 void Kick::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI (different note offsets for different tuning?)
+	// Called when accessed from MIDI
 	playing = true;
 	phase = Phase::Ramp1;
 	position = 0.0f;
 	currentLevel = 0.0f;
-	//noteMapper->led.On();
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_KickLevel]) / 32768.0f);
 	fastSinInc = FreqToInc(config.fastSinFreq);
 	slowSinInc = FreqToInc(config.initSlowSinFreq);
@@ -68,7 +67,7 @@ void Kick::CalcOutput()
 	case Phase::SlowSine:
 	{
 		slowSinInc *= config.sineSlowDownRate;			// Sine wave slowly decreases in frequency
-		position += slowSinInc;					// Set current poition in sine wave
+		position += slowSinInc;							// Set current poition in sine wave
 		const float decaySpeed = 0.9994f + 0.00055f * static_cast<float>(ADC_array[ADC_KickDecay]) / 65536.0f;
 		slowSinLevel = slowSinLevel * decaySpeed;
 		currentLevel = std::sin(position) * slowSinLevel;
@@ -76,7 +75,6 @@ void Kick::CalcOutput()
 		if (slowSinLevel <= 0.00001f) {
 			playing = false;
 			phase = Phase::Off;
-			//noteMapper->led.Off();
 		}
 		break;
 	}
