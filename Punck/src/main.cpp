@@ -20,8 +20,9 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // Web editor not refreshing correctly
 // Tempo clock out
 // Store sequences to flash memory
-// Sample voice pot (including round robin)
+// Sample voice pot round robin
 // USB does not restart when unplugged and re-plugged in
+// Saving config
 
 USB usb;
 

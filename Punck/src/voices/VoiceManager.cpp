@@ -31,16 +31,10 @@ VoiceManager::VoiceManager()
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
 	hh.drumVoice = &hihatPlayer;
-	hh.trigger = {GPIOE, 11, GPIOG, 10, GPIOD, 7};			// FIXME - open hats PD7
+	hh.trigger = {GPIOE, 11, GPIOG, 10, GPIOD, 7};
 	hh.pwmLed = {&TIM8->CCR2};			// PC7: White
 	hh.midiLow = 78;
 	hh.midiHigh = 82;
-
-	NoteMapper& t = noteMapper[Voice::toms];
-	tomsPlayer.noteMapper = &k;
-	t.drumVoice = &tomsPlayer;
-	t.midiLow = 48;
-	t.midiHigh = 52;
 
 	NoteMapper& sa = noteMapper[samplerA];
 	samples.sampler[0].noteMapper = &sa;
@@ -48,8 +42,8 @@ VoiceManager::VoiceManager()
 	sa.voiceIndex = 0;
 	sa.trigger = {GPIOB, 7, GPIOE, 14};
 	sa.pwmLed = {&TIM4->CCR3};			// PD14: Green
-	sa.midiLow = 72;
-	sa.midiHigh = 77;
+	sa.midiLow = 60;
+	sa.midiHigh = 67;
 
 	NoteMapper& sb = noteMapper[samplerB];
 	samples.sampler[1].noteMapper = &sb;
@@ -57,8 +51,14 @@ VoiceManager::VoiceManager()
 	sb.voiceIndex = 1;
 	sb.trigger = {GPIOG, 13, GPIOE, 15};
 	sb.pwmLed = {&TIM4->CCR4};			// PD15: Yellow
-	sb.midiLow = 60;
-	sb.midiHigh = 67;
+	sb.midiLow = 72;
+	sb.midiHigh = 77;
+
+	NoteMapper& t = noteMapper[Voice::toms];
+	tomsPlayer.noteMapper = &k;
+	t.drumVoice = &tomsPlayer;
+	t.midiLow = 48;
+	t.midiHigh = 52;
 }
 
 
@@ -141,7 +141,13 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 			if (n.midiLow > n.midiHigh) {
 				std::swap(n.midiLow, n.midiHigh);
 			}
-			//n.led.Off();		// FIXME - logic to jump to next voice for midi learn
+
+			// Switch to next voice Once high value is assigned
+			midiLearnState = MidiLearnState::lowNote;
+			noteMapper[midiLearnVoice].pwmLed.Level(0.0f);
+			if (++midiLearnVoice > Voice::samplerB) {
+				midiLearnVoice = Voice::kick;
+			}
 		}
 	} else {
 		// Locate voice
@@ -164,17 +170,28 @@ void VoiceManager::CheckButtons()
 	// Check mode select switch. Options: Play note; MIDI learn; drum pattern selector
 	ButtonMode oldMode = buttonMode;
 	if ((GPIOE->IDR & GPIO_IDR_ID1) == 0) {				// PE1: MIDI Learn
-		buttonMode = ButtonMode::midiLearn;
-		if (oldMode != buttonMode) {
+		if (oldMode != ButtonMode::midiLearn) {
+			buttonMode = ButtonMode::midiLearn;
 			sequencer.playing = false;					// Stop active sequence
-			for (auto& note : noteMapper) {				// Switch off all LEDs
-				note.pwmLed.setMinLevel(0);
-			}
+			midiLearnState = MidiLearnState::lowNote;
+			midiLearnVoice = 0;
+			midiLearnCounter = 0;
+		} else {
+			// Pulse LED to show MIDI Learn state - slow is low note, fast is high note
+			midiLearnCounter += midiLearnState == MidiLearnState::lowNote ? 5 : 10;
+			noteMapper[midiLearnVoice].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
 		}
 	} else if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {		// PC6: Sequence Select
 		buttonMode = ButtonMode::drumPattern;
 	} else  {
 		buttonMode = ButtonMode::playNote;
+	}
+
+	//	When switching to or from MIDI learn mode turn off all LEDs
+	if (oldMode != buttonMode && (oldMode == ButtonMode::midiLearn || buttonMode == ButtonMode::midiLearn)) {
+		for (auto& note : noteMapper) {
+			note.pwmLed.setMinLevel(0);
+		}
 	}
 
 	for (auto& note : noteMapper) {
@@ -184,7 +201,7 @@ void VoiceManager::CheckButtons()
 				note.trigger.buttonOn = true;
 
 				if (buttonMode == ButtonMode::midiLearn) {
-					//note.led.On();
+					noteMapper[midiLearnVoice].pwmLed.Level(0.0f);
 					midiLearnState = MidiLearnState::lowNote;
 					midiLearnVoice = note.voice;
 

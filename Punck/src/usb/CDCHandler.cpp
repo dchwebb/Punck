@@ -121,10 +121,13 @@ void CDCHandler::ProcessCommand()
 				printf("Close HH");
 				break;
 			case VoiceManager::samplerA:
-				printf("Sample 1");
+				printf("Sample A");
 				break;
 			case VoiceManager::samplerB:
-				printf("Sample 2");
+				printf("Sample B");
+				break;
+			case VoiceManager::toms:
+				printf("Toms    ");
 				break;
 			}
 			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);
