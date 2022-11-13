@@ -10,7 +10,7 @@
 #include <cstring>
 
 struct NoteMapper {
-
+	enum  TriggerType: uint8_t {noTrigger = 0, triggerBtn = 1, trigger1 = 2, trigger2 = 4};
 	DrumVoice* drumVoice = nullptr;
 	uint8_t voice;
 	uint8_t voiceIndex = 0;				// For use with players that have multiple outputs (eg sampler)
@@ -22,23 +22,27 @@ struct NoteMapper {
 		uint8_t btnGpioPin;
 		GPIO_TypeDef* trgGpioBank;
 		uint8_t trgGpioPin;
+		GPIO_TypeDef* tr2GpioBank;
+		uint8_t tr2GpioPin;
 
 		uint8_t debounce = 0;
 		bool buttonOn;
 
-		bool IsOn()  {
-			if ((btnGpioBank && (btnGpioBank->IDR & (1 << btnGpioPin)) == 0) ||
-			    (trgGpioBank && (trgGpioBank->IDR & (1 << trgGpioPin)) == 0)) {
+		TriggerType IsOn()  {
+			TriggerType triggers = (TriggerType)((btnGpioBank && (btnGpioBank->IDR & (1 << btnGpioPin)) == 0) ? 1 : 0 |
+							   (trgGpioBank && (trgGpioBank->IDR & (1 << trgGpioPin)) == 0) ? 2 : 0 |
+							   (tr2GpioBank && (tr2GpioBank->IDR & (1 << tr2GpioPin)) == 0) ? 4 : 0);
+			if (triggers) {		// Fixme - probably need difference debounce on each trigger
 				if (debounce == 0) {
 					debounce = 20;
-					return true;
+					return triggers;
 				}
 				debounce = 20;
 			}
 			if (debounce > 0) {
 				--debounce;
 			}
-			return false;
+			return noTrigger;
 		}
 	} trigger;
 

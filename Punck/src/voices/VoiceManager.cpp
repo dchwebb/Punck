@@ -31,7 +31,7 @@ VoiceManager::VoiceManager()
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
 	hh.drumVoice = &hihatPlayer;
-	hh.trigger = {GPIOE, 11, GPIOG, 10};			// FIXME - open hats PD7
+	hh.trigger = {GPIOE, 11, GPIOG, 10, GPIOD, 7};			// FIXME - open hats PD7
 	hh.pwmLed = {&TIM8->CCR2};			// PC7: White
 	hh.midiLow = 78;
 	hh.midiHigh = 82;
@@ -178,25 +178,22 @@ void VoiceManager::CheckButtons()
 	}
 
 	for (auto& note : noteMapper) {
-		if (note.trigger.IsOn()) {
+		NoteMapper::TriggerType triggerType = note.trigger.IsOn();
+		if (triggerType) {
 			if (!note.trigger.buttonOn) {
 				note.trigger.buttonOn = true;
 
-				switch (buttonMode) {
-				case ButtonMode::playNote:
-					if (note.drumVoice) {
-						note.drumVoice->Play(note.voiceIndex, 0);
-					}
-					break;
-				case ButtonMode::midiLearn:
+				if (buttonMode == ButtonMode::midiLearn) {
 					//note.led.On();
 					midiLearnState = MidiLearnState::lowNote;
 					midiLearnVoice = note.voice;
-					break;
-				case ButtonMode::drumPattern:
-					noteMapper[sequencer.activeSequence].pwmLed.Level((uint32_t)0);
+
+				} else if (buttonMode == ButtonMode::playNote || triggerType != NoteMapper::TriggerType::triggerBtn) {
+					// Trigger input only used to play notes; Trigger 2 currently only used for open hihat
+					note.drumVoice->Play(note.voiceIndex, triggerType == NoteMapper::TriggerType::trigger2 ? 128 : 0);
+
+				} else if (buttonMode == ButtonMode::drumPattern) {
 					sequencer.StartStop(note.voice);
-					break;
 				}
 			}
 		} else {

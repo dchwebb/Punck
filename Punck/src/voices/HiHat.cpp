@@ -38,7 +38,7 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 void HiHat::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
-	Play(0, 0, 0, 1.0f);
+	Play(0, index, 0, 1.0f);
 }
 
 
