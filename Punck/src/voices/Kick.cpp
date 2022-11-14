@@ -111,3 +111,7 @@ void Kick::StoreConfig(uint8_t* buff, const uint32_t len)
 	}
 }
 
+uint32_t Kick::ConfigSize()
+{
+	return sizeof(config);
+}

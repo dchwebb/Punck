@@ -15,7 +15,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // Sample panning (naming? web interface?)
-// Midi learn functionality to use PWM LEDs
 // Snare decay previously mapped to ADC
 // Web editor not refreshing correctly
 // Tempo clock out
@@ -23,6 +22,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // Sample voice pot round robin
 // USB does not restart when unplugged and re-plugged in
 // Saving config
+// Green LED too dim
 
 USB usb;
 

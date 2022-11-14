@@ -14,6 +14,7 @@ public:
 	virtual void CalcOutput() = 0;
 	virtual uint32_t SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex) = 0;		// Fills a buffer with config data for transmission over SysEx
 	virtual void StoreConfig(uint8_t* buff, const uint32_t len) = 0;					// Reads config data back into member values
+	virtual uint32_t ConfigSize() = 0;
 	virtual void UpdateFilter() {};
 
 	constexpr float FreqToInc(const float frequency)

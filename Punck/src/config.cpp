@@ -1,5 +1,7 @@
 #include <config.h>
 #include <cmath>
+#include "VoiceManager.h"
+#include "Sequencer.h"
 
 Config config;
 
@@ -17,14 +19,21 @@ bool Config::SaveConfig()
 	scheduleSave = false;
 	suspendI2S();
 
-	configValues cv;
-	SetConfig(cv);
+	uint32_t cfgSize = SetConfig();
 
 	__disable_irq();					// Disable Interrupts
 	FlashUnlock(2);						// Unlock Flash memory for writing
 	FLASH->SR2 = FLASH_ALL_ERRORS;		// Clear error flags in Status Register
-	FlashEraseSector(7, 2);				// Erase sector 7, Bank 2 (See p152 of manual)
-	bool result = FlashProgram(ADDR_FLASH_SECTOR_7, reinterpret_cast<uint32_t*>(&cv), sizeof(cv));
+
+	// Check if flash needs erasing
+	for (uint32_t i = 0; i < cfgSize / 4; ++i) {
+		if (addrFlashBank2Sector7[i] != 0xFFFFFFFF) {
+			FlashEraseSector(7, 2);		// Erase sector 7, Bank 2 (See p152 of manual)
+			break;
+		}
+	}
+
+	bool result = FlashProgram(addrFlashBank2Sector7, reinterpret_cast<uint32_t*>(&configBuffer), cfgSize);
 	FlashLock(2);						// Lock Bank 2 Flash
 	__enable_irq(); 					// Enable Interrupts
 
@@ -33,33 +42,66 @@ bool Config::SaveConfig()
 }
 
 
-void Config::SetConfig(configValues &cv)
+uint32_t Config::SetConfig()
 {
-//	cv.audio_offset_left = adcZeroOffset[left];
-//	cv.audio_offset_right = adcZeroOffset[right];
+	// Serialise config values into buffer
+	memset(configBuffer, 0, sizeof(configBuffer));					// Clear buffer
+	strncpy(reinterpret_cast<char*>(configBuffer), "CFG", 4);		// Header
+	configBuffer[4] = configVersion;
+	uint32_t configPos = 8;											// Position in buffer to store data
+
+	uint8_t* cfgBuffer = nullptr;
+
+	// Voice configurations - store each one into config buffer
+	for (auto& nm : voiceManager.noteMapper) {
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+
+			const uint32_t configSize = nm.drumVoice->SerialiseConfig(&cfgBuffer, nm.voiceIndex);
+			memcpy(&configBuffer[configPos], cfgBuffer, configSize);
+			configPos += configSize;
+		}
+	}
+
+	// Drum sequences
+	const uint32_t configSize = sequencer.GetSequences(&cfgBuffer);
+	memcpy(&configBuffer[configPos], cfgBuffer, configSize);
+	configPos += configSize;
+
+	// Footer
+	strncpy(reinterpret_cast<char*>(&configBuffer[configPos]), "END", 4);
+	configPos += 4;
+	return configPos;
 }
 
 
 // Restore configuration settings from flash memory
 void Config::RestoreConfig()
 {
-	// create temporary copy of settings from memory to check if they are valid
-	configValues cv;
-	memcpy(reinterpret_cast<uint32_t*>(&cv), ADDR_FLASH_SECTOR_7, sizeof(cv));
 
-	if (strcmp(cv.StartMarker, "CFG") == 0 && strcmp(cv.EndMarker, "END") == 0 && cv.Version == CONFIG_VERSION) {
-//		adcZeroOffset[left]  = cv.audio_offset_left;
-//		adcZeroOffset[right] = cv.audio_offset_right;
+	uint8_t* flashConfig = reinterpret_cast<uint8_t*>(addrFlashBank2Sector7);
+
+	// Check for config start and version number
+	if (strcmp((char*)flashConfig, "CFG") == 0 && *reinterpret_cast<uint32_t*>(&flashConfig[4]) == configVersion) {
+		uint32_t configPos = 8;											// Position in buffer to store data
+
+		// Voice configurations - store each one into config buffer
+		for (auto& nm : voiceManager.noteMapper) {
+			if (nm.voiceIndex == 0) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+				const uint32_t configSize = nm.drumVoice->ConfigSize();
+				nm.drumVoice->StoreConfig(&flashConfig[configPos], configSize);
+				configPos += configSize;
+			}
+		}
+
+		// Drum sequences
+		sequencer.StoreSequences(&flashConfig[configPos]);
+		configPos += sequencer.SequencesSize();
 	}
-
-	// Set up averaging values for ongoing ADC offset calibration
-//	newOffset[0] = adcZeroOffset[0];
-//	newOffset[1] = adcZeroOffset[1];
 }
 
 
 // Unlock the FLASH control register access
-void __attribute__((section(".itcm_text"))) Config::FlashUnlock(uint8_t bank)
+void Config::FlashUnlock(uint8_t bank)
 {
 	volatile uint32_t* bankCR  = &(bank == 1 ? FLASH->CR1 : FLASH->CR2);
 	volatile uint32_t* bankKEY = &(bank == 1 ? FLASH->KEYR1 : FLASH->KEYR2);
@@ -72,7 +114,7 @@ void __attribute__((section(".itcm_text"))) Config::FlashUnlock(uint8_t bank)
 
 
 // Lock the FLASH Bank Registers access
-void __attribute__((section(".itcm_text"))) Config::FlashLock(uint8_t bank)
+void Config::FlashLock(uint8_t bank)
 {
 	if (bank == 1) {
 		FLASH->CR1 |= FLASH_CR_LOCK;
@@ -83,7 +125,7 @@ void __attribute__((section(".itcm_text"))) Config::FlashLock(uint8_t bank)
 
 
 // Erase sector - FLASH_CR_PSIZE_1 means a write size of 32bits (see p163 of manual)
-void __attribute__((section(".itcm_text"))) Config::FlashEraseSector(uint8_t Sector, uint32_t bank)
+void Config::FlashEraseSector(uint8_t Sector, uint32_t bank)
 {
 	volatile uint32_t* bankCR = &(bank == 1 ? FLASH->CR1 : FLASH->CR2);
 
@@ -95,7 +137,7 @@ void __attribute__((section(".itcm_text"))) Config::FlashEraseSector(uint8_t Sec
 }
 
 
-bool __attribute__((section(".itcm_text"))) Config::FlashWaitForLastOperation(uint32_t bank)
+bool Config::FlashWaitForLastOperation(uint32_t bank)
 {
     // Even if FLASH operation fails, the QW flag will be reset and an error flag will be set
 	volatile uint32_t* bankSR  = &(bank == 1 ? FLASH->SR1 : FLASH->SR2);
@@ -118,7 +160,7 @@ bool __attribute__((section(".itcm_text"))) Config::FlashWaitForLastOperation(ui
 }
 
 
-bool __attribute__((section(".itcm_text"))) Config::FlashProgram(uint32_t* dest_addr, uint32_t* src_addr, size_t size)
+bool Config::FlashProgram(uint32_t* dest_addr, uint32_t* src_addr, size_t size)
 {
 	uint8_t bank = (reinterpret_cast<uintptr_t>(dest_addr) < FLASH_BANK2_BASE) ? 1 : 2;		// Get which bank we are programming from destination address
 	volatile uint32_t* bankCR = &(bank == 1 ? FLASH->CR1 : FLASH->CR2);

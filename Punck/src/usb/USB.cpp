@@ -42,7 +42,7 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		USB_OTG_FS->GINTMSK &= ~USB_OTG_GINTSTS_RXFLVL;
 
 		const uint32_t receiveStatus = USB_OTG_FS->GRXSTSP;		// OTG status read and pop register: not shown in SFR, but read only (ie do not pop) register under OTG_FS_GLOBAL->FS_GRXSTSR_Device
-		epnum = receiveStatus & USB_OTG_GRXSTSP_EPNUM;		// Get the endpoint number
+		epnum = receiveStatus & USB_OTG_GRXSTSP_EPNUM;			// Get the endpoint number
 		const uint16_t packetSize = (receiveStatus & USB_OTG_GRXSTSP_BCNT) >> 4;
 
 		USBUpdateDbg(receiveStatus, {}, epnum, packetSize, {}, nullptr);
@@ -192,10 +192,6 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 							EPStartXfer(Direction::in, 0, ep0.inBuffSize);
 						}
 					} else {
-						//if (epnum == CDC_Out) {
-							//EPStartXfer(Direction::in, classByEP[epnum]->inEP, 0);
-						//}
-
 						classByEP[epnum]->DataIn();
 						transmitting = false;
 					}
@@ -737,8 +733,8 @@ void USB::CtlError()
 }
 
 
-bool USB::ReadInterrupts(const uint32_t interrupt) {
-
+bool USB::ReadInterrupts(const uint32_t interrupt)
+{
 #if (USB_DEBUG)
 	if (((USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK) & interrupt) == interrupt && usbDebugEvent < USB_DEBUG_COUNT && debugStart) {
 		usbDebugNo = usbDebugEvent % USB_DEBUG_COUNT;

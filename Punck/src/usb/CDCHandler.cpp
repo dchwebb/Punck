@@ -1,5 +1,6 @@
 #include "USB.h"
 #include "CDCHandler.h"
+#include "Config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
 #include "Samples.h"
@@ -107,6 +108,14 @@ void CDCHandler::ProcessCommand()
 		extern volatile bool debugStart;
 		debugStart = true;
 #endif
+
+	} else if (cmd.compare("saveconfig") == 0) {				// Serialise config to internal flash
+		printf("Saving config\r\n");
+		config.SaveConfig();
+
+	} else if (cmd.compare("restoreconfig") == 0) {				// Restore confgi from internal flash
+		printf("Restoring config\r\n");
+		config.RestoreConfig();
 
 	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
 		for (auto note : voiceManager.noteMapper) {

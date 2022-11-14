@@ -11,7 +11,7 @@ var barClip = null;			// Clipboard for copying and pasting bars
 
 // enum from c++ code to match voice
 var voiceEnum = {
-    Kick: 0, Snare: 1, HiHat: 2, Toms: 3, Sampler_A: 4, Sampler_B: 5
+    Kick: 0, Snare: 1, HiHat: 2, Sampler_A: 3, Sampler_B: 4, Toms: 5
 };
 
 var requestEnum = {

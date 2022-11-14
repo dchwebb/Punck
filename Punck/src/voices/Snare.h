@@ -15,6 +15,7 @@ public:
 	void UpdateFilter();
 	uint32_t SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex);
 	void StoreConfig(uint8_t* buff, const uint32_t len);
+	uint32_t ConfigSize();
 
 	NoteMapper* noteMapper;
 private:

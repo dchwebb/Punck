@@ -23,7 +23,10 @@ public:
 	SeqInfo GetSeqInfo(uint8_t seq);
 
 	uint32_t GetBar(uint8_t** buff, uint8_t seq, uint8_t bar);
+	uint32_t GetSequences(uint8_t** buff);
+	void StoreSequences(uint8_t* buff);
 	void StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar, uint8_t beatsPerBar, uint8_t bars);
+	uint32_t SequencesSize();
 
 private:
 	struct Sequence {

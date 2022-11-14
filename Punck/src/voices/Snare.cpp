@@ -84,3 +84,9 @@ void Snare::StoreConfig(uint8_t* buff, const uint32_t len)
 		memcpy(&config, buff, len);
 	}
 }
+
+
+uint32_t Snare::ConfigSize()
+{
+	return sizeof(config);
+}

@@ -138,5 +138,9 @@ void HiHat::StoreConfig(uint8_t* buff, const uint32_t len)
 	}
 }
 
+uint32_t HiHat::ConfigSize()
+{
+	return sizeof(config);
+}
 
 

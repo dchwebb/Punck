@@ -214,6 +214,20 @@ uint32_t Sequencer::GetBar(uint8_t** buff, uint8_t seq, uint8_t bar)
 }
 
 
+uint32_t Sequencer::GetSequences(uint8_t** buff)
+{
+	// return pointer to and size of complete set of sequences
+	*buff = reinterpret_cast<uint8_t*>(&sequence);
+	return sizeof(sequence);
+}
+
+
+void Sequencer::StoreSequences(uint8_t* buff)
+{
+	// Store complete set of sequences
+	memcpy(sequence, buff, sizeof(sequence));
+}
+
 void Sequencer::StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar, uint8_t beatsPerBar, uint8_t bars)
 {
 	sequence[seq].info.bars = bars;
@@ -221,4 +235,10 @@ void Sequencer::StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t ba
 	if (len <= sizeof(sequence[seq].bar[bar])) {
 		memcpy(&(sequence[seq].bar[bar]), buff, len);
 	}
+}
+
+
+uint32_t Sequencer::SequencesSize()
+{
+	return sizeof(sequence);
 }

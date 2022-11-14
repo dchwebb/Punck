@@ -263,3 +263,8 @@ uint32_t Samples::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 void Samples::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 }
+
+uint32_t Samples::ConfigSize()
+{
+	return 0;
+}

@@ -8,7 +8,7 @@ VoiceManager voiceManager;
 
 VoiceManager::VoiceManager()
 {
-	for (uint8_t i = 0; i < 9; ++i) {
+	for (uint8_t i = 0; i < Voice::count; ++i) {
 		noteMapper[i].voice = i;
 	}
 
