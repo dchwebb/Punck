@@ -759,7 +759,13 @@ function DecodeSysEx(data, headerLen)
 
 function DisplayPosition()
 {
-var highlightOn = document.getElementById("autoUpdate").checked && seqSettings.playing;
+	// Check if sequence has been changed on module
+	if (seqSettings.playingSeq != seqSettings.seq && seqSettings.playing) {
+		RefreshSequence(seqSettings.playingSeq);
+		return;
+	}
+
+	var highlightOn = document.getElementById("autoUpdate").checked && seqSettings.playing;
 
 	// Clear border of previously selected note
 	if (highlitBeat != "" && highlitBeat != selectedBeat && document.getElementById(highlitBeat) != null) {
@@ -783,17 +789,19 @@ var highlightOn = document.getElementById("autoUpdate").checked && seqSettings.p
 			}
 		}
 	}
-	StatusTimer();
+	if (document.getElementById("autoUpdate").checked) {
+		StatusTimer();
+	}
 }
 
 
 function StatusTimer(wait)
 {
 	// Request playing position update periodically
-	if (wait == null) {
-		wait = seqSettings.playing ? 300 : 1500;
-	}
 	if (document.getElementById("autoUpdate").checked) {
+		if (wait == null) {
+			wait = seqSettings.playing ? 300 : 1500;
+		}
 		setTimeout(function(){ RequestStatus(); }, wait);
 	} else {
 		DisplayPosition();			// Clear highlight bar/beat
@@ -872,6 +880,8 @@ function getMIDIMessage(midiMessage)
 				// Request the configuration data for the first drum voice
 				if (++requestNo < seqSettings.bars) {
 					RequestSequence(seqSettings.seq, requestNo);
+				} else 	if (document.getElementById("autoUpdate").checked) {
+					StatusTimer();
 				}
 				break;
 
