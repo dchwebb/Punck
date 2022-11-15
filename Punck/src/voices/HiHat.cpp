@@ -5,7 +5,6 @@
 
 void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI
 	playing = true;
 
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_HiHatLevel]) / 32768.0f);
@@ -45,6 +44,12 @@ void HiHat::Play(const uint8_t voice, const uint32_t index)
 
 void HiHat::CalcOutput()
 {
+	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
+	if (noteQueued) {
+		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+		noteQueued = false;
+	}
+
 	if (playing) {
 
 		const int32_t noise = static_cast<int32_t>(RNG->DR);		// Get noise level here to give time for next noise value to be calculated

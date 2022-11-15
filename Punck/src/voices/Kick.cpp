@@ -6,7 +6,6 @@
 
 void Kick::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI
 	playing = true;
 	phase = Phase::Ramp1;
 	position = 0.0f;
@@ -27,6 +26,12 @@ void Kick::Play(const uint8_t voice, const uint32_t index)
 
 void Kick::CalcOutput()
 {
+	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
+	if (noteQueued) {
+		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+		noteQueued = false;
+	}
+
 	switch (phase) {
 	case Phase::Ramp1:
 		currentLevel = currentLevel + (config.ramp1Inc * (1.0f - currentLevel));

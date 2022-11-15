@@ -23,6 +23,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // USB does not restart when unplugged and re-plugged in
 // Saving config
 // Green LED too dim
+// MIDI Play should add to queue and then be triggered in interrupt to avoid clashes
 
 USB usb;
 

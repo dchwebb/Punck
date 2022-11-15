@@ -268,16 +268,16 @@ void MidiHandler::midiEvent(const uint32_t data)
 
 void MidiHandler::serialHandler(uint32_t data)
 {
-	Queue[QueueWrite] = data;
+	Queue[QueueWrite] = data;			// Queue handles MIDI data divided into individual bytes
 	QueueSize++;
-	QueueWrite = (QueueWrite + 1) % MIDIQUEUESIZE;
+	QueueWrite = (QueueWrite + 1) % SerialQueueSize;
 
 	MIDIType type = static_cast<MIDIType>(Queue[QueueRead] >> 4);
 	uint8_t channel = Queue[QueueRead] & 0x0F;
 
 	//NoteOn = 0x9, NoteOff = 0x8, PolyPressure = 0xA, ControlChange = 0xB, ProgramChange = 0xC, ChannelPressure = 0xD, PitchBend = 0xE, System = 0xF
 	while ((QueueSize > 2 && (type == NoteOn || type == NoteOff || type == PolyPressure ||  type == ControlChange ||  type == PitchBend)) ||
-			(QueueSize > 1 && (type == ProgramChange || type == ChannelPressure))) {
+		   (QueueSize > 1 && (type == ProgramChange || type == ChannelPressure))) {
 
 		MidiData event;
 		event.chn = channel;
@@ -314,7 +314,7 @@ void MidiHandler::serialHandler(uint32_t data)
 
 inline void MidiHandler::QueueInc() {
 	QueueSize--;
-	QueueRead = (QueueRead + 1) % MIDIQUEUESIZE;
+	QueueRead = (QueueRead + 1) % SerialQueueSize;
 }
 
 

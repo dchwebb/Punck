@@ -2,7 +2,6 @@
 
 #include "initialisation.h"
 #include "USBHandler.h"
-#define MIDIQUEUESIZE 50
 
 class USB;
 
@@ -66,7 +65,8 @@ private:
 		};
 	};
 
-	uint8_t Queue[MIDIQUEUESIZE];			// hold incoming serial MIDI bytes
+	static constexpr uint8_t SerialQueueSize = 50;
+	uint8_t Queue[SerialQueueSize];			// hold incoming serial MIDI bytes
 	uint8_t QueueRead = 0;
 	uint8_t QueueWrite = 0;
 	uint8_t QueueSize = 0;

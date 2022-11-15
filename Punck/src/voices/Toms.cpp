@@ -6,7 +6,6 @@
 
 void Toms::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI
 	playing = true;
 	phase = Phase::Ramp;
 
@@ -32,6 +31,12 @@ void Toms::Play(const uint8_t voice, const uint32_t index)
 
 void Toms::CalcOutput()
 {
+	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
+	if (noteQueued) {
+		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+		noteQueued = false;
+	}
+
 	switch (phase) {
 	case Phase::Ramp:
 		currentLevel = currentLevel + (config.rampInc * (1.0f - currentLevel));

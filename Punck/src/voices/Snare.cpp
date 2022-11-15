@@ -3,7 +3,6 @@
 
 void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
-	// Called when accessed from MIDI
 	partialInc[0] = FreqToInc(config.baseFreq);			// First Mode 0,1 frequency
 	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
@@ -30,6 +29,12 @@ void Snare::Play(const uint8_t voice, const uint32_t index)
 
 void Snare::CalcOutput()
 {
+	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
+	if (noteQueued) {
+		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+		noteQueued = false;
+	}
+
 	if (playing) {
 		const float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
 		const float adcDecay = 0.00055f * 0.5;//static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC

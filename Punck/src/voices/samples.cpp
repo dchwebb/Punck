@@ -67,6 +67,12 @@ static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes, con
 
 void Samples::CalcOutput()
 {
+	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
+	if (noteQueued) {
+		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+		noteQueued = false;
+	}
+
 	playing = (sampler[playerA].playing || sampler[playerB].playing);
 	for (auto& sp : sampler) {
 		if (sp.playing) {

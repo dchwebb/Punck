@@ -150,14 +150,14 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 			}
 		}
 	} else {
-		// Locate voice
+		// Locate voice and queue note (notes are only triggered in the main interrupt to avoid data corruption)
 		for (auto& note : noteMapper) {
 			if (midiNote.noteValue >= note.midiLow && midiNote.noteValue <= note.midiHigh) {
 				const uint32_t noteOffset = midiNote.noteValue - note.midiLow;
 				const uint32_t noteRange = note.midiHigh - note.midiLow + 1;
 
 				if (note.drumVoice) {
-					note.drumVoice->Play(note.voiceIndex, noteOffset, noteRange, static_cast<float>(midiNote.velocity) / 127.0f);
+					note.drumVoice->QueuePlay(note.voiceIndex, noteOffset, noteRange, static_cast<float>(midiNote.velocity) / 127.0f);
 				}
 			}
 		}
