@@ -679,7 +679,7 @@ function RefreshSequence(seq)
 
 function RequestSequence(seq, bar)
 {
-	// Creates a SysEx request for a voice's configuration
+	// Creates a SysEx request for a sequence
 	var message = [0xF0, requestEnum.GetSequence, seq, bar, 0xF7];
 	PrintMessage(message);			// Print contents of payload to console
     output.send(message);

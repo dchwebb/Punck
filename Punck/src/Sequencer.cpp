@@ -201,7 +201,11 @@ void Sequencer::ChangeSequence(uint8_t seq)
 
 Sequencer::SeqInfo Sequencer::GetSeqInfo(uint8_t seq)
 {
-	ChangeSequence(seq);				// Update active sequence so switching sequence in the editor updates playing sequence
+	if (playing && seq != activeSequence) {
+		StartStop(seq);						// Will call ChangeSequence and also handle switching LEDs
+	} else {
+		ChangeSequence(seq);				// Update active sequence so switching sequence in the editor updates playing sequence
+	}
 	return sequence[seq].info;
 }
 
