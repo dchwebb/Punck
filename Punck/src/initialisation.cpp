@@ -789,3 +789,20 @@ void InitPWMTimer()
 	TIM4->CR1 |= TIM_CR1_CEN;						// Enable counter
 
 }
+
+
+
+void DelayMS(uint32_t ms)
+{
+	// Crude delay system
+	const uint32_t now = SysTickVal;
+	while (now + ms > SysTickVal) {};
+}
+
+
+void Reboot()
+{
+	__disable_irq();
+	__DSB();
+	NVIC_SystemReset();
+}

@@ -85,19 +85,22 @@ void CDCHandler::ProcessCommand()
 	if (cmd.compare("help") == 0) {
 		usb->SendString("Mountjoy Punck\r\n"
 				"\r\nSupported commands:\r\n"
-				"resume      -  Resume I2S after debugging\r\n"
+				"saveconfig  -  Save configuration to internal memory\r\n"
+				"restoreconfig  Restore saved configuration\r\n"
+				"clearconfig -  Erase configuration and restart\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
 				"flashid     -  Print flash manufacturer and device IDs\r\n"
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"printcluster:A Print 2048 bytes of cluster address A (>=2)\r\n"
-				"eraseflash  -  Erase all flash data\r\n"
+				"eraseflash  -  Erase all sample storage flash data\r\n"
+				"format      -  Format sample storage flash\r\n"
 				"eraseblock:A   Erase block of memory (8192 bytes in dual flash mode)\r\n"
 				"dirdetails  -  Print detailed file list for root directory\r\n"
 				"dir         -  Print list of all files and their directories\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"cacheinfo   -  Show all bytes changed in header cache\r\n"
 				"samplelist  -  Show details of all samples found in flash\r\n"
-				"clusterchain   List chain of clusters\r\n"
+				"clusterchain   List chain of FAT clusters\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
 				"\r\n"
 		);
@@ -120,14 +123,15 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("clearconfig") == 0) {				// Erase config from internal flash
-		printf("Clearing config\r\n");
-		config.ClearConfig();
+		printf("Clearing config and restarting ...\r\n");
+		config.SaveConfig(config.eraseConfig);
+		DelayMS(10);
+		Reboot();
 
 	} else if (cmd.compare("reboot") == 0) {					// Restart
-		__disable_irq();
-		__DSB();
-		NVIC_SystemReset();
-
+		printf("Rebooting ...\r\n");
+		DelayMS(10);
+		Reboot();
 
 	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
 		for (auto note : voiceManager.noteMapper) {

@@ -14,9 +14,11 @@ void Config::ScheduleSave()
 
 
 // Write calibration settings to Flash memory (H743 see programming manual p152 for sector layout)
-bool Config::SaveConfig()
+bool Config::SaveConfig(bool eraseOnly)
 {
 	scheduleSave = false;
+	bool result = true;
+
 	suspendI2S();
 
 	uint32_t cfgSize = SetConfig();
@@ -24,9 +26,18 @@ bool Config::SaveConfig()
 	__disable_irq();					// Disable Interrupts
 	FlashUnlock(2);						// Unlock Flash memory for writing
 	FLASH->SR2 = FLASH_ALL_ERRORS;		// Clear error flags in Status Register
-	ClearConfig();						// Erase flash if necessary
 
-	bool result = FlashProgram(addrFlashBank2Sector7, reinterpret_cast<uint32_t*>(&configBuffer), cfgSize);
+	// Check if flash needs erasing
+	for (uint32_t i = 0; i < BufferSize / 4; ++i) {
+		if (addrFlashBank2Sector7[i] != 0xFFFFFFFF) {
+			FlashEraseSector(7, 2);		// Erase sector 7, Bank 2 (See p152 of manual)
+			break;
+		}
+	}
+
+	if (!eraseOnly) {
+		result = FlashProgram(addrFlashBank2Sector7, reinterpret_cast<uint32_t*>(&configBuffer), cfgSize);
+	}
 	FlashLock(2);						// Lock Bank 2 Flash
 	__enable_irq(); 					// Enable Interrupts
 
@@ -101,18 +112,6 @@ void Config::RestoreConfig()
 	}
 }
 
-
-void Config::ClearConfig()
-{
-	// Check if flash needs erasing
-	for (uint32_t i = 0; i < BufferSize / 4; ++i) {
-		if (addrFlashBank2Sector7[i] != 0xFFFFFFFF) {
-			FlashEraseSector(7, 2);		// Erase sector 7, Bank 2 (See p152 of manual)
-			break;
-		}
-	}
-
-}
 
 
 // Unlock the FLASH control register access

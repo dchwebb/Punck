@@ -15,8 +15,8 @@ Samples::Samples()
 	sampler[playerB].tuningADC = &ADC_array[ADC_SampleBSpeed];
 	sampler[playerA].levelADC = &ADC_array[ADC_SampleALevel];
 	sampler[playerB].levelADC = &ADC_array[ADC_SampleBLevel];
-
 }
+
 
 void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRange, const float velocity)
 {
@@ -27,7 +27,11 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 	sampler[sp].velocityScale = velocity * (static_cast<float>(*sampler[sp].levelADC) / 32768.0f);
 
 	// Get sample from sorted bank list based on player and note offset
-	noteOffset = (noteOffset < sampler[sp].bankLen) ? noteOffset : 0;		// If there are no samples at that index just use first sample in bank
+	if (noteOffset == sampler[sp].bankLen) {								// Random mode
+		noteOffset = RNG->DR % (sampler[sp].bankLen - 1);
+	} else {
+		noteOffset = (noteOffset < sampler[sp].bankLen) ? noteOffset : 0;	// If no sample at index use first sample in bank
+	}
 	sampler[sp].sample = sampler[sp].bank[noteOffset].s;
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = static_cast<float>(sampler[sp].sample->sampleRate) / systemSampleRate;
@@ -37,7 +41,7 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 void Samples::Play(const uint8_t sp, uint32_t index)
 {
 	// Samples played from button: use voice pot to determine note
-	index =  (sampler[sp].bankLen * *sampler[sp].voiceADC) / 65536;
+	index =  (*sampler[sp].voiceADC * (sampler[sp].bankLen + 1)) / 65536;		// Last position is random mode
 
 	Play(sp, index, 0, 1.0f);
 }

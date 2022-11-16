@@ -69,6 +69,11 @@ uint32_t MidiHandler::ConstructSysEx(const uint8_t* dataBuffer, uint32_t dataLen
 		}
 	}
 
+	// FIXME - this is a specific fix for sending out 2 byte headers; end byte codes should be used correctly as below
+	if (dataLen == 0 && pos == 5) {
+		sysExOut[pos - 1] = 0x5;
+	}
+
 	bool lowerNibble = true;
 	for (uint32_t i = 0; i < dataLen; ++i) {
 		if (noSplit) {
@@ -215,7 +220,7 @@ void MidiHandler::ProcessSysex()
 			const uint8_t cfgHeader[2] = {GetSamples, samplePlayer};		// Insert header data
 
 			uint8_t* cfgBuffer = nullptr;
-			const uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);;
+			const uint32_t bytes = voiceManager.samples.SerialiseSampleNames(&cfgBuffer, samplePlayer);
 			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, cfgHeader, 2, noSplit);
 
 			usb->SendData(sysExOut, len, inEP);

@@ -26,7 +26,7 @@ private:
 
 	float noiseLevel;
 	float velocityScale;
-	float decayRate;
+	float sustainRate;
 
 	struct Config {
 		float noiseInitLevel = 1.0f;

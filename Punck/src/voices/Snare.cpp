@@ -20,7 +20,7 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
 
 	noteRange = noteRange == 0 ? 128 : noteRange;
-	decayRate = 0.00055f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
+	sustainRate = 0.001f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// note offset allows for longer sustained hits
 }
 
 
@@ -40,15 +40,15 @@ void Snare::CalcOutput()
 	}
 
 	if (playing) {
-		const float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
+		const float rand1 = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Left channel random number used for noise
 
-		noiseLevel *= config.noiseDecay + decayRate;
+		noiseLevel *= config.noiseDecay + sustainRate;
 		float maxLevel = noiseLevel;
 
 		float partialOutput = 0.0f;
 		for (uint8_t i = 0; i < partialCount; ++i) {
 			partialpos[i] += partialInc[i];							// Set current poition in sine wave
-			partialLevel[i] *= config.partialDecay + decayRate;
+			partialLevel[i] *= config.partialDecay + sustainRate;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
 			if (partialLevel[i] > maxLevel) {

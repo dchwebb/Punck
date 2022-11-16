@@ -10,18 +10,17 @@
 volatile uint32_t SysTickVal;		// 1 ms resolution
 extern uint32_t SystemCoreClock;
 
-// Store buffers that need to live in special memory areas
+// Create DMA buffer that need to live in non-cached memory area
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 
 // TODO:
 // Sample panning (naming? web interface?)
-// Web editor not refreshing correctly
 // Tempo clock out
 // Sample voice pot round robin
 // USB does not restart when unplugged and re-plugged in
 // Green LED too dim
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
-
+// Look at saving config when module has been idle for some time
 
 USB usb;
 
@@ -39,16 +38,16 @@ int main(void) {
 	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
-	InitPWMTimer();
+	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
 	InitRNG();						// Init random number generator
-	InitMidiUART();
-	InitADC();
-	InitDAC();
+	InitMidiUART();					// UART for receiving serial MIDI
+	InitADC();						// ADCs used to monitor potentiometer inputs
+	InitDAC();						// Available on debug pins
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
 
 	extFlash.Init();				// Initialise external QSPI Flash
-	InitIO();						// Initialise switches and LEDs
+	InitIO();						// Initialise buttons, switches and Tempo out
 	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 
 	usb.Init();
