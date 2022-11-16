@@ -113,9 +113,21 @@ void CDCHandler::ProcessCommand()
 		printf("Saving config\r\n");
 		config.SaveConfig();
 
-	} else if (cmd.compare("restoreconfig") == 0) {				// Restore confgi from internal flash
+
+	} else if (cmd.compare("restoreconfig") == 0) {				// Restore config from internal flash
 		printf("Restoring config\r\n");
 		config.RestoreConfig();
+
+
+	} else if (cmd.compare("clearconfig") == 0) {				// Erase config from internal flash
+		printf("Clearing config\r\n");
+		config.ClearConfig();
+
+	} else if (cmd.compare("reboot") == 0) {					// Restart
+		__disable_irq();
+		__DSB();
+		NVIC_SystemReset();
+
 
 	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
 		for (auto note : voiceManager.noteMapper) {
@@ -141,6 +153,7 @@ void CDCHandler::ProcessCommand()
 			}
 			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);
 		}
+
 
 	} else if (cmd.compare("readreg") == 0) {					// Read QSPI register
 		usb->SendString("Status register 1: " + std::to_string(extFlash.ReadStatus(ExtFlash::readStatusReg1)) +

@@ -1,8 +1,10 @@
 #include "Snare.h"
 #include "VoiceManager.h"
 
-void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t noteRange, const float velocity)
+void Snare::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity)
 {
+	playing = true;
+
 	partialInc[0] = FreqToInc(config.baseFreq);			// First Mode 0,1 frequency
 	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
@@ -16,14 +18,16 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t 
 	}
 	noiseLevel = config.noiseInitLevel;
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
-	playing = true;
+
+	noteRange = noteRange == 0 ? 128 : noteRange;
+	decayRate = 0.00055f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// store 0.0f - 1.0f to for amount closed
 }
 
 
 void Snare::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
-	Play(0, 0, 0, 1.0f);
+	Play(0, index, 0, 1.0f);
 }
 
 
@@ -37,15 +41,14 @@ void Snare::CalcOutput()
 
 	if (playing) {
 		const float rand1 = intToFloatMult * (int32_t)RNG->DR;		// Left channel random number used for noise
-		const float adcDecay = 0.00055f * 0.5;//static_cast<float>(ADC_array[ADC_SnareDecay]) / 65536.0f;		// FIXME - use dedicated ADC
 
-		noiseLevel *= config.noiseDecay + adcDecay;
+		noiseLevel *= config.noiseDecay + decayRate;
 		float maxLevel = noiseLevel;
 
 		float partialOutput = 0.0f;
 		for (uint8_t i = 0; i < partialCount; ++i) {
 			partialpos[i] += partialInc[i];							// Set current poition in sine wave
-			partialLevel[i] *= config.partialDecay + adcDecay;
+			partialLevel[i] *= config.partialDecay + decayRate;
 			partialOutput += std::sin(partialpos[i]) * partialLevel[i];
 
 			if (partialLevel[i] > maxLevel) {

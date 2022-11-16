@@ -115,6 +115,7 @@ var pickerTypeEnum = {discrete: 0, range: 1};
 var variationPicker = [
 	{voice: 'Sampler_A', picker: 'samplePicker0', pickerBlock: 'samplePickerBlock0', pickerType: pickerTypeEnum.discrete},
 	{voice: 'Sampler_B', picker: 'samplePicker1', pickerBlock: 'samplePickerBlock1', pickerType: pickerTypeEnum.discrete},
+	{voice: 'Snare', picker: 'snarePicker', pickerBlock: 'snarePickerBlock', pickerType: pickerTypeEnum.range},
 	{voice: 'HiHat', picker: 'hihatPicker', pickerBlock: 'hihatPickerBlock', pickerType: pickerTypeEnum.range},
 	{voice: 'Toms', picker: 'tomsPicker', pickerBlock: 'tomsPickerBlock', pickerType: pickerTypeEnum.range},
 ];
@@ -612,7 +613,11 @@ function BuildSequenceHtml()
 	}
 
 	// Add option pickers for hihat and toms
-	samplePickerhtml += `<div id="hihatPickerBlock" style="display: none;">
+	samplePickerhtml += `<div id="snarePickerBlock" style="display: none;">
+							<label style="padding: 5px;">Sustain  </label>   
+							<input id="snarePicker" onchange="PickerChanged('snarePicker');" value="0" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
+						</div>
+						<div id="hihatPickerBlock" style="display: none;">
 							<label style="padding: 5px;">Open  </label>   
 							<input id="hihatPicker" onchange="PickerChanged('hihatPicker');" value="0" min="0" max="127" type="range" class="topcoat-range" style="vertical-align: middle;">
 						 </div>

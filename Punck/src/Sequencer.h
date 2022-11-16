@@ -9,8 +9,8 @@ static constexpr uint8_t getActiveSequence = 127;		// Used in the web editor to 
 class Sequencer {
 public:
 	struct SeqInfo {
-		uint8_t bars;
-		uint8_t beatsPerBar;
+		uint8_t bars = 1;
+		uint8_t beatsPerBar = 16;
 	};
 	bool playing;
 	uint8_t activeSequence;
@@ -39,7 +39,7 @@ private:
 
 			} beat[maxBeatsPerBar][VoiceManager::Voice::count];
 		} bar[4];
-	} sequence[6];
+	} sequence[5];
 
 	float tempo;
 	uint32_t position;

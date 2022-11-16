@@ -4,6 +4,11 @@ Sequencer sequencer;
 
 Sequencer::Sequencer()
 {
+//	for (uint8_t i = 0; i < 5; ++i) {
+//		sequence[i].info.bars = 1;
+//		sequence[i].info.beatsPerBar = 16;
+//	}
+
 	// Create simple rock pattern for testing
 	sequence[0].info.bars = 2;
 	sequence[0].info.beatsPerBar = 16;
@@ -78,7 +83,7 @@ Sequencer::Sequencer()
 
 
 
-	// Create swingpattern for testing
+	// Create swing pattern for testing
 	sequence[1].info.bars = 1;
 	sequence[1].info.beatsPerBar = 24;
 

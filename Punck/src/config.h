@@ -13,11 +13,12 @@ extern USB usb;
 // Class used to store calibration settings - note this uses the Standard Peripheral Driver code
 class Config {
 public:
-	static constexpr uint32_t configVersion = 1;
+	static constexpr uint32_t configVersion = 2;
+	static constexpr uint32_t BufferSize = 16384;
 
 	bool scheduleSave = false;
 	uint32_t saveBooked;
-	uint8_t configBuffer[16384];		// Need a large buffer as drum sequence data is ~6k
+	uint8_t configBuffer[BufferSize];	// Need a large buffer as drum sequence data is ~6k
 
 	void Calibrate();
 	void AutoZeroOffset();				// Automatically adjusts ADC zero offset by averaging low level signals
@@ -25,6 +26,7 @@ public:
 	bool SaveConfig();
 	uint32_t SetConfig();				// Serialise configuration data into buffer
 	void RestoreConfig();				// gets config from Flash, checks and updates settings accordingly
+	void ClearConfig();					// Erases Flash config region if necessary
 
 	void FlashUnlock(uint8_t bank);
 	void FlashLock(uint8_t bank);
@@ -36,4 +38,4 @@ private:
 
 };
 
-extern Config config;;
+extern Config config;

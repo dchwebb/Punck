@@ -32,7 +32,7 @@ struct NoteMapper {
 			TriggerType triggers = (TriggerType)((btnGpioBank && (btnGpioBank->IDR & (1 << btnGpioPin)) == 0) ? 1 : 0 |
 							   (trgGpioBank && (trgGpioBank->IDR & (1 << trgGpioPin)) == 0) ? 2 : 0 |
 							   (tr2GpioBank && (tr2GpioBank->IDR & (1 << tr2GpioPin)) == 0) ? 4 : 0);
-			if (triggers) {		// Fixme - probably need difference debounce on each trigger
+			if (triggers) {		// Fixme - probably need different debounce on each trigger
 				if (debounce == 0) {
 					debounce = 20;
 					return triggers;
@@ -73,6 +73,9 @@ public:
 	void CheckButtons();
 	void IdleTasks();
 
+	uint32_t GetConfig(uint8_t** buff);							// Return a pointer to config data for saving
+	uint32_t StoreConfig(uint8_t* buff);							// Reads config data back into member values
+
 	Kick kickPlayer;
 	Snare snarePlayer;
 	Samples samples;
@@ -82,6 +85,7 @@ public:
 	NoteMapper noteMapper[Voice::count];
 private:
 	float FastTanh(const float x);
+	uint8_t config[Voice::count * 2];							// Buffer to store config data (currently used to store midi note mapping]
 
 	enum class ButtonMode {playNote, midiLearn, drumPattern};
 	enum class MidiLearnState {off, lowNote, highNote};

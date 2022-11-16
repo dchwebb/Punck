@@ -189,8 +189,8 @@ void VoiceManager::CheckButtons()
 
 	//	When switching to or from MIDI learn mode turn off all LEDs
 	if (oldMode != buttonMode && (oldMode == ButtonMode::midiLearn || buttonMode == ButtonMode::midiLearn)) {
-		for (auto& note : noteMapper) {
-			note.pwmLed.setMinLevel(0);
+		for (auto& nm : noteMapper) {
+			nm.pwmLed.setMinLevel(0);
 		}
 	}
 
@@ -230,3 +230,29 @@ void VoiceManager::IdleTasks()
 		}
 	}
 }
+
+
+uint32_t VoiceManager:: GetConfig(uint8_t** buff)
+{
+	// Return a pointer to config data for saving
+	uint8_t i = 0;
+	for (auto& nm : noteMapper) {
+		config[i++] = nm.midiLow;
+		config[i++] = nm.midiHigh;
+	}
+	*buff = config;
+	return sizeof(config);
+}
+
+
+uint32_t VoiceManager:: StoreConfig(uint8_t* buff)
+{
+	// Reads config data back into member values
+	uint8_t i = 0;
+	for (auto& nm : noteMapper) {
+		nm.midiLow = buff[i++];
+		nm.midiHigh = buff[i++];
+	}
+	return sizeof(config);
+}
+

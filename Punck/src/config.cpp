@@ -24,14 +24,7 @@ bool Config::SaveConfig()
 	__disable_irq();					// Disable Interrupts
 	FlashUnlock(2);						// Unlock Flash memory for writing
 	FLASH->SR2 = FLASH_ALL_ERRORS;		// Clear error flags in Status Register
-
-	// Check if flash needs erasing
-	for (uint32_t i = 0; i < cfgSize / 4; ++i) {
-		if (addrFlashBank2Sector7[i] != 0xFFFFFFFF) {
-			FlashEraseSector(7, 2);		// Erase sector 7, Bank 2 (See p152 of manual)
-			break;
-		}
-	}
+	ClearConfig();						// Erase flash if necessary
 
 	bool result = FlashProgram(addrFlashBank2Sector7, reinterpret_cast<uint32_t*>(&configBuffer), cfgSize);
 	FlashLock(2);						// Lock Bank 2 Flash
@@ -49,6 +42,7 @@ uint32_t Config::SetConfig()
 	strncpy(reinterpret_cast<char*>(configBuffer), "CFG", 4);		// Header
 	configBuffer[4] = configVersion;
 	uint32_t configPos = 8;											// Position in buffer to store data
+	uint32_t configSize = 0;										// Holds the size of each config buffer
 
 	uint8_t* cfgBuffer = nullptr;
 
@@ -56,14 +50,19 @@ uint32_t Config::SetConfig()
 	for (auto& nm : voiceManager.noteMapper) {
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
 
-			const uint32_t configSize = nm.drumVoice->SerialiseConfig(&cfgBuffer, nm.voiceIndex);
+			configSize = nm.drumVoice->SerialiseConfig(&cfgBuffer, nm.voiceIndex);
 			memcpy(&configBuffer[configPos], cfgBuffer, configSize);
 			configPos += configSize;
 		}
 	}
 
+	// MIDI note map
+	configSize = voiceManager.GetConfig(&cfgBuffer);
+	memcpy(&configBuffer[configPos], cfgBuffer, configSize);
+	configPos += configSize;
+
 	// Drum sequences
-	const uint32_t configSize = sequencer.GetSequences(&cfgBuffer);
+	configSize = sequencer.GetSequences(&cfgBuffer);
 	memcpy(&configBuffer[configPos], cfgBuffer, configSize);
 	configPos += configSize;
 
@@ -93,10 +92,26 @@ void Config::RestoreConfig()
 			}
 		}
 
+		// MIDI note map
+		configPos += voiceManager.StoreConfig(&flashConfig[configPos]);
+
 		// Drum sequences
 		sequencer.StoreSequences(&flashConfig[configPos]);
 		configPos += sequencer.SequencesSize();
 	}
+}
+
+
+void Config::ClearConfig()
+{
+	// Check if flash needs erasing
+	for (uint32_t i = 0; i < BufferSize / 4; ++i) {
+		if (addrFlashBank2Sector7[i] != 0xFFFFFFFF) {
+			FlashEraseSector(7, 2);		// Erase sector 7, Bank 2 (See p152 of manual)
+			break;
+		}
+	}
+
 }
 
 
