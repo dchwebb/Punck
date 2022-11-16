@@ -1,8 +1,7 @@
+#include <configManager.h>
 #include "samples.h"
 #include "FatTools.h"
 #include "VoiceManager.h"
-#include "config.h"
-
 #include <cstring>
 #include <cmath>
 
@@ -243,23 +242,28 @@ uint32_t Samples::SerialiseSampleNames(uint8_t** buff, const uint8_t voiceIndex)
 {
 	// Copy the first 8 characters of each file name to the config buffer
 	uint8_t s = 0;
-	for (; s < sampler[voiceIndex].bankLen; ++s) {
+	for (; s < sampler[voiceIndex].bankLen + 1; ++s) {
 		// overflow checking
-		if ((uint32_t)((s * 8) + 8) >= sizeof(config.configBuffer)) {
+		if ((uint32_t)((s * 8) + 8) >= sizeof(configManager.configBuffer)) {
 			break;
 		}
 
-		const char* sampleName = sampler[voiceIndex].bank[s].s->name;
-		memcpy(config.configBuffer + (s * 8), sampleName, 8);
+		if (s < sampler[voiceIndex].bankLen) {
+			const char* sampleName = sampler[voiceIndex].bank[s].s->name;
+			memcpy(configManager.configBuffer + (s * 8), sampleName, 8);
+		} else {
+			// Create dummy name for random mode
+			strncpy((char*)configManager.configBuffer + (s * 8), "-Random-", 8);
+		}
 	}
 
 	// Check that there are no characters with ASCII code > 127 for sysex transmission (replace with "_")
 	for (uint8_t i; i < s * 8; ++i) {
-		if (config.configBuffer[i] & 0x80) {
-			config.configBuffer[i] = '_';
+		if (configManager.configBuffer[i] & 0x80) {
+			configManager.configBuffer[i] = '_';
 		}
 	}
-	*buff = config.configBuffer;
+	*buff = configManager.configBuffer;
 	return s * 8;
 }
 

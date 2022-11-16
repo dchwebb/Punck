@@ -15,7 +15,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E, GetADC: 0x1F, SetADC: 0x2F
+    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E, SaveConfig: 0x1F
 };
 
 
@@ -86,29 +86,6 @@ var hihatSettings = [
 	{name: 'Partial 5 Frequency'},
 ];
 
-
-var ADC_Controls = [
-	{name: 'Tempo', value: 'ADC_Tempo'},
-
-	{name: 'Kick Level', value: 'ADC_KickLevel'},
-	{name: 'Kick Attack', value: 'ADC_KickFilter'},
-	{name: 'Kick Decay', value: 'ADC_KickDecay'},
-
-	{name: 'Snare Level', value: 'ADC_SnareLevel'},
-	{name: 'Snare Filter', value: 'ADC_SnareFilter'},
-	{name: 'Snare Decay', value: 'ADC_SnareDecay'},
-	{name: 'Snare Tuning', value: 'ADC_SnareTuning'},
-	
-	{name: 'HiHat Level', value: 'ADC_HiHatLevel'},
-	{name: 'HiHat Decay', value: 'ADC_HiHatDecay'},
-
-	{name: 'Sample A Level', value: 'ADC_SampleALevel'},
-	{name: 'Sample A Speed', value: 'ADC_SampleASpeed'},
-	{name: 'Sample B Level', value: 'ADC_SampleBLevel'},
-	{name: 'Sample B Speed', value: 'ADC_SampleBSpeed'},
-
-	{name: 'Toms Level', value: 'ADC_TomsLevel'},
-];
 
 var pickerTypeEnum = {discrete: 0, range: 1};
 
@@ -306,11 +283,10 @@ function afterLoad()
 {
 	// Build button bar
 	var html = '<div style="padding: 2px">Drum Sequence:</div> <div>';
-	for (var s = 0; s < 6; ++s) {
+	for (var s = 0; s < 5; ++s) {
 		html += `<button id="btnSeq${s}" class="topcoat-button-bar__button--large" onclick="RefreshSequence(${s})" >${s + 1}</button> `;
 	}
 	html += `&nbsp;&nbsp;<button id="btnEditConfig" class="topcoat-button-bar__button--large" onclick="RefreshConfig();" style="background-color: rgb(74, 77, 78)">Drum Settings</button>
-			 &nbsp;&nbsp;<button id="btnEditADC" class="topcoat-button-bar__button--large" onclick="RefreshADC();" style="background-color: rgb(74, 77, 78)">ADC Editor</button>
 		</div>`;
 	document.getElementById("buttonBar").innerHTML = html;
 	ClearButtonBar();
@@ -335,11 +311,10 @@ function afterLoad()
 function ClearButtonBar()
 {
 	// Reset all button bar colours so selected button/tab can be lightened
-	for (var s = 0; s < 6; ++s) {
+	for (var s = 0; s < 5; ++s) {
 		document.getElementById(`btnSeq${s}`).style.backgroundColor = "rgb(74, 77, 78)";
 	}
 	document.getElementById(`btnEditConfig`).style.backgroundColor = "rgb(74, 77, 78)";
-	document.getElementById(`btnEditADC`).style.backgroundColor = "rgb(74, 77, 78)";
 }
 
 
@@ -520,63 +495,6 @@ function SequenceChanged()
 }
 
 
-function ADCChanged()
-{
-	var adcSettings = new Uint16Array(ADC_Controls.length);
-
-	for (var i = 0; i < ADC_Controls.length; ++i) {
-		adcSettings[i] = document.getElementById(ADC_Controls[i].value).value;
-	}
-	var byteArray = new Uint8Array(adcSettings.buffer);
-
-    // Convert to sysex information
-    var message = new Uint8Array(3 + (byteArray.length * 2));
-    message[0] = 0xF0;
-    message[1] = requestEnum.SetADC;
-    var msgPos = 2;
-   
-	// Since the upper bit of a sysex byte cannot be set, split each byte into an upper and lower nibble for transmission
-	var lowerNibble = true;
-    for (i = 0; i < byteArray.length * 2; ++i) {
-		if (lowerNibble) {
-			message[msgPos++] = byteArray[Math.trunc(i / 2)] & 0xF;
-		} else {
-			message[msgPos++] = byteArray[Math.trunc(i / 2)] >> 4;
-		}
-        lowerNibble = !lowerNibble;
-    }
-	message[msgPos] = 0xF7;
-
-	PrintMessage(message);			// Print contents of payload to console
-	output.send(message);
-
-
-}
-
-
-function BuildADCHtml(settings)
-{
-	var adcSettings = new Uint16Array(new Uint8Array(settings).buffer);
-
-	// Build html lists of settings for each drum voice
-	var html = '<div style="display: grid; grid-template-columns: 150px 300px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.3);">';
-	for (var i = 0; i < ADC_Controls.length; ++i) {
-		html += `<div class="grid-container3">${ADC_Controls[i].name}</div>` +
-				`<div style="padding-top: 12px;">
-					<input id="${ADC_Controls[i].value}" onchange="ADCChanged();" value="${adcSettings[i]}" min="0" max="65535" type="range" class="topcoat-range">	
-				 </div>`;
-	}
-
-	html += '</div>'
-
-	document.getElementById("drumEditor").innerHTML = html;
-
-	ClearButtonBar();
-	document.getElementById(`btnEditADC`).style.backgroundColor = "#737373";
-
-}
-
-
 function BuildSequenceHtml()
 {
 	// Build drum sequence editor html
@@ -691,6 +609,15 @@ function RequestSequence(seq, bar)
 }
 
 
+function SaveConfig()
+{
+	// Creates a SysEx request for a sequence
+	var message = [0xF0, requestEnum.SaveConfig, 0, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
+	output.send(message);
+}
+
+
 function RequestStatus()
 {
 	// Creates a SysEx request for current playing position
@@ -704,14 +631,6 @@ function RefreshConfig()
 {
 	requestNo = 0;
 	RequestConfig(drumSettings[requestNo].id);
-}
-
-
-function RefreshADC()
-{
-	var message = [0xF0, requestEnum.GetADC, 0, 0xF7];
-	PrintMessage(message);			// Print contents of payload to console
-    output.send(message);
 }
 
 
@@ -822,11 +741,6 @@ function getMIDIMessage(midiMessage)
     if (midiMessage.data[0] == 0xF0) {
 
 		switch (midiMessage.data[1]) {
-			case requestEnum.GetADC:
-				var sysEx = DecodeSysEx(midiMessage.data, 2);	// 2 is length of header
-				PrintMessage(sysEx, true);						// Print contents of payload to console
-				BuildADCHtml(sysEx);
-				break;
 
 			case requestEnum.GetStatus:
 				PrintMessage(midiMessage.data, true);			// Print contents of payload to console

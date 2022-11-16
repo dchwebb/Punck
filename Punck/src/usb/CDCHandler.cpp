@@ -1,6 +1,6 @@
+#include <configManager.h>
 #include "USB.h"
 #include "CDCHandler.h"
-#include "Config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
 #include "Samples.h"
@@ -114,17 +114,17 @@ void CDCHandler::ProcessCommand()
 
 	} else if (cmd.compare("saveconfig") == 0) {				// Serialise config to internal flash
 		printf("Saving config\r\n");
-		config.SaveConfig();
+		configManager.SaveConfig();
 
 
 	} else if (cmd.compare("restoreconfig") == 0) {				// Restore config from internal flash
 		printf("Restoring config\r\n");
-		config.RestoreConfig();
+		configManager.RestoreConfig();
 
 
 	} else if (cmd.compare("clearconfig") == 0) {				// Erase config from internal flash
 		printf("Clearing config and restarting ...\r\n");
-		config.SaveConfig(config.eraseConfig);
+		configManager.SaveConfig(configManager.eraseConfig);
 		DelayMS(10);
 		Reboot();
 

@@ -1,8 +1,8 @@
+#include <configManager.h>
 #include "initialisation.h"
 #include "USB.h"
 #include "Filter.h"
 #include "VoiceManager.h"
-#include "config.h"
 #include "ExtFlash.h"
 #include "FatTools.h"
 
@@ -16,11 +16,9 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // TODO:
 // Sample panning (naming? web interface?)
 // Tempo clock out
-// Sample voice pot round robin
 // USB does not restart when unplugged and re-plugged in
 // Green LED too dim
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
-// Look at saving config when module has been idle for some time
 
 USB usb;
 
@@ -48,7 +46,7 @@ int main(void) {
 
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise buttons, switches and Tempo out
-	config.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
+	configManager.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
 
 	usb.Init();
 	InitI2S();						// Initialise I2S which will start main sample interrupts

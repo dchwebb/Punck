@@ -37,4 +37,4 @@ private:
 
 };
 
-extern Config config;
+extern Config configManager;

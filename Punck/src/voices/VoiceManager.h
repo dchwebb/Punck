@@ -50,6 +50,9 @@ struct NoteMapper {
 		volatile uint32_t* timerChannel;
 		uint32_t minLevel = 0;
 
+		uint32_t GetLevel()  {
+			return *timerChannel;
+		}
 		void Level(float brightness)  {
 			*timerChannel = std::max(minLevel, static_cast<uint32_t>(brightness * 4095.0f));
 		}
@@ -72,9 +75,12 @@ public:
 	void Output();
 	void CheckButtons();
 	void IdleTasks();
+	void SetAllLeds(float val);
+	void RestoreAllLeds();
+
 
 	uint32_t GetConfig(uint8_t** buff);							// Return a pointer to config data for saving
-	uint32_t StoreConfig(uint8_t* buff);							// Reads config data back into member values
+	uint32_t StoreConfig(uint8_t* buff);						// Reads config data back into member values
 
 	Kick kickPlayer;
 	Snare snarePlayer;
@@ -93,6 +99,8 @@ private:
 	uint8_t midiLearnVoice;
 	MidiLearnState midiLearnState;
 	int16_t midiLearnCounter;
+	uint32_t ledBackup[Voice::count];
+
 };
 
 extern VoiceManager voiceManager;

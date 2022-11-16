@@ -31,6 +31,9 @@ public:
 	const float pitchBendSemiTones = 12.0f;					// Number of semitones for a full pitchbend
 
 private:
+	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D,
+		GetStatus = 0x1E, SaveConfig = 0x1F};
+
 	void midiEvent(const uint32_t data);
 	void QueueInc();
 	void ProcessSysex();

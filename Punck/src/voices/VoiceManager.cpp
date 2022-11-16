@@ -1,9 +1,8 @@
+#include <configManager.h>
 #include "VoiceManager.h"
 #include "Sequencer.h"
 
 VoiceManager voiceManager;
-
-
 
 
 VoiceManager::VoiceManager()
@@ -137,6 +136,7 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 			n.midiHigh = midiNote.noteValue;
 			midiLearnState = MidiLearnState::highNote;
 		} else {
+			configManager.ScheduleSave();
 			n.midiHigh = midiNote.noteValue;
 			if (n.midiLow > n.midiHigh) {
 				std::swap(n.midiLow, n.midiHigh);
@@ -187,8 +187,11 @@ void VoiceManager::CheckButtons()
 		buttonMode = ButtonMode::playNote;
 	}
 
-	//	When switching to or from MIDI learn mode turn off all LEDs
+	//	When switching to or from MIDI learn mode turn off all LEDs save if required and turn off LEDs
 	if (oldMode != buttonMode && (oldMode == ButtonMode::midiLearn || buttonMode == ButtonMode::midiLearn)) {
+		if (oldMode == ButtonMode::midiLearn && configManager.scheduleSave) {
+			configManager.SaveConfig();
+		}
 		for (auto& nm : noteMapper) {
 			nm.pwmLed.setMinLevel(0);
 		}
@@ -256,3 +259,25 @@ uint32_t VoiceManager:: StoreConfig(uint8_t* buff)
 	return sizeof(config);
 }
 
+
+void VoiceManager::SetAllLeds(float val)
+{
+	// Used so one-off processes like config storing can flash all LEDs simultaneously and then restore settings
+	for (auto& nm : voiceManager.noteMapper) {
+		if (nm.pwmLed.timerChannel) {
+			ledBackup[nm.voice] = *nm.pwmLed.timerChannel;
+			nm.pwmLed.Level(val);
+		}
+	}
+}
+
+
+void VoiceManager::RestoreAllLeds()
+{
+	// Restore leds to previous values after setting all
+	for (auto& nm : voiceManager.noteMapper) {
+		if (nm.pwmLed.timerChannel) {
+			*nm.pwmLed.timerChannel = ledBackup[nm.voice];
+		}
+	}
+}

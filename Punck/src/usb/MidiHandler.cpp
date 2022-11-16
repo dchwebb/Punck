@@ -1,7 +1,7 @@
+#include <configManager.h>
 #include "USB.h"
 #include "MidiHandler.h"
 #include "VoiceManager.h"
-#include "config.h"
 #include "sequencer.h"
 
 
@@ -121,9 +121,9 @@ uint32_t MidiHandler::ReadCfgSysEx(uint8_t headerLength)
 	for (uint32_t i = headerLength; i < sysExCount; ++i) {
 		uint32_t idx = (i - headerLength) / 2;
 		if (lowerNibble) {
-			config.configBuffer[idx] = sysEx[i];
+			configManager.configBuffer[idx] = sysEx[i];
 		} else {
-			config.configBuffer[idx] += sysEx[i] << 4;
+			configManager.configBuffer[idx] += sysEx[i] << 4;
 		}
 		lowerNibble = !lowerNibble;
 	}
@@ -133,9 +133,6 @@ uint32_t MidiHandler::ReadCfgSysEx(uint8_t headerLength)
 
 void MidiHandler::ProcessSysex()
 {
-	enum sysExCommands {StartStopSeq = 0x1A, GetSequence = 0x1B, SetSequence = 0x2B, GetVoiceConfig = 0x1C, SetVoiceConfig = 0x2C, GetSamples = 0x1D,
-		GetStatus = 0x1E, GetADC = 0x1F, SetADC = 0x2F};
-
 	// Check if SysEx contains read config command
 	switch (sysEx[0]) {
 		case GetVoiceConfig:
@@ -157,7 +154,7 @@ void MidiHandler::ProcessSysex()
 		case SetVoiceConfig:
 			if (sysEx[1] < VoiceManager::Voice::count) {
 				const uint32_t bytes = ReadCfgSysEx(2);
-				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(config.configBuffer, bytes);
+				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(configManager.configBuffer, bytes);
 			}
 			break;
 
@@ -165,16 +162,20 @@ void MidiHandler::ProcessSysex()
 			sequencer.StartStop(sysEx[1]);
 			break;
 
+		case SaveConfig:
+			configManager.SaveConfig();
+			break;
+
 		case GetStatus:
 		{
 			// Get playing status from sequence
-			config.configBuffer[0] = GetStatus;
-			config.configBuffer[1] = sequencer.playing ? 1 : 0;					// playing
-			config.configBuffer[2] = sequencer.activeSequence; 					// active sequence
-			config.configBuffer[3] = sequencer.currentBar;     					// current bar
-			config.configBuffer[4] = sequencer.currentBeat;    					// current beat
+			configManager.configBuffer[0] = GetStatus;
+			configManager.configBuffer[1] = sequencer.playing ? 1 : 0;					// playing
+			configManager.configBuffer[2] = sequencer.activeSequence; 					// active sequence
+			configManager.configBuffer[3] = sequencer.currentBar;     					// current bar
+			configManager.configBuffer[4] = sequencer.currentBeat;    					// current beat
 
-			const uint32_t len = ConstructSysEx(config.configBuffer, 5, nullptr, 0, noSplit);
+			const uint32_t len = ConstructSysEx(configManager.configBuffer, 5, nullptr, 0, noSplit);
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
@@ -189,15 +190,15 @@ void MidiHandler::ProcessSysex()
 			auto seqInfo = sequencer.GetSeqInfo(seq);
 
 			// Insert header data
-			config.configBuffer[0] = GetSequence;
-			config.configBuffer[1] = seq;					// sequence
-			config.configBuffer[2] = seqInfo.beatsPerBar;	// beats per bar
-			config.configBuffer[3] = seqInfo.bars;			// bars
-			config.configBuffer[4] = bar;					// bar number
+			configManager.configBuffer[0] = GetSequence;
+			configManager.configBuffer[1] = seq;					// sequence
+			configManager.configBuffer[2] = seqInfo.beatsPerBar;	// beats per bar
+			configManager.configBuffer[3] = seqInfo.bars;			// bars
+			configManager.configBuffer[4] = bar;					// bar number
 
 			uint8_t* cfgBuffer = nullptr;
 			const uint32_t bytes = sequencer.GetBar(&cfgBuffer, seq, bar);
-			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, config.configBuffer, 5, noSplit);
+			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, configManager.configBuffer, 5, noSplit);
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
@@ -226,25 +227,7 @@ void MidiHandler::ProcessSysex()
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}
-
-		case GetADC:
-			{
-				// Get current (virtual) ADC settings
-				config.configBuffer[0] = GetADC;
-
-				const uint32_t len = ConstructSysEx((uint8_t*)ADC_array, sizeof(ADC_array), config.configBuffer, 1, split);
-				usb->SendData(sysExOut, len, inEP);
-			}
-			break;
-
-		case SetADC:
-			{
-				const uint32_t bytes = ReadCfgSysEx(1);
-				memcpy((uint8_t*)ADC_array, config.configBuffer, bytes);
-			}
-			break;
 	}
-
 
 
 }

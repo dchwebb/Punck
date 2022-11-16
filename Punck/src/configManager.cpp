@@ -1,9 +1,9 @@
-#include <config.h>
+#include <configManager.h>
 #include <cmath>
 #include "VoiceManager.h"
 #include "Sequencer.h"
 
-Config config;
+Config configManager;
 
 // called whenever a config setting is changed to schedule a save after waiting to see if any more changes are being made
 void Config::ScheduleSave()
@@ -16,6 +16,9 @@ void Config::ScheduleSave()
 // Write calibration settings to Flash memory (H743 see programming manual p152 for sector layout)
 bool Config::SaveConfig(bool eraseOnly)
 {
+	// Set all LEDs to full
+	voiceManager.SetAllLeds(1.0f);
+
 	scheduleSave = false;
 	bool result = true;
 
@@ -38,10 +41,12 @@ bool Config::SaveConfig(bool eraseOnly)
 	if (!eraseOnly) {
 		result = FlashProgram(addrFlashBank2Sector7, reinterpret_cast<uint32_t*>(&configBuffer), cfgSize);
 	}
-	FlashLock(2);						// Lock Bank 2 Flash
-	__enable_irq(); 					// Enable Interrupts
 
+	FlashLock(2);						// Lock Bank 2 Flash
+	voiceManager.RestoreAllLeds();
+	__enable_irq(); 					// Enable Interrupts
 	resumeI2S();
+
 	return result;
 }
 
