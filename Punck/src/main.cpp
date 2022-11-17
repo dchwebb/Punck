@@ -19,6 +19,8 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // USB does not restart when unplugged and re-plugged in
 // Green LED too dim
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
+// Performance updates
+// Add claps voice
 
 USB usb;
 
@@ -33,7 +35,7 @@ int main(void) {
 	InitSysTick();
 
 #if (USB_DEBUG)
-	InitUART();						// Used on Nucleo for debugging USB
+//	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
 	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
@@ -46,7 +48,7 @@ int main(void) {
 
 	extFlash.Init();				// Initialise external QSPI Flash
 	InitIO();						// Initialise buttons, switches and Tempo out
-	configManager.RestoreConfig();			// Restore configuration settings (ADC offsets etc)
+	configManager.RestoreConfig();	// Restore configuration settings (voice config, MIDI mapping, drum sequences)
 
 	usb.Init();
 	InitI2S();						// Initialise I2S which will start main sample interrupts
@@ -57,9 +59,9 @@ int main(void) {
 		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
-		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
-			usb.OutputDebug();
-		}
+//		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
+//			usb.OutputDebug();
+//		}
 #endif
 
 	}

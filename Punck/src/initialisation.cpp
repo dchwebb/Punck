@@ -664,7 +664,7 @@ void InitQSPI()
 	GPIOC->AFR[1] |= 9 << GPIO_AFRH_AFSEL11_Pos;	// Alternate function 9
 
 	// FIXME - slowed down as having problems on dev setup
-	QUADSPI->CR |= 15 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
+	QUADSPI->CR |= 7 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 8 = ~25MHz
 
 	if (dualFlashMode) {
 		QUADSPI->DCR |= 24 << QUADSPI_DCR_FSIZE_Pos;// Set bytes in Flash memory to 2^(FSIZE + 1) = 2^25 = 32 Mbytes

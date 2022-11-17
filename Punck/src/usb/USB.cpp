@@ -286,10 +286,11 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 			USBx_INEP(i)->DIEPCTL &= ~USB_OTG_DIEPCTL_STALL;
 			USBx_OUTEP(i)->DOEPINT = 0xFB7FU;
 			USBx_OUTEP(i)->DOEPCTL &= ~USB_OTG_DOEPCTL_STALL;
+			//USBx_OUTEP(i)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;		// FIXME ADDED
 		}
 		USBx_DEVICE->DAINTMSK |= 0x10001U;
 
-		USBx_DEVICE->DOEPMSK |= USB_OTG_DOEPMSK_STUPM | USB_OTG_DOEPMSK_XFRCM | USB_OTG_DOEPMSK_EPDM | USB_OTG_DOEPMSK_OTEPSPRM;			//  | USB_OTG_DOEPMSK_NAKM
+		USBx_DEVICE->DOEPMSK |= USB_OTG_DOEPMSK_STUPM | USB_OTG_DOEPMSK_XFRCM | USB_OTG_DOEPMSK_EPDM | USB_OTG_DOEPMSK_OTEPSPRM;			// FIXME ADD?: | USB_OTG_DOEPMSK_NAKM
 		USBx_DEVICE->DIEPMSK |= USB_OTG_DIEPMSK_TOM | USB_OTG_DIEPMSK_XFRCM | USB_OTG_DIEPMSK_EPDM;
 
 		// Set Default Address to 0 (will be set later when address instruction received from host)
@@ -342,6 +343,20 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		if ((temp & USB_OTG_GOTGINT_SEDET) == USB_OTG_GOTGINT_SEDET) {
 			//HAL_PCD_DisconnectCallback(hpcd);
 			//pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
+
+			devState = DeviceState::Default;
+
+			// for each endpoint:
+			for (uint8_t epnum = 1; epnum < 5; ++epnum) {
+				USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_IEPM & (uint32_t)(1UL << (epnum & EP_ADDR_MASK)));
+				USBx_INEP(epnum)->DIEPCTL &= ~(USB_OTG_DIEPCTL_USBAEP | USB_OTG_DIEPCTL_MPSIZ | USB_OTG_DIEPCTL_TXFNUM | USB_OTG_DIEPCTL_SD0PID_SEVNFRM | USB_OTG_DIEPCTL_EPTYP);		// sets diepctl1 = 0
+
+				USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
+				USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_EPDIS;
+
+				USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << (epnum & EP_ADDR_MASK)) << 16));
+				USBx_OUTEP(epnum)->DOEPCTL &= ~(USB_OTG_DOEPCTL_USBAEP | USB_OTG_DOEPCTL_MPSIZ | USB_OTG_DOEPCTL_SD0PID_SEVNFRM | USB_OTG_DOEPCTL_EPTYP);
+			}
 		}
 		USB_OTG_FS->GOTGINT |= temp;
 	}
@@ -865,23 +880,23 @@ void USB::OutputDebug() {
 			}
 
 			break;
-		case USB_OTG_GINTSTS_SRQINT:
+		case USB_OTG_GINTSTS_SRQINT:		// 0x40000000
 			interrupt = "SRQINT";
 			break;
-		case USB_OTG_GINTSTS_USBSUSP:
+		case USB_OTG_GINTSTS_USBSUSP:		// 0x800
 			interrupt = "USBSUSP";
 			break;
-		case USB_OTG_GINTSTS_WKUINT:
+		case USB_OTG_GINTSTS_WKUINT:		// 0x80000000
 			interrupt = "WKUINT";
 			break;
-		case USB_OTG_GINTSTS_USBRST:
+		case USB_OTG_GINTSTS_USBRST:		// 0x1000
 			interrupt = "USBRST";
 			subtype = "";
 			break;
-		case USB_OTG_GINTSTS_ENUMDNE:
+		case USB_OTG_GINTSTS_ENUMDNE:		// 0x2000
 			interrupt = "ENUMDNE";
 			break;
-		case USB_OTG_GINTSTS_OEPINT:
+		case USB_OTG_GINTSTS_OEPINT:		// 0x80000
 			interrupt = "OEPINT";
 
 			switch (usbDebug[evNo].IntData) {
@@ -895,7 +910,7 @@ void USB::OutputDebug() {
 				subtype = "";
 			}
 			break;
-		case USB_OTG_GINTSTS_IEPINT:
+		case USB_OTG_GINTSTS_IEPINT:		// 0x40000
 			interrupt = "IEPINT";
 
 				switch (usbDebug[evNo].IntData) {

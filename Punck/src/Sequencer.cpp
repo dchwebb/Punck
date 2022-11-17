@@ -4,11 +4,6 @@ Sequencer sequencer;
 
 Sequencer::Sequencer()
 {
-//	for (uint8_t i = 0; i < 5; ++i) {
-//		sequence[i].info.bars = 1;
-//		sequence[i].info.beatsPerBar = 16;
-//	}
-
 	// Create simple rock pattern for testing
 	sequence[0].info.bars = 2;
 	sequence[0].info.beatsPerBar = 16;
@@ -161,6 +156,11 @@ void Sequencer::Play()
 		uint32_t beatLen = (18000.0f - tempo) * (16.0f / (float)seq.info.beatsPerBar);
 
 		if (position == 0) {
+			if (clockEveryTick || (currentBeat % (seq.info.beatsPerBar == 16 ? 4 : 6) == 0)) {
+				GPIOD->ODR |= GPIO_ODR_OD9;					// PD9: activate tempo out
+				clockOn = SysTickVal;
+			}
+
 			for (uint32_t i = 0; i < VoiceManager::Voice::count; ++i) {
 				auto& b = seq.bar[currentBar].beat[currentBeat][i];
 				if (b.level > 0) {
@@ -168,6 +168,12 @@ void Sequencer::Play()
 					note.drumVoice->Play(note.voiceIndex, b.index, 0, static_cast<float>(b.level) / 127.0f);
 				}
 			}
+		}
+
+		// Turn off clock pulse after 6ms
+		if (clockOn > 0 && SysTickVal > clockOn + 6) {
+			clockOn = 0;
+			GPIOD->ODR &= ~GPIO_ODR_OD9;				// PD9: clear tempo out pin
 		}
 
 		if (++position > beatLen) {
@@ -236,6 +242,7 @@ void Sequencer::StoreSequences(uint8_t* buff)
 	// Store complete set of sequences
 	memcpy(sequence, buff, sizeof(sequence));
 }
+
 
 void Sequencer::StoreConfig(uint8_t* buff, uint32_t len, uint8_t seq, uint8_t bar, uint8_t beatsPerBar, uint8_t bars)
 {

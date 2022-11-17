@@ -6448,7 +6448,7 @@
     (property "Reference" "Y1" (id 0) (at 40.64 81.28 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Value" "8MHz 20pF" (id 1) (at 24.13 83.82 90)
+    (property "Value" "12MHz 20pF" (id 1) (at 24.13 83.82 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Footprint" "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm" (id 2) (at 38.1 83.82 0)
@@ -10124,7 +10124,7 @@
       (reference "U7") (unit 1) (value "LD1117-3.3-4Tab") (footprint "Package_TO_SOT_SMD:SOT-223-3_TabPin2")
     )
     (path "/00000000-0000-0000-0000-00005f020654"
-      (reference "Y1") (unit 1) (value "8MHz 20pF") (footprint "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm")
+      (reference "Y1") (unit 1) (value "12MHz 20pF") (footprint "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm")
     )
   )
 )

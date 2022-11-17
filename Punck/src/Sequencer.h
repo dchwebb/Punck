@@ -16,6 +16,7 @@ public:
 	uint8_t activeSequence;
 	uint8_t currentBar;
 	uint8_t currentBeat;
+	bool clockEveryTick = false;		// If false tempo out will only happen on quarter notes
 
 	Sequencer();
 	void StartStop(uint8_t sequence);
@@ -44,7 +45,7 @@ private:
 	float tempo;
 	uint32_t position;
 	static const uint32_t currSeqBrightness = 50;	// brightness of led indicating playing sequence
-
+	uint32_t clockOn;				// Time when tempo clock is turned on to schedule switching off
 	void ChangeSequence(uint8_t newSeq);
 };
 
