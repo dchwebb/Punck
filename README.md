@@ -1,5 +1,5 @@
 # Punck
-![Image](https://github.com/dchwebb/Punck/raw/master/pictures/Punck_Front.png "icon")
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Front.jpg "icon")
 
 Overview
 --------
@@ -17,7 +17,7 @@ A browser-based editor allows drum sequences to be entered graphically and detai
 Technical
 ------------
 
-![Image](https://github.com/dchwebb/Punck/raw/master/pictures/Punck_Back.png "icon")
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Back.jpg "icon")
 
 +12V Current Draw: 123mA
 -12V Current Draw: 8mA
