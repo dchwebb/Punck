@@ -117,6 +117,20 @@ void CDCHandler::ProcessCommand()
 		configManager.SaveConfig();
 
 
+	} else if (cmd.compare(0, 5, "leds:") == 0) {				// Percentage brightness of all leds
+		const int32_t percent = ParseInt(cmd, ':', 0, 100);
+		if (percent >= 0) {
+			voiceManager.SetAllLeds((float)percent / 100.0f);
+		}
+
+
+	} else if (cmd.compare("revertleds") == 0) {				// Revert leds to previous values
+		voiceManager.RestoreAllLeds();
+
+	} else if (cmd.compare("uart") == 0) {						// Test UART
+		uartSendString("test\r\n");
+
+
 	} else if (cmd.compare("restoreconfig") == 0) {				// Restore config from internal flash
 		printf("Restoring config\r\n");
 		configManager.RestoreConfig();

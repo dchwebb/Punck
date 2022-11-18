@@ -16,7 +16,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 // TODO:
 // Sample panning (naming? web interface?)
 // USB does not restart when unplugged and re-plugged in
-// Green LED too dim
+// Green LED too dim, red too bright
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
 // Performance updates
 // Add claps voice
@@ -26,6 +26,8 @@ USB usb;
 extern "C" {
 #include "interrupts.h"
 }
+
+bool uarttest = false;
 
 int main(void) {
 
@@ -57,6 +59,10 @@ int main(void) {
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
 		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
+		if (uarttest) {
+			uarttest = false;
+			uartSendString("test\r\n");
+		}
 #if (USB_DEBUG)
 //		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
 //			usb.OutputDebug();

@@ -1,7 +1,7 @@
 #include "uartHandler.h"
 
 volatile uint8_t uartCmdPos = 0;
-volatile char uartCmd[100];
+volatile char uartCmd[255];
 volatile bool uartCmdRdy = false;
 
 
@@ -60,7 +60,8 @@ extern "C" {
 // USART Decoder
 void UART7_IRQHandler() {
 	if (!uartCmdRdy) {
-		uartCmd[uartCmdPos] = UART7->RDR; 				// accessing RDR automatically resets the receive flag
+		const uint32_t recData = UART7->RDR;						// Note that 32 bits must be read to clear the receive flag
+		uartCmd[uartCmdPos] = (char)recData; 				// accessing RDR automatically resets the receive flag
 		if (uartCmd[uartCmdPos] == 10) {
 			uartCmdRdy = true;
 			uartCmdPos = 0;
