@@ -27,7 +27,6 @@ extern "C" {
 #include "interrupts.h"
 }
 
-bool uarttest = false;
 
 int main(void) {
 
@@ -59,10 +58,6 @@ int main(void) {
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
 		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
-		if (uarttest) {
-			uarttest = false;
-			uartSendString("test\r\n");
-		}
 #if (USB_DEBUG)
 //		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
 //			usb.OutputDebug();
