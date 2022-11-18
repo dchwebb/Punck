@@ -1,0 +1,15 @@
+// Disconnect
+Suspend
+Disconnection
+
+
+// After reconnect:
+// Resume
+// Connect
+// Suspend
+// Reset
+
+0,40000000,SRQINT,0,,0,0, 0, 0, 0, 0, 0, 0,
+1,800,USBSUSP,0,,0,0, 0, 0, 0, 0, 0, 0,
+2,1000,USBRST,0,,0,0, 0, 0, 0, 0, 0, 0,
+3,2000,ENUMDNE,0,,0,0, 0, 0, 0, 0, 0, 0,

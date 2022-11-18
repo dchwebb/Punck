@@ -15,7 +15,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // Sample panning (naming? web interface?)
-// Tempo clock out
 // USB does not restart when unplugged and re-plugged in
 // Green LED too dim
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
@@ -35,7 +34,7 @@ int main(void) {
 	InitSysTick();
 
 #if (USB_DEBUG)
-//	InitUART();						// Used on Nucleo for debugging USB
+	InitUART();						// Used on Nucleo for debugging USB
 #endif
 
 	InitPWMTimer();					// PWM Timers used for adjustable LED brightness

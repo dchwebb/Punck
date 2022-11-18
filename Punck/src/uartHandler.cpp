@@ -18,49 +18,49 @@ void InitUART() {
 
 	// By default clock source is muxed to peripheral clock 1 which is system clock / 4 (change clock source in RCC->D2CCIP2R)
 	// Calculations depended on oversampling mode set in CR1 OVER8. Default = 0: Oversampling by 16
-	int USARTDIV = (SystemCoreClock / 4) / 230400;	//clk / desired_baud
+	int USARTDIV = (SystemCoreClock / 4) / 230400;	// clk / desired_baud
 	UART7->BRR |= USARTDIV & USART_BRR_DIV_MANTISSA_Msk;
-	UART7->CR1 &= ~USART_CR1_M;						// 0: 1 Start bit, 8 Data bits, n Stop bit; 	1: 1 Start bit, 9 Data bits, n Stop bit
+	UART7->CR1 &= ~USART_CR1_M;						// 0: 1 Start bit, 8 Data bits, n Stop bit; 1: 1 Start bit, 9 Data bits, n Stop bit
 	UART7->CR1 |= USART_CR1_RE;						// Receive enable
 	UART7->CR1 |= USART_CR1_TE;						// Transmitter enable
 
 	// Set up interrupts
 	UART7->CR1 |= USART_CR1_RXNEIE;
-	NVIC_SetPriority(UART7_IRQn, 3);				// Lower is higher priority
+	NVIC_SetPriority(UART7_IRQn, 6);				// Lower is higher priority
 	NVIC_EnableIRQ(UART7_IRQn);
 
-	UART7->CR1 |= USART_CR1_UE;						// USART Enable
+	UART7->CR1 |= USART_CR1_UE;						// UART Enable
 }
 
 
 void uartSendChar(char c) {
-	while ((USART3->ISR & USART_ISR_TXE_TXFNF) == 0);
-	USART3->TDR = c;
+	while ((UART7->ISR & USART_ISR_TXE_TXFNF) == 0);
+	UART7->TDR = c;
 }
 
 void uartSendString(const char* s) {
 	char c = s[0];
 	uint8_t i = 0;
 	while (c) {
-		while ((USART3->ISR & USART_ISR_TXE_TXFNF) == 0);
-		USART3->TDR = c;
+		while ((UART7->ISR & USART_ISR_TXE_TXFNF) == 0);
+		UART7->TDR = c;
 		c = s[++i];
 	}
 }
 
 void uartSendString(const std::string& s) {
 	for (char c : s) {
-		while ((USART3->ISR & USART_ISR_TXE_TXFNF) == 0);
-		USART3->TDR = c;
+		while ((UART7->ISR & USART_ISR_TXE_TXFNF) == 0);
+		UART7->TDR = c;
 	}
 }
 
 extern "C" {
 
 // USART Decoder
-void USART3_IRQHandler() {
+void UART7_IRQHandler() {
 	if (!uartCmdRdy) {
-		uartCmd[uartCmdPos] = USART3->RDR; 				// accessing RDR automatically resets the receive flag
+		uartCmd[uartCmdPos] = UART7->RDR; 				// accessing RDR automatically resets the receive flag
 		if (uartCmd[uartCmdPos] == 10) {
 			uartCmdRdy = true;
 			uartCmdPos = 0;
