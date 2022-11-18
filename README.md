@@ -15,9 +15,16 @@ Samples are stored on 32MB of internal Flash memory. This storage space is made 
 A browser-based editor allows drum sequences to be entered graphically and detailed parameters of internal voices to be edited.
 
 Technical
-------------
+---------
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Back.jpg "icon")
 
 +12V Current Draw: 123mA
+
 -12V Current Draw: 8mA
+
+Prototype
+---------
+
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Dev.jpg "icon")
+
