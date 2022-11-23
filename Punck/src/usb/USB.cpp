@@ -520,62 +520,61 @@ void USB::GetDescriptor()
 
 	switch (req.Value >> 8)	{
 	case DeviceDescriptor:
-		return EP0In(USBD_FS_DeviceDesc, sizeof(USBD_FS_DeviceDesc));
+		return EP0In(deviceDescr, sizeof(deviceDescr));
 		break;
 
 	case ConfigurationDescriptor:
-		return EP0In(configDescriptor, MakeConfigDescriptor());
-		//return EP0In(ConfigDesc, sizeof(ConfigDesc));
+		return EP0In(configDescriptor, MakeConfigDescriptor());		// Construct config descriptor from individual classes
 		break;
 
 	case BosDescriptor:
-		return EP0In(USBD_FS_BOSDesc, sizeof(USBD_FS_BOSDesc));
+		return EP0In(bosDescr, sizeof(bosDescr));
 		break;
 
 	case DeviceQualifierDescriptor:
-		return EP0In(USBD_MSC_DeviceQualifierDesc, sizeof(USBD_MSC_DeviceQualifierDesc));
+		return EP0In(deviceQualifierDescr, sizeof(deviceQualifierDescr));
 		break;
 
 	case StringDescriptor:
 
 		switch ((uint8_t)(req.Value)) {
 		case StringIndex::LangId:				// 300
-			return EP0In(USBD_LangIDDesc, sizeof(USBD_LangIDDesc));
+			return EP0In(langIDDescr, sizeof(langIDDescr));
 			break;
 
 		case StringIndex::Manufacturer:			// 301
-			strSize = StringToUnicode(USBD_MANUFACTURER_STRING, USBD_StrDesc);
-			return EP0In(USBD_StrDesc, strSize);
+			strSize = StringToUnicode(USBD_MANUFACTURER_STRING, stringDescr);
+			return EP0In(stringDescr, strSize);
 			break;
 
 		case StringIndex::Product:				// 302
-			strSize = StringToUnicode(USBD_PRODUCT_STRING, USBD_StrDesc);
-			return EP0In(USBD_StrDesc, strSize);
+			strSize = StringToUnicode(USBD_PRODUCT_STRING, stringDescr);
+			return EP0In(stringDescr, strSize);
 			break;
 
 		case StringIndex::Serial:				// 303
 			SerialToUnicode();
-			return EP0In(USBD_StrDesc, USBD_StrDesc[0]);				// length is 24 bytes (x2 for unicode padding) + 2 for header
+			return EP0In(stringDescr, stringDescr[0]);				// length is 24 bytes (x2 for unicode padding) + 2 for header
 			break;
 
 		case StringIndex::Configuration:		// 304
-	    	strSize = StringToUnicode(USBD_CFG_STRING, USBD_StrDesc);
-	    	return EP0In(USBD_StrDesc, strSize);
+	    	strSize = StringToUnicode(USBD_CFG_STRING, stringDescr);
+	    	return EP0In(stringDescr, strSize);
 	    	break;
 
 	    case StringIndex::MassStorageClass:		// 305
-	    	strSize = StringToUnicode(USBD_MSC_STRING, USBD_StrDesc);
-	    	return EP0In(USBD_StrDesc, strSize);
+	    	strSize = StringToUnicode(USBD_MSC_STRING, stringDescr);
+	    	return EP0In(stringDescr, strSize);
 			break;
 
 	    case StringIndex::CommunicationClass:	// 306
-	    	strSize = StringToUnicode(USBD_CDC_STRING, USBD_StrDesc);
-	    	return EP0In(USBD_StrDesc, strSize);
+	    	strSize = StringToUnicode(USBD_CDC_STRING, stringDescr);
+	    	return EP0In(stringDescr, strSize);
 			break;
 
 	    case StringIndex::AudioClass:			// 307
-	    	strSize = StringToUnicode(USBD_MIDI_STRING, USBD_StrDesc);
-	    	return EP0In(USBD_StrDesc, strSize);
+	    	strSize = StringToUnicode(USBD_MIDI_STRING, stringDescr);
+	    	return EP0In(stringDescr, strSize);
 			break;
 
 		default:
@@ -624,6 +623,7 @@ uint32_t USB::MakeConfigDescriptor()
 	return descPos;
 }
 
+
 uint32_t USB::StringToUnicode(const std::string_view desc, uint8_t *unicode)
 {
 	uint32_t idx = 2;
@@ -645,11 +645,11 @@ void USB::SerialToUnicode()
 	char uidBuff[usbSerialNoSize + 1];
 	snprintf(uidBuff, usbSerialNoSize + 1, "%08lx%08lx%08lx", uidAddr[0], uidAddr[1], uidAddr[2]);
 
-	USBD_StrDesc[0] = usbSerialNoSize * 2 + 2;				// length is 24 bytes (x2 for unicode padding) + 2 for header
-	USBD_StrDesc[1] = StringDescriptor;
+	stringDescr[0] = usbSerialNoSize * 2 + 2;				// length is 24 bytes (x2 for unicode padding) + 2 for header
+	stringDescr[1] = StringDescriptor;
 	for (uint8_t i = 0; i < usbSerialNoSize * 2; ++i) {
 		const uint8_t sumUid = uidAddr[i] + uidAddr[i + 12];
-		USBD_StrDesc[i * 2 + 2] = uidBuff[i];
+		stringDescr[i * 2 + 2] = uidBuff[i];
 	}
 }
 
@@ -723,24 +723,6 @@ void USB::StdDevReq()
 
 			}
 			break;
-
-		/*
-		case USB_REQ_GET_CONFIGURATION:
-			// USBD_GetConfig (pdev, req);
-			break;
-
-		case USB_REQ_GET_STATUS:
-			//USBD_GetStatus (pdev, req);
-			break;
-
-		case USB_REQ_SET_FEATURE:
-			//USBD_SetFeature (pdev, req);
-			break;
-
-		case USB_REQ_CLEAR_FEATURE:
-			//USBD_ClrFeature (pdev, req);
-			break;
-*/
 
 		default:
 			CtlError();
