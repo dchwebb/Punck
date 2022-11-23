@@ -348,6 +348,7 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 
 			// for each endpoint:
 			for (uint8_t epnum = 1; epnum < 5; ++epnum) {
+				USBx_DEVICE->DEACHMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << (epnum & EP_ADDR_MASK)) << 16));
 				USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_IEPM & (uint32_t)(1UL << (epnum & EP_ADDR_MASK)));
 				USBx_INEP(epnum)->DIEPCTL &= ~(USB_OTG_DIEPCTL_USBAEP | USB_OTG_DIEPCTL_MPSIZ | USB_OTG_DIEPCTL_TXFNUM | USB_OTG_DIEPCTL_SD0PID_SEVNFRM | USB_OTG_DIEPCTL_EPTYP);		// sets diepctl1 = 0
 
@@ -358,7 +359,10 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 				USBx_OUTEP(epnum)->DOEPCTL &= ~(USB_OTG_DOEPCTL_USBAEP | USB_OTG_DOEPCTL_MPSIZ | USB_OTG_DOEPCTL_SD0PID_SEVNFRM | USB_OTG_DOEPCTL_EPTYP);
 			}
 		}
+
 		USB_OTG_FS->GOTGINT |= temp;
+
+		debugStart = true;
 	}
 
 }
@@ -472,7 +476,7 @@ void USB::ActivateEndpoint(uint8_t endpoint, const Direction direction, const En
 					USB_OTG_DIEPCTL_USBAEP;
 		}
 	} else {
-		USBx_DEVICE->DAINTMSK |= USB_OTG_DAINTMSK_OEPM & ((1 << endpoint) << 16);
+		USBx_DEVICE->DAINTMSK |= USB_OTG_DAINTMSK_OEPM & ((1 << endpoint) << USB_OTG_DAINTMSK_OEPM_Pos);
 
 		if (((USBx_OUTEP(endpoint)->DOEPCTL) & USB_OTG_DOEPCTL_USBAEP) == 0) {
 			USBx_OUTEP(endpoint)->DOEPCTL |=
@@ -520,7 +524,8 @@ void USB::GetDescriptor()
 		break;
 
 	case ConfigurationDescriptor:
-		return EP0In(ConfigDesc, sizeof(ConfigDesc));
+		return EP0In(configDescriptor, MakeConfigDescriptor());
+		//return EP0In(ConfigDesc, sizeof(ConfigDesc));
 		break;
 
 	case BosDescriptor:
@@ -590,6 +595,35 @@ void USB::GetDescriptor()
 }
 
 
+uint32_t USB::MakeConfigDescriptor()
+{
+	// Construct the configuration descriptor from the various class descriptors with header
+	static constexpr uint8_t descrHeaderSize = 9;
+	uint32_t descPos = descrHeaderSize;
+	for (auto c : classByEP) {
+		const uint8_t* descBuff = nullptr;
+		uint32_t descSize = c-> GetInterfaceDescriptor(&descBuff);
+		memcpy(&configDescriptor[descPos], descBuff, descSize);
+		descPos += descSize;
+	}
+
+	// Insert config descriptor header
+	const uint8_t descriptorHeader[] = {
+		0x09,								// bLength: Configuration Descriptor size
+		ConfigurationDescriptor,			// bDescriptorType: Configuration
+		LOBYTE(descPos),					// wTotalLength
+		HIBYTE(descPos),
+		interfaceCount,						// bNumInterfaces: 5 [1 MSC, 2 CDC, 2 MIDI]
+		0x01,								// bConfigurationValue: Configuration value
+		0x04,								// iConfiguration: Index of string descriptor describing the configuration
+		0xC0,								// bmAttributes: self powered
+		0x32,								// MaxPower 0 mA
+	};
+	memcpy(&configDescriptor[0], descriptorHeader, descrHeaderSize);
+
+	return descPos;
+}
+
 uint32_t USB::StringToUnicode(const std::string_view desc, uint8_t *unicode)
 {
 	uint32_t idx = 2;
@@ -658,6 +692,31 @@ void USB::StdDevReq()
 				ActivateEndpoint(CDC_In,   Direction::in,  Bulk);			// Activate CDC in endpoint
 				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
 				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
+
+				// FIXME - this should be specific to MSC and done after activateendpoint??
+				// Flush RX FIFO
+				volatile uint32_t i = 0;
+				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) == 0U);		// Wait for AHB master IDLE state
+				for (i = 0; i < 1000; ++i) {};
+				USB_OTG_FS->GRSTCTL = USB_OTG_GRSTCTL_RXFFLSH;						// Flush RX Fifo
+				for (i = 0; i < 1000; ++i) {};
+				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_RXFFLSH) == USB_OTG_GRSTCTL_RXFFLSH);
+
+				// Flush TX Fifo
+				for (i = 0; i < 1000; ++i) {};
+				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) == 0U);
+				USB_OTG_FS->GRSTCTL = (USB_OTG_GRSTCTL_TXFFLSH | ((Midi_Out | CDC_Out | MSC_Out) << 6));
+				for (i = 0; i < 1000; ++i) {};
+				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH);
+				for (i = 0; i < 1000; ++i) {};
+
+				EPStartXfer(Direction::out, Midi_Out, 64);
+
+				// Prepare EP to Receive First BOT Cmd
+				EPStartXfer(Direction::out, MSC_Out, 0x1F);		//MSC_Handler.cbwSize
+
+				EPStartXfer(Direction::out, CDC_Out, 64);
+
 
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
@@ -854,7 +913,7 @@ std::string HexByte(const uint16_t& v) {
 
 void USB::OutputDebug() {
 
-	uartSendString("Event,Interrupt,Desc,Int Data,Desc,Endpoint,mRequest,Request,Value,Index,Length,Scsi,PacketSize,XferBuff\n");
+	uart.SendString("Event,Interrupt,Desc,Int Data,Desc,Endpoint,mRequest,Request,Value,Index,Length,Scsi,PacketSize,XferBuff\n");
 	uint16_t evNo = usbDebugEvent % USB_DEBUG_COUNT;
 	std::string interrupt, subtype;
 	for (int i = 0; i < USB_DEBUG_COUNT; ++i) {
@@ -863,74 +922,72 @@ void USB::OutputDebug() {
 			interrupt = "RXFLVL";
 
 			switch ((usbDebug[evNo].IntData & USB_OTG_GRXSTSP_PKTSTS) >> 17) {
-			case OutDataReceived:			// 2 = OUT data packet received
-				subtype = "Out packet rec";
-				break;
-			case OutTransferCompleted:		// 3 = Transfer completed
-				subtype = "Transfer completed";
-				break;
-			case SetupDataReceived:			// 6 = SETUP data packet received
-				subtype = "Setup packet rec";
-				break;
-			case SetupTransComplete:		// 4 = SETUP comp
-				subtype = "Setup comp";
-				break;
-			default:
-				subtype = "";
+				case OutDataReceived:			subtype = "Out packet rec";			break;		// 2 = OUT data packet received
+				case OutTransferCompleted:		subtype = "Transfer completed";		break;		// 3 = Transfer completed
+				case SetupDataReceived:			subtype = "Setup packet rec";		break;		// 6 = SETUP data packet received
+				case SetupTransComplete:		subtype = "Setup comp";				break;		// 4 = SETUP comp
+				default:						subtype = "";
 			}
 
 			break;
-		case USB_OTG_GINTSTS_SRQINT:		// 0x40000000
-			interrupt = "SRQINT";
-			break;
-		case USB_OTG_GINTSTS_USBSUSP:		// 0x800
-			interrupt = "USBSUSP";
-			break;
-		case USB_OTG_GINTSTS_WKUINT:		// 0x80000000
-			interrupt = "WKUINT";
-			break;
-		case USB_OTG_GINTSTS_USBRST:		// 0x1000
-			interrupt = "USBRST";
-			subtype = "";
-			break;
-		case USB_OTG_GINTSTS_ENUMDNE:		// 0x2000
-			interrupt = "ENUMDNE";
-			break;
-		case USB_OTG_GINTSTS_OEPINT:		// 0x80000
-			interrupt = "OEPINT";
+		case USB_OTG_GINTSTS_SRQINT:		interrupt = "SRQINT";			break;		// 0x40000000
+		case USB_OTG_GINTSTS_USBSUSP:		interrupt = "USBSUSP";			break;		// 0x800
+		case USB_OTG_GINTSTS_WKUINT:		interrupt = "WKUINT";			break;		// 0x80000000
+		case USB_OTG_GINTSTS_USBRST:		interrupt = "USBRST";			break;		// 0x1000
+		case USB_OTG_GINTSTS_ENUMDNE:		interrupt = "ENUMDNE";			break;		// 0x2000
+		case USB_OTG_GINTSTS_OEPINT:		interrupt = "OEPINT";						// 0x80000
 
 			switch (usbDebug[evNo].IntData) {
-			case USB_OTG_DOEPINT_XFRC:
-				subtype = "Transfer completed";
-				break;
+			case USB_OTG_DOEPINT_XFRC:			subtype = "Transfer Done";							break;
+
 			case USB_OTG_DOEPINT_STUP:
-				subtype = "Setup phase done";
+
+				switch (usbDebug[evNo].Request.Value >> 8)	{
+					case DeviceDescriptor:			subtype = "Device Descriptor";					break;
+					case ConfigurationDescriptor:	subtype = "Configuration Descriptor";			break;
+					case BosDescriptor:				subtype = "Bos Descriptor";						break;
+					case DeviceQualifierDescriptor:	subtype = "Device Qualifier Descriptor";		break;
+					case StringDescriptor:
+
+						switch ((uint8_t)(usbDebug[evNo].Request.Value)) {
+							case StringIndex::LangId:				subtype = "Lang Id";			break;
+							case StringIndex::Manufacturer:			subtype = "Manufacturer";		break;
+							case StringIndex::Product:				subtype = "Product";			break;
+							case StringIndex::Serial:				subtype = "Serial";				break;
+							case StringIndex::Configuration:		subtype = "Configuration";		break;
+							case StringIndex::MassStorageClass:		subtype = "MassStorageClass";	break;
+							case StringIndex::CommunicationClass:	subtype = "CommunicationClass";	break;
+							case StringIndex::AudioClass:			subtype = "AudioClass";			break;
+							default:				    			subtype = "Setup phase done";	break;
+						}
+						break;
+
+					default: 									subtype = "Setup phase done";	break;
+				}
+
 				break;
+
 			default:
 				subtype = "";
 			}
 			break;
+
 		case USB_OTG_GINTSTS_IEPINT:		// 0x40000
 			interrupt = "IEPINT";
 
-				switch (usbDebug[evNo].IntData) {
-				case USB_OTG_DIEPINT_XFRC:
-					subtype = "Transfer completed";
-					break;
-				case USB_OTG_DIEPINT_TXFE:
-					subtype = "Transmit FIFO empty";
-					break;
-				default:
-					subtype = "";
-				}
-
+			switch (usbDebug[evNo].IntData) {
+				case USB_OTG_DIEPINT_XFRC:			subtype = "Transfer completed";			break;
+				case USB_OTG_DIEPINT_TXFE:			subtype = "Transmit FIFO empty";		break;
+				default:							subtype = "";
+			}
 			break;
+
 		default:
 			interrupt = "";
 		}
 
 		if (usbDebug[evNo].Interrupt != 0) {
-			uartSendString(IntToString(usbDebug[evNo].eventNo) + ","
+			uart.SendString(IntToString(usbDebug[evNo].eventNo) + ","
 					+ HexToString(usbDebug[evNo].Interrupt, false) + "," + interrupt + ","
 					+ HexToString(usbDebug[evNo].IntData, false) + "," + subtype + ","
 					+ IntToString(usbDebug[evNo].endpoint) + ","
@@ -1358,5 +1415,7 @@ Event,Interrupt,Desc,Int Data,Desc,Endpoint,mRequest,Request,Value,Index,Length,
 */
 
 #endif
+
+
 
 

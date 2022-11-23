@@ -1,11 +1,9 @@
 #include "uartHandler.h"
+#include "usb.h"
 
-volatile uint8_t uartCmdPos = 0;
-volatile char uartCmd[255];
-volatile bool uartCmdRdy = false;
+UART uart;
 
-
-void InitUART() {
+void UART::Init() {
 	// Debug UART pins: PF7 (UART7 TX) and PF6 (UART7 RX)
 
 	RCC->APB1LENR |= RCC_APB1LENR_UART7EN;			// USART7 clock enable
@@ -33,12 +31,12 @@ void InitUART() {
 }
 
 
-void uartSendChar(char c) {
+void UART::SendChar(char c) {
 	while ((UART7->ISR & USART_ISR_TXE_TXFNF) == 0);
 	UART7->TDR = c;
 }
 
-void uartSendString(const char* s) {
+void UART::SendString(const char* s) {
 	char c = s[0];
 	uint8_t i = 0;
 	while (c) {
@@ -48,25 +46,49 @@ void uartSendString(const char* s) {
 	}
 }
 
-void uartSendString(const std::string& s) {
+void UART::SendString(const std::string& s) {
 	for (char c : s) {
 		while ((UART7->ISR & USART_ISR_TXE_TXFNF) == 0);
 		UART7->TDR = c;
 	}
 }
 
+
+void UART::ProcessCommand()
+{
+	if (!commandReady) {
+		return;
+	}
+	std::string_view cmd {command};
+
+	if (cmd.compare("printdebug\n") == 0) {
+		usb.OutputDebug();
+
+	} else if (cmd.compare("debugon\n") == 0) {
+		extern volatile bool debugStart;
+		debugStart = true;
+		SendString("Debug activated\r\n");
+
+	} else {
+		SendString("Unrecognised command\r\n");
+	}
+
+	commandReady = false;
+}
+
+
 extern "C" {
 
 // USART Decoder
 void UART7_IRQHandler() {
-	if (!uartCmdRdy) {
-		const uint32_t recData = UART7->RDR;						// Note that 32 bits must be read to clear the receive flag
-		uartCmd[uartCmdPos] = (char)recData; 				// accessing RDR automatically resets the receive flag
-		if (uartCmd[uartCmdPos] == 10) {
-			uartCmdRdy = true;
-			uartCmdPos = 0;
+	if (!uart.commandReady) {
+		const uint32_t recData = UART7->RDR;					// Note that 32 bits must be read to clear the receive flag
+		uart.command[uart.cmdPos] = (char)recData; 				// accessing RDR automatically resets the receive flag
+		if (uart.command[uart.cmdPos] == 10) {
+			uart.commandReady = true;
+			uart.cmdPos = 0;
 		} else {
-			uartCmdPos++;
+			uart.cmdPos++;
 		}
 	}
 }

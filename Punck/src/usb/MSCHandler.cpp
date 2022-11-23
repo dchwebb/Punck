@@ -572,6 +572,40 @@ int8_t MSCHandler::SCSI_RequestSense()
 
 
 
+// Descriptor definition here as requires constants from USB class
+const uint8_t MSCHandler::Descriptor[] = {
+	//--------------------------------------------------------------------------------------
+	// MSC Descriptor
+	0x09,								// sizeof(usbDescrInterface): length of descriptor in bytes
+	USB::InterfaceDescriptor,			// interface descriptor type
+	USB::MSCInterface,					// index of this interface
+	0x00,								// alternate setting for this interface
+	0x02,								// endpoints excl 0: number of endpoint descriptors to follow
+	0x08,								// Mass Storage
+	0x06,								// SCSI transparent command set
+	0x50,								// bInterfaceProtocol: Bulk-Only Transport
+	USB::MassStorageClass,				// string index for interface
 
+	// Bulk IN Endpoint Descriptor
+	0x07,								// bLength
+	USB::EndpointDescriptor,			// bDescriptorType = endpoint
+	USB::MSC_In,						// bEndpointAddress IN endpoint number 3
+	USB::Bulk,							// bmAttributes: 2: Bulk, 3: Interrupt endpoint
+	LOBYTE(USB::ep_maxPacket),			// wMaxPacketSize
+	HIBYTE(USB::ep_maxPacket),
+	0x00,								// bInterval in ms
 
+	// Bulk OUT Endpoint Descriptor
+	0x07,								// bLength
+	USB::EndpointDescriptor,			// bDescriptorType = endpoint
+	USB::MSC_Out,						// bEndpointAddress
+	USB::Bulk,							// bmAttributes: 2:Bulk
+	LOBYTE(USB::ep_maxPacket),			// wMaxPacketSize
+	HIBYTE(USB::ep_maxPacket),
+	0x00,								// bInterval in ms : ignored for bulk
+};
 
+uint32_t MSCHandler::GetInterfaceDescriptor(const uint8_t** buffer) {
+	*buffer = Descriptor;
+	return sizeof(Descriptor);
+}

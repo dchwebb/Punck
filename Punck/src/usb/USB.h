@@ -43,6 +43,9 @@ public:
 	enum class Request {GetStatus = 0x0, SetAddress = 0x5, GetDescriptor = 0x6, SetConfiguration = 0x9};
 	enum Descriptor {DeviceDescriptor = 0x1, ConfigurationDescriptor = 0x2, StringDescriptor = 0x3, InterfaceDescriptor = 0x4, EndpointDescriptor = 0x5, DeviceQualifierDescriptor = 0x6, IadDescriptor = 0xb, BosDescriptor = 0xF, ClassSpecificInterfaceDescriptor = 0x24};
 	enum PacketStatus {GlobalOutNAK = 1, OutDataReceived = 2, OutTransferCompleted = 3, SetupTransComplete = 4, SetupDataReceived = 6};
+	enum StringIndex {LangId = 0, Manufacturer = 1, Product = 2, Serial = 3, Configuration = 4, MassStorageClass = 5,
+		CommunicationClass = 6, AudioClass = 7};
+
 	static constexpr uint8_t ep_maxPacket = 0x40;
 
 	void InterruptHandler();
@@ -64,8 +67,7 @@ public:
 
 private:
 	enum class EP0State {Idle, Setup, DataIn, DataOut, StatusIn, StatusOut, Stall};
-	enum StringIndex {LangId = 0, Manufacturer = 1, Product = 2, Serial = 3, Configuration = 4, MassStorageClass = 5,
-		CommunicationClass = 6, AudioClass = 7};
+
 	static constexpr std::string_view USBD_MANUFACTURER_STRING = "Mountjoy Modular";
 	static constexpr std::string_view USBD_PRODUCT_STRING = "Mountjoy Punck MSC";
 	static constexpr std::string_view USBD_CFG_STRING = "MSC Punck Config";
@@ -84,6 +86,7 @@ private:
 	void EP0In(const uint8_t* buff, uint32_t size);
 	void CtlError();
 	bool ReadInterrupts(const uint32_t interrupt);
+	uint32_t MakeConfigDescriptor();
 	void SerialToUnicode();
 
 	std::array<USBHandler*, 4>classesByInterface;		// Lookup tables to get appropriate class handlers
@@ -92,6 +95,7 @@ private:
 	bool transmitting;
 	usbRequest req;
 	uint8_t USBD_StrDesc[128];
+	uint8_t configDescriptor[255];
 
 
 	// USB standard device descriptor

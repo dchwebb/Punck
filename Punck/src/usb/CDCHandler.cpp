@@ -127,9 +127,6 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare("revertleds") == 0) {				// Revert leds to previous values
 		voiceManager.RestoreAllLeds();
 
-	} else if (cmd.compare("uart") == 0) {						// Test UART
-		uartSendString("test\r\n");
-
 
 	} else if (cmd.compare("restoreconfig") == 0) {				// Restore config from internal flash
 		printf("Restoring config\r\n");
@@ -472,4 +469,102 @@ float CDCHandler::ParseFloat(const std::string_view cmd, const char precedingCha
 		return low - 1.0f;
 	}
 	return val;
+}
+
+
+// Descriptor definition here as requires constants from USB class
+const uint8_t CDCHandler::Descriptor[] = {
+	// IAD Descriptor - Interface association descriptor for CDC class
+	0x08,									// bLength (8 bytes)
+	USB::IadDescriptor,						// bDescriptorType
+	USB::CDCCmdInterface,					// bFirstInterface
+	0x02,									// bInterfaceCount
+	0x02,									// bFunctionClass (Communications and CDC Control)
+	0x02,									// bFunctionSubClass
+	0x01,									// bFunctionProtocol
+	USB::CommunicationClass,				// String Descriptor
+
+	// Interface Descriptor
+	0x09,									// bLength: Interface Descriptor size
+	USB::InterfaceDescriptor,				// bDescriptorType: Interface
+	USB::CDCCmdInterface,					// bInterfaceNumber: Number of Interface
+	0x00,									// bAlternateSetting: Alternate setting
+	0x01,									// bNumEndpoints: 1 endpoint used
+	0x02,									// bInterfaceClass: Communication Interface Class
+	0x02,									// bInterfaceSubClass: Abstract Control Model
+	0x01,									// bInterfaceProtocol: Common AT commands
+	USB::CommunicationClass,				// iInterface
+
+	// Header Functional Descriptor
+	0x05,									// bLength: Endpoint Descriptor size
+	USB::ClassSpecificInterfaceDescriptor,	// bDescriptorType: CS_INTERFACE
+	0x00,									// bDescriptorSubtype: Header Func Desc
+	0x10,									// bcdCDC: spec release number
+	0x01,
+
+	// Call Management Functional Descriptor
+	0x05,									// bFunctionLength
+	USB::ClassSpecificInterfaceDescriptor,	// bDescriptorType: CS_INTERFACE
+	0x01,									// bDescriptorSubtype: Call Management Func Desc
+	0x00,									// bmCapabilities: D0+D1
+	0x01,									// bDataInterface: 1
+
+	// ACM Functional Descriptor
+	0x04,									// bFunctionLength
+	USB::ClassSpecificInterfaceDescriptor,	// bDescriptorType: CS_INTERFACE
+	0x02,									// bDescriptorSubtype: Abstract Control Management desc
+	0x02,									// bmCapabilities
+
+	// Union Functional Descriptor
+	0x05,									// bFunctionLength
+	USB::ClassSpecificInterfaceDescriptor,	// bDescriptorType: CS_INTERFACE
+	0x06,									// bDescriptorSubtype: Union func desc
+	0x00,									// bMasterInterface: Communication class interface FIXME
+	0x01,									// bSlaveInterface0: Data Class Interface
+
+	// Endpoint 2 Descriptor
+	0x07,									// bLength: Endpoint Descriptor size
+	USB::EndpointDescriptor,				// bDescriptorType: Endpoint
+	USB::CDC_Cmd,							// bEndpointAddress
+	USB::Interrupt,							// bmAttributes: Interrupt
+	0x08,									// wMaxPacketSize
+	0x00,
+	0x10,									// bInterval
+
+	//---------------------------------------------------------------------------
+
+	// Data class interface descriptor
+	0x09,									// bLength: Endpoint Descriptor size
+	USB::InterfaceDescriptor,				// bDescriptorType:
+	USB::CDCDataInterface,					// bInterfaceNumber: Number of Interface
+	0x00,									// bAlternateSetting: Alternate setting
+	0x02,									// bNumEndpoints: Two endpoints used
+	0x0A,									// bInterfaceClass: CDC
+	0x00,									// bInterfaceSubClass:
+	0x00,									// bInterfaceProtocol:
+	0x00,									// iInterface:
+
+	// Endpoint OUT Descriptor
+	0x07,									// bLength: Endpoint Descriptor size
+	USB::EndpointDescriptor,				// bDescriptorType: Endpoint
+	USB::CDC_Out,							// bEndpointAddress
+	USB::Bulk,								// bmAttributes: Bulk
+	LOBYTE(USB::ep_maxPacket),				// wMaxPacketSize:
+	HIBYTE(USB::ep_maxPacket),
+	0x00,									// bInterval: ignore for Bulk transfer
+
+	// Endpoint IN Descriptor
+	0x07,									// bLength: Endpoint Descriptor size
+	USB::EndpointDescriptor,				// bDescriptorType: Endpoint
+	USB::CDC_In,							// bEndpointAddress
+	USB::Bulk,								// bmAttributes: Bulk
+	LOBYTE(USB::ep_maxPacket),				// wMaxPacketSize:
+	HIBYTE(USB::ep_maxPacket),
+	0x00,									// bInterval: ignore for Bulk transfer
+};
+
+
+uint32_t CDCHandler::GetInterfaceDescriptor(const uint8_t** buffer) {
+	*buffer = Descriptor;
+	return sizeof(Descriptor);
 }

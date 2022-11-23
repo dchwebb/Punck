@@ -11,7 +11,7 @@ USBHandler::USBHandler(USB* usb, const uint8_t inEP, const uint8_t outEP, int8_t
 
 void USBHandler::EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len)
 {
-   usb->EPStartXfer(d, ep, len);
+	usb->EPStartXfer(d, ep, len);
 }
 
 
@@ -36,3 +36,4 @@ void EP0Handler::ClassSetup(usbRequest& req)
 void EP0Handler::ClassSetupData(usbRequest& req, const uint8_t* data)
 {
 }
+

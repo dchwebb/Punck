@@ -15,6 +15,8 @@ public:
 	void DataOut() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
+	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override;
+
 	void serialHandler(uint32_t data);
 
 	enum MIDIType {Unknown = 0, NoteOn = 0x9, NoteOff = 0x8, PolyPressure = 0xA, ControlChange = 0xB,
@@ -26,6 +28,9 @@ public:
 		uint8_t noteValue;		// MIDI note value
 		uint8_t velocity;
 	};
+
+	static const uint8_t Descriptor[];
+	static constexpr uint8_t MidiClassDescSize = 50;		// size of just the MIDI class definition (excluding interface descriptors)
 
 	uint16_t pitchBend = 8192;								// Pitchbend amount in raw format (0 - 16384)
 	const float pitchBendSemiTones = 12.0f;					// Number of semitones for a full pitchbend
@@ -39,6 +44,7 @@ private:
 	void ProcessSysex();
 	uint32_t ConstructSysEx(const uint8_t* buffer, uint32_t len, const uint8_t* headerBuffer, const uint32_t headerLen, const bool noSplit);
 	uint32_t ReadCfgSysEx(uint8_t headerLength);
+
 	static constexpr bool noSplit = true;
 	static constexpr bool split = false;
 
@@ -81,4 +87,7 @@ private:
 
 	MidiData tx;
 	uint8_t sysExOut[sysexMaxSize];
+
+
+
 };

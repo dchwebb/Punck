@@ -17,12 +17,14 @@ public:
 	void DataOut() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
+	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override;
 
 	void ProcessCommand();			// Processes command received during interrupt
 
 	bool cmdPending = false;
 	static constexpr uint32_t maxCmdLen = 40;
 	char comCmd[maxCmdLen];
+
 
 	struct LineCoding {
 		uint32_t bitrate;    		// Data terminal rate in bits per sec.
@@ -34,8 +36,9 @@ private:
 	enum {SetLineCoding = 0x20, GetLineCoding = 0x21};						// See CDC documentation rev 1.2 p.30
 	enum {HtoD_Class_Interface = 0x21, DtoH_Class_Interface = 0xA1};		// A1 = [1|01|00001] Device to host | Class | Interface;
 	uint32_t xfer_buff[64];
-
 	uint32_t buffPos = 0;
+
+	static const uint8_t Descriptor[];
 
 	int32_t ParseInt(const std::string_view cmd, const char precedingChar, const int32_t low, const int32_t high);
 	float ParseFloat(const std::string_view cmd, const char precedingChar, const float low, const float high);

@@ -35,7 +35,7 @@ int main(void) {
 	InitSysTick();
 
 #if (USB_DEBUG)
-	InitUART();						// Used on Nucleo for debugging USB
+	uart.Init();						// Used on Nucleo for debugging USB
 #endif
 
 	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
@@ -59,9 +59,9 @@ int main(void) {
 		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 
 #if (USB_DEBUG)
-//		if ((GPIOC->IDR & GPIO_IDR_ID13) == GPIO_IDR_ID13) {
-//			usb.OutputDebug();
-//		}
+		if (uart.commandReady) {
+			uart.ProcessCommand();
+		}
 #endif
 
 	}

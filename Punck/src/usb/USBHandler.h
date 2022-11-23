@@ -30,6 +30,7 @@ public:
 	uint8_t inEP;
 	uint8_t outEP;
 	int8_t interface;
+	//const uint8_t Descriptor[];
 
 	uint32_t* outBuff;			// Pointer to end point's OUT (receive from host) buffer [Previously xfer_buff]
 	uint32_t outBuffCount;		// Number of bytes received in OUT packet [Previously xfer_count]
@@ -45,6 +46,8 @@ public:
 	virtual void DataOut() = 0;
 	virtual void ClassSetup(usbRequest& req) = 0;
 	virtual void ClassSetupData(usbRequest& req, const uint8_t* data) = 0;
+	virtual uint32_t GetInterfaceDescriptor(const uint8_t** buffer) = 0;
+
 protected:
    // Proxy functions to allow access to USB private methods
    void EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len);
@@ -61,6 +64,7 @@ public:
 	void DataOut() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
+	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override {return 0;};
 
 private:
 	uint32_t ep0OutBuff[64];		// EP0 OUT Data filled in RxLevel Interrupt
