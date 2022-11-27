@@ -168,8 +168,6 @@ uint8_t FatTools::FlushCache()
 
 
 
-
-
 const uint8_t* FatTools::GetClusterAddr(const uint32_t cluster, const bool ignoreCache)
 {
 	// Byte offset of the cluster start (note cluster numbers start at 2)
@@ -269,7 +267,7 @@ void FatTools::PrintDirInfo(const uint32_t cluster)
 		}
 
 		// Recursively call function to print sub directory details (ignoring directories '.' and '..' which hold current and parent directory clusters
-		if ((fatInfo->attr & AM_DIR) && (fatInfo->name[0] != '.')) {
+		if ((fatInfo->attr & AM_DIR) && (fatInfo->name[0] != '.') && (fatInfo->firstClusterLow < fatMaxCluster)) {
 			PrintDirInfo(fatInfo->firstClusterLow);
 		}
 		fatInfo++;
@@ -300,7 +298,7 @@ std::string FatTools::GetFileName(const FATFileInfo* fi)
 {
 	char cs[14];
 	std::string s;
-	if (fi->attr == 0xF) {									// NB - unicode characters not properly handled - just assuming ASCII char in lower byte
+	if (fi->attr == 0xF) {									// LFN. NB - unicode characters not properly handled - just assuming ASCII char in lower byte
 		FATLongFilename* lfn = (FATLongFilename*)fi;
 		return std::string({lfn->name1[0], lfn->name1[2], lfn->name1[4], lfn->name1[6], lfn->name1[8],
 				lfn->name2[0], lfn->name2[2], lfn->name2[4], lfn->name2[6], lfn->name2[8], lfn->name2[10],

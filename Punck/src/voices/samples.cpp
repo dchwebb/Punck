@@ -23,7 +23,7 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 		return;
 	}
 	sampler[sp].playing = true;
-	sampler[sp].velocityScale = velocity * (static_cast<float>(*sampler[sp].levelADC) / 32768.0f);
+
 
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset == sampler[sp].bankLen) {								// Random mode
@@ -34,6 +34,7 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 	sampler[sp].sample = sampler[sp].bank[noteOffset].s;
 	sampler[sp].sampleAddress = sampler[sp].sample->startAddr;
 	sampler[sp].playbackSpeed = static_cast<float>(sampler[sp].sample->sampleRate) / systemSampleRate;
+	sampler[sp].velocityScale = sampler[sp].sample->volume * velocity * (static_cast<float>(*sampler[sp].levelADC) / 32768.0f);
 }
 
 
@@ -48,6 +49,10 @@ void Samples::Play(const uint8_t sp, uint32_t index)
 
 static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes, const uint16_t format)
 {
+	if (!extFlash.memMapMode) {					// If writing to flash attempting to read memory mapped data will hard fault
+		return 0;
+	}
+
 	// where data size is less than 32 bit, shift left to zero out lower bytes
 	switch (bytes) {
 	case 1:										// 8 bit data
@@ -186,12 +191,34 @@ bool Samples::UpdateSampleList()
 	bool changed = false;
 
 	while (dirEntry->name[0] != 0) {
-		// Check not LFN, not deleted, not directory, extension = WAV
-		if (dirEntry->attr != 0xF && dirEntry->name[0] != 0xE5 && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
+
+		if (dirEntry->attr == FATFileInfo::LONG_NAME) {
+			// Store long file name in temporary buffer as this may contain volume and panning information
+			const FATLongFilename* lfn = (FATLongFilename*)dirEntry;
+			const char tempFileName[13] {lfn->name1[0], lfn->name1[2], lfn->name1[4], lfn->name1[6], lfn->name1[8],
+				lfn->name2[0], lfn->name2[2], lfn->name2[4], lfn->name2[6], lfn->name2[8], lfn->name2[10],
+				lfn->name3[0], lfn->name3[2]};
+
+			memcpy(&longFileName[((lfn->order & 0x3F) - 1) * 13], tempFileName, 13);		// strip 0x40 marker from first LFN entry order field
+			lfnPosition += 13;
+
+		// Valid sample: not LFN, not deleted, not directory, extension = WAV
+		} else if (dirEntry->name[0] != 0xE5 && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
 			Sample* sample = &(sampleList[pos++]);
 
+			// If directory entry preceeded by long file name use that to check for volume/panning information
+			float newVolume = 1.0f;
+			if (lfnPosition > 0) {
+				longFileName[lfnPosition] = '\0';
+				const int32_t vol = ParseInt(longFileName, ".v", 0, 100);
+				if (vol > 0) {
+					newVolume = static_cast<float>(vol) / 100.0f;
+				}
+			}
+
 			// Check if any fields have changed
-			if (sample->cluster != dirEntry->firstClusterLow || sample->size != dirEntry->fileSize || strncmp(sample->name, dirEntry->name, 11) != 0) {
+			if (sample->cluster != dirEntry->firstClusterLow || sample->size != dirEntry->fileSize ||
+					strncmp(sample->name, dirEntry->name, 11) != 0 || newVolume != sample->volume) {
 				changed = true;
 				strncpy(sample->name, dirEntry->name, 11);
 				sample->cluster = dirEntry->firstClusterLow;
@@ -199,7 +226,10 @@ bool Samples::UpdateSampleList()
 				sample->bank = (sample->name[0] == 'A') ? playerA : (sample->name[0] == 'B') ? playerB : noPlayer;
 				sample->bankIndex = std::strtol(&(sample->name[1]), nullptr, 10);
 				sample->valid = GetSampleInfo(sample);
+				sample->volume = newVolume;
 			}
+		} else {
+			lfnPosition = 0;
 		}
 		dirEntry++;
 	}
@@ -265,6 +295,21 @@ uint32_t Samples::SerialiseSampleNames(uint8_t** buff, const uint8_t voiceIndex)
 	}
 	*buff = configManager.configBuffer;
 	return s * 8;
+}
+
+
+int32_t Samples::ParseInt(const std::string_view cmd, const std::string_view precedingChar, const int32_t low, const int32_t high)
+{
+	int32_t val = -1;
+	const int8_t pos = cmd.find(precedingChar);		// locate position of character preceding
+	if (pos >= 0 && std::strspn(&cmd[pos + precedingChar.size()], "0123456789-") > 0) {
+		val = std::stoi(&cmd[pos + precedingChar.size()]);
+	}
+	if (high > low && (val > high || val < low)) {
+		printf("Must be a value between %ld and %ld\r\n", low, high);
+		return low - 1;
+	}
+	return val;
 }
 
 

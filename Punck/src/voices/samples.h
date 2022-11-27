@@ -2,6 +2,7 @@
 
 #include "initialisation.h"
 #include "DrumVoice.h"
+#include <string>
 
 class NoteMapper;
 
@@ -25,6 +26,7 @@ public:
 		SamplePlayer bank;					// Bank A or B (indicated by sample name eg A1xxx.wav or B2xx.wav)
 		uint8_t bankIndex;					// The index of the sample in the bank
 		bool valid;							// false if header cannot be processed
+		float volume;
 	} sampleList[128];
 
 	struct Bank {
@@ -59,6 +61,9 @@ public:
 	uint32_t ConfigSize();
 
 private:
+	char longFileName[100];
+	uint8_t lfnPosition = 0;
 	bool GetSampleInfo(Sample* sample);
+	int32_t ParseInt(const std::string_view cmd, const std::string_view precedingChar, const int32_t low = 0, const int32_t high = 0);
 };
 

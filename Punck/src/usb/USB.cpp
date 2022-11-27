@@ -274,31 +274,31 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 	if (ReadInterrupts(USB_OTG_GINTSTS_USBRST))	{
 		USBx_DEVICE->DCTL &= ~USB_OTG_DCTL_RWUSIG;
 
-		// USB_FlushTxFifo
+		// Flush Tx Fifo
+		while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) == 0U);
 		USB_OTG_FS->GRSTCTL = (USB_OTG_GRSTCTL_TXFFLSH | (0x10 << 6));
-		uint32_t waitCounter = SysTickVal;
-		while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH && waitCounter < 100000) {
-			waitCounter++;
-		}
+		while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH);
 
-		for (int i = 0; i < 6; i++) {				// hpcd->Init.dev_endpoints
+		for (int i = 0; i < 6; i++) {				// FIXME - 6 is number of endpoints (in/out pairs)
 			USBx_INEP(i)->DIEPINT = 0xFB7FU;		// see p1177 for explanation: based on datasheet should be more like 0b10100100111011
 			USBx_INEP(i)->DIEPCTL &= ~USB_OTG_DIEPCTL_STALL;
 			USBx_OUTEP(i)->DOEPINT = 0xFB7FU;
 			USBx_OUTEP(i)->DOEPCTL &= ~USB_OTG_DOEPCTL_STALL;
-			//USBx_OUTEP(i)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;		// FIXME ADDED
+			USBx_OUTEP(i)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
 		}
 		USBx_DEVICE->DAINTMSK |= 0x10001U;
 
-		USBx_DEVICE->DOEPMSK |= USB_OTG_DOEPMSK_STUPM | USB_OTG_DOEPMSK_XFRCM | USB_OTG_DOEPMSK_EPDM | USB_OTG_DOEPMSK_OTEPSPRM;			// FIXME ADD?: | USB_OTG_DOEPMSK_NAKM
+		USBx_DEVICE->DOEPMSK |= USB_OTG_DOEPMSK_STUPM | USB_OTG_DOEPMSK_XFRCM | USB_OTG_DOEPMSK_EPDM | USB_OTG_DOEPMSK_OTEPSPRM;
 		USBx_DEVICE->DIEPMSK |= USB_OTG_DIEPMSK_TOM | USB_OTG_DIEPMSK_XFRCM | USB_OTG_DIEPMSK_EPDM;
 
-		// Set Default Address to 0 (will be set later when address instruction received from host)
+		// Clear Default Address (will be set later when address instruction received from host)
 		USBx_DEVICE->DCFG &= ~USB_OTG_DCFG_DAD;
 
 		// Set up EP0 to receive SETUP packets
 		// Set PKTCNT to 1, XFRSIZ to 24, STUPCNT to 3 (number of back-to-back SETUP data packets endpoint can receive)
-		USBx_OUTEP(0U)->DOEPTSIZ = (1U << 19) | (3U * 8U) | USB_OTG_DOEPTSIZ_STUPCNT;
+		if ((USBx_OUTEP(0U)->DOEPCTL & USB_OTG_DOEPCTL_EPENA) != USB_OTG_DOEPCTL_EPENA) {
+			USBx_OUTEP(0U)->DOEPTSIZ = (1U << 19) | (3U * 8U) | USB_OTG_DOEPTSIZ_STUPCNT;
+		}
 
 		USB_OTG_FS->GINTSTS &= USB_OTG_GINTSTS_USBRST;
 	}
@@ -313,6 +313,9 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		// Assuming Full Speed USB and clock > 32MHz Set USB Turnaround time
 		USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_TRDT;
 		USB_OTG_FS->GUSBCFG |= (6 << 10);
+
+		DeactivateEndpoint(MSC_Out, Direction::out);			// FIXME - all or no endpoints?
+		DeactivateEndpoint(MSC_In, Direction::in);
 
 		ActivateEndpoint(0, Direction::out, Control);			// Open EP0 OUT
 		ActivateEndpoint(0, Direction::in, Control);			// Open EP0 IN
@@ -332,6 +335,11 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 	/////////// 	80000000	WKUINT: Resume Interrupt
 	if (ReadInterrupts(USB_OTG_GINTSTS_WKUINT)) {
 		USBx_DEVICE->DCTL &= ~USB_OTG_DCTL_RWUSIG;				// Clear the Remote Wake-up Signaling
+
+		if (devState == DeviceState::Suspended) {
+			devState = DeviceState::Default;
+		}
+
 		USB_OTG_FS->GINTSTS &= USB_OTG_GINTSTS_WKUINT;
 	}
 
@@ -341,23 +349,11 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		uint32_t temp = USB_OTG_FS->GOTGINT;
 
 		if ((temp & USB_OTG_GOTGINT_SEDET) == USB_OTG_GOTGINT_SEDET) {
-			//HAL_PCD_DisconnectCallback(hpcd);
-			//pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
-
 			devState = DeviceState::Default;
 
-			// for each endpoint:
-			for (uint8_t epnum = 1; epnum < 5; ++epnum) {
-				USBx_DEVICE->DEACHMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << (epnum & EP_ADDR_MASK)) << 16));
-				USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_IEPM & (uint32_t)(1UL << (epnum & EP_ADDR_MASK)));
-				USBx_INEP(epnum)->DIEPCTL &= ~(USB_OTG_DIEPCTL_USBAEP | USB_OTG_DIEPCTL_MPSIZ | USB_OTG_DIEPCTL_TXFNUM | USB_OTG_DIEPCTL_SD0PID_SEVNFRM | USB_OTG_DIEPCTL_EPTYP);		// sets diepctl1 = 0
-
-				USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
-				USBx_OUTEP(epnum)->DOEPCTL |= USB_OTG_DOEPCTL_EPDIS;
-
-				USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << (epnum & EP_ADDR_MASK)) << 16));
-				USBx_OUTEP(epnum)->DOEPCTL &= ~(USB_OTG_DOEPCTL_USBAEP | USB_OTG_DOEPCTL_MPSIZ | USB_OTG_DOEPCTL_SD0PID_SEVNFRM | USB_OTG_DOEPCTL_EPTYP);
-			}
+			// FIXME for each endpoint:
+			DeactivateEndpoint(MSC_Out, Direction::out);
+			DeactivateEndpoint(MSC_In, Direction::in);
 		}
 
 		USB_OTG_FS->GOTGINT |= temp;
@@ -488,6 +484,39 @@ void USB::ActivateEndpoint(uint8_t endpoint, const Direction direction, const En
 }
 
 
+void USB::DeactivateEndpoint(uint8_t endpoint, const Direction direction)
+{
+	endpoint = endpoint & 0xF;
+
+	if (direction == Direction::in) {
+		if ((USBx_INEP(endpoint)->DIEPCTL & USB_OTG_DIEPCTL_EPENA) == USB_OTG_DIEPCTL_EPENA) {
+			USBx_INEP(endpoint)->DIEPCTL |= USB_OTG_DIEPCTL_SNAK;
+			USBx_INEP(endpoint)->DIEPCTL |= USB_OTG_DIEPCTL_EPDIS;
+		}
+
+		USBx_DEVICE->DEACHMSK &= ~(USB_OTG_DAINTMSK_IEPM & (uint32_t)(1 << (endpoint)));
+		USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_IEPM & (uint32_t)(1 << (endpoint)));
+		USBx_INEP(endpoint)->DIEPCTL &= ~(USB_OTG_DIEPCTL_USBAEP |
+				USB_OTG_DIEPCTL_MPSIZ |
+				USB_OTG_DIEPCTL_TXFNUM |
+				USB_OTG_DIEPCTL_SD0PID_SEVNFRM |
+				USB_OTG_DIEPCTL_EPTYP);
+	} else {
+		if ((USBx_OUTEP(endpoint)->DOEPCTL & USB_OTG_DOEPCTL_EPENA) == USB_OTG_DOEPCTL_EPENA) {
+			USBx_OUTEP(endpoint)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
+			USBx_OUTEP(endpoint)->DOEPCTL |= USB_OTG_DOEPCTL_EPDIS;
+		}
+
+		USBx_DEVICE->DEACHMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << endpoint) << USB_OTG_DAINTMSK_OEPM_Pos));
+		USBx_DEVICE->DAINTMSK &= ~(USB_OTG_DAINTMSK_OEPM & ((uint32_t)(1UL << endpoint) << USB_OTG_DAINTMSK_OEPM_Pos));
+		USBx_OUTEP(endpoint)->DOEPCTL &= ~(USB_OTG_DOEPCTL_USBAEP |
+				USB_OTG_DOEPCTL_MPSIZ |
+				USB_OTG_DOEPCTL_SD0PID_SEVNFRM |
+				USB_OTG_DOEPCTL_EPTYP);
+	}
+}
+
+
 void USB::ReadPacket(const uint32_t* dest, const uint16_t len, const uint32_t offset)
 {
 	// Read a packet from the RX FIFO
@@ -600,10 +629,12 @@ uint32_t USB::MakeConfigDescriptor()
 	static constexpr uint8_t descrHeaderSize = 9;
 	uint32_t descPos = descrHeaderSize;
 	for (auto c : classByEP) {
-		const uint8_t* descBuff = nullptr;
-		uint32_t descSize = c-> GetInterfaceDescriptor(&descBuff);
-		memcpy(&configDescriptor[descPos], descBuff, descSize);
-		descPos += descSize;
+		if (c != nullptr) {
+			const uint8_t* descBuff = nullptr;
+			uint32_t descSize = c-> GetInterfaceDescriptor(&descBuff);
+			memcpy(&configDescriptor[descPos], descBuff, descSize);
+			descPos += descSize;
+		}
 	}
 
 	// Insert config descriptor header

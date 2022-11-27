@@ -11,7 +11,7 @@ Sector = 512 bytes
 Cluster = 4 * 512 bytes = 2048 bytes
 Block = 4096 bytes (minimum erase size)
 
-16 MBytes on Flash = 31,250 Sectors (7812.5 Clusters - data area is 7802 clusters after 10 clusters used for headers)
+16 MBytes on each Flash = 31,250 Sectors (7812.5 Clusters - data area is 7802 clusters after 10 clusters used for headers)
 
 Blocks    Bytes			Description
 ------------------------------------
@@ -26,6 +26,7 @@ Cluster 2: 20480, Cluster 3: 22528, Cluster 4: 24576, Cluster 5: 26624, Cluster 
 static constexpr uint32_t fatSectorSize = 512;			// Sector size used by FAT
 static constexpr uint32_t fatSectorCount = 31250 * (dualFlashMode ? 2 : 1);		// 31250 sectors of 512 bytes = 16 MBytes
 static constexpr uint32_t fatClusterSize = 2048;		// Cluster size used by FAT (ie block size in data section)
+static constexpr uint32_t fatMaxCluster = (fatSectorSize * fatSectorCount) / fatClusterSize;		// Store largest cluster number
 static constexpr uint32_t fatEraseSectors = 8 * (dualFlashMode ? 2 : 1);			// Number of sectors in an erase block (4096 bytes per device)
 static constexpr uint32_t fatHeaderSectors = 40;		// Number of sectors in all header regions [1 sector Boot sector; 31 sectors FAT; 8 sectors Root Directory]
 static constexpr uint32_t fatCacheSectors = 72;			// Header + extra for testing
@@ -34,6 +35,8 @@ extern uint8_t headerCacheDebug[fatSectorSize * fatCacheSectors];
 
 // Struct to hold regular 32 byte directory entries (SFN)
 struct FATFileInfo {
+	enum FileAttribute {READ_ONLY = 0x01, HIDDEN = 0x02, SYSTEM = 0x04, VOLUME_ID = 0x08, DIRECTORY = 0x10, ARCHIVE = 0x20, LONG_NAME = 0xF};
+
 	char name[11];						// Short name: If name[0] == 0xE5 directory entry is free (0x00 also means free and rest of directory is free)
 	uint8_t attr;						// READ_ONLY 0x01; HIDDEN 0x02; SYSTEM 0x04; VOLUME_ID 0x08; DIRECTORY 0x10; ARCHIVE 0x20; LONG_NAME 0xF
 	uint8_t NTRes;						// Reserved for use by Windows NT

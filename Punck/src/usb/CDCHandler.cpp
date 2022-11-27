@@ -88,21 +88,25 @@ void CDCHandler::ProcessCommand()
 				"saveconfig  -  Save configuration to internal memory\r\n"
 				"restoreconfig  Restore saved configuration\r\n"
 				"clearconfig -  Erase configuration and restart\r\n"
+				"dirdetails  -  Print detailed file list for root directory\r\n"
+				"dir         -  Print list of all files and their directories\r\n"
+				"samplelist  -  Show details of all samples found in flash\r\n"
+				"midimap     -  Display MIDI note mapping\r\n"
+				"reboot      -  Reboot device\r\n"
+				"\r\n"
+				"Flash Tools:\r\n"
+				"------------\r\n"
 				"readreg     -  Print QSPI flash status registers\r\n"
 				"flashid     -  Print flash manufacturer and device IDs\r\n"
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"printcluster:A Print 2048 bytes of cluster address A (>=2)\r\n"
+				"clusterchain   List chain of FAT clusters\r\n"
+				"cacheinfo   -  Show all bytes changed in header cache\r\n"
+				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"eraseflash  -  Erase all sample storage flash data\r\n"
 				"format      -  Format sample storage flash\r\n"
 				"eraseblock:A   Erase block of memory (8192 bytes in dual flash mode)\r\n"
-				"dirdetails  -  Print detailed file list for root directory\r\n"
-				"dir         -  Print list of all files and their directories\r\n"
-				"flushcache  -  Flush any changed data in cache to flash\r\n"
-				"cacheinfo   -  Show all bytes changed in header cache\r\n"
-				"samplelist  -  Show details of all samples found in flash\r\n"
-				"clusterchain   List chain of FAT clusters\r\n"
-				"midimap     -  Display MIDI note mapping\r\n"
-				"\r\n"
+
 		);
 
 
@@ -213,10 +217,10 @@ void CDCHandler::ProcessCommand()
 	} else if (cmd.compare("samplelist") == 0) {				// Prints sample list
 		uint32_t pos = 0;
 
-		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds\r\n");
+		printf("Num Name          Bytes    Rate Bits Channels Valid Address    Seconds Volume\r\n");
 
 		while (voiceManager.samples.sampleList[pos].name[0] != 0) {
-			printf("%3lu %.11s %7lu %7lu %3u%1s %8u %s     0x%08x %.3f\r\n",
+			printf("%3lu %.11s %7lu %7lu %3u%1s %8u %s     0x%08x %.3f  %.2f\r\n",
 					pos,
 					voiceManager.samples.sampleList[pos].name,
 					voiceManager.samples.sampleList[pos].size,
@@ -226,7 +230,8 @@ void CDCHandler::ProcessCommand()
 					voiceManager.samples.sampleList[pos].channels,
 					voiceManager.samples.sampleList[pos].valid ? "Y" : " ",
 					(unsigned int)voiceManager.samples.sampleList[pos].startAddr,
-					(float)voiceManager.samples.sampleList[pos].sampleCount / voiceManager.samples.sampleList[pos].sampleRate
+					(float)voiceManager.samples.sampleList[pos].sampleCount / voiceManager.samples.sampleList[pos].sampleRate,
+					voiceManager.samples.sampleList[pos].volume
 					);
 			++pos;
 		}
@@ -397,7 +402,7 @@ void CDCHandler::ProcessCommand()
 
 
 	} else if (cmd.compare("eraseflash") == 0) {				// Erase all flash memory
-		printf("Erasing flash. Pleae wait ...\r\n");
+		printf("Erasing flash. Please wait ...\r\n");
 		extFlash.FullErase();
 		printf("Flash erased\r\n");
 

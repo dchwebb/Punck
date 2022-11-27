@@ -1,5 +1,6 @@
 #include "uartHandler.h"
 #include "usb.h"
+#include "FatTools.h"
 
 UART uart;
 
@@ -68,6 +69,9 @@ void UART::ProcessCommand()
 		extern volatile bool debugStart;
 		debugStart = true;
 		SendString("Debug activated\r\n");
+
+	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
+		fatTools.PrintDirInfo();
 
 	} else {
 		SendString("Unrecognised command\r\n");

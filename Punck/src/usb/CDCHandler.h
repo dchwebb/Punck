@@ -18,6 +18,7 @@ public:
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
 	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override;
+	int32_t ParseInt(const std::string_view cmd, const char precedingChar, const int32_t low, const int32_t high);
 
 	void ProcessCommand();			// Processes command received during interrupt
 
@@ -40,6 +41,5 @@ private:
 
 	static const uint8_t Descriptor[];
 
-	int32_t ParseInt(const std::string_view cmd, const char precedingChar, const int32_t low, const int32_t high);
 	float ParseFloat(const std::string_view cmd, const char precedingChar, const float low, const float high);
 };

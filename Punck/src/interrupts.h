@@ -35,6 +35,7 @@ uint32_t debugUartOR = 0;
 void UART8_IRQHandler(void) {
 	// MIDI Decoder
 	if (UART8->ISR & USART_ISR_RXNE_RXFNE) {
+		//uint32_t dummy = UART8->RDR;
 		usb.midi.serialHandler(UART8->RDR); 			// accessing DR automatically resets the receive flag
 	} else {
 		// Overrun
