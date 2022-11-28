@@ -14,6 +14,9 @@ extern volatile uint32_t SysTickVal;
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
 #define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
+
+#define DEBUG_MSC false
+
 constexpr double pi = 3.14159265358979323846;
 constexpr float intToFloatMult = 1.0f / std::pow(2.0f, 31.0f);		// Multiple to convert 32 bit int to -1.0 - 1.0 float
 constexpr float floatToIntMult = std::pow(2.0f, 31.0f);				// Multiple to convert -1.0 - 1.0 float to 32 bit int
@@ -22,7 +25,7 @@ static constexpr uint32_t systemSampleRate = 48000;
 static constexpr float systemMaxFreq = 22000.0f;
 
 extern volatile uint16_t ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
-extern int32_t adcZeroOffset[2];
+
 
 // Define ADC array positions of various controls
 enum ADC_Controls {
