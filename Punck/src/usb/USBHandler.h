@@ -4,6 +4,7 @@
 class USB;
 
 enum class Direction {in, out};
+enum EndPointType {Control = 0, Isochronous = 1, Bulk = 2, Interrupt = 3};
 
 struct usbRequest {
 	uint8_t RequestType;
@@ -44,14 +45,16 @@ public:
 
 	virtual void DataIn() = 0;
 	virtual void DataOut() = 0;
+	virtual void ActivateEP() = 0;
 	virtual void ClassSetup(usbRequest& req) = 0;
 	virtual void ClassSetupData(usbRequest& req, const uint8_t* data) = 0;
 	virtual uint32_t GetInterfaceDescriptor(const uint8_t** buffer) = 0;
 
 protected:
-   // Proxy functions to allow access to USB private methods
-   void EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len);
-   void SetupIn(const uint32_t size, const uint8_t* buff);
+	// Proxy functions to allow access to USB private methods
+	void EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len);
+	void EndPointActivate(uint8_t ep, const Direction d, const EndPointType eptype);
+	void SetupIn(const uint32_t size, const uint8_t* buff);
 };
 
 class EP0Handler : public USBHandler {
@@ -62,6 +65,7 @@ public:
 
 	void DataIn() override;
 	void DataOut() override;
+	void ActivateEP() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
 	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override {return 0;};

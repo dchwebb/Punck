@@ -88,6 +88,7 @@ public:
 
 	void DataIn() override;
 	void DataOut() override;
+	void ActivateEP() override;
 	void ClassSetup(usbRequest& req) override;
 	void ClassSetupData(usbRequest& req, const uint8_t* data) override;
 	uint32_t GetInterfaceDescriptor(const uint8_t** buffer) override;

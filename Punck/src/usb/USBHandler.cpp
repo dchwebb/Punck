@@ -15,11 +15,20 @@ void USBHandler::EndPointTransfer(const Direction d, const uint8_t ep, const uin
 }
 
 
+void USBHandler::EndPointActivate(uint8_t ep, const Direction d, const EndPointType eptype)
+{
+	usb->ActivateEndpoint(ep, d, static_cast<USB::EndPointType>(eptype));
+}
+
 void USBHandler::SetupIn(const uint32_t size, const uint8_t* buff)
 {
 	usb->EP0In(buff, size);
 }
 
+
+void EP0Handler::ActivateEP()
+{
+}
 
 void EP0Handler::DataIn()
 {

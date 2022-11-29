@@ -1,9 +1,9 @@
 #include <configManager.h>
 #include "initialisation.h"
 #include "USB.h"
-#include "Filter.h"
+//#include "Filter.h"
 #include "VoiceManager.h"
-#include "ExtFlash.h"
+//#include "ExtFlash.h"
 #include "FatTools.h"
 
 
@@ -15,7 +15,6 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // Sample panning (naming? web interface?)
-// USB does not restart when unplugged and re-plugged in
 // Problem where sampler voice triggered by MIDI occasionally does not play during sequence
 // Performance updates
 // Add claps voice

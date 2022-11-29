@@ -48,8 +48,13 @@ void MidiHandler::DataOut()
 }
 
 
+void MidiHandler::ActivateEP()
+{
+	EndPointActivate(USB::Midi_In,   Direction::in,  EndPointType::Bulk);
+	EndPointActivate(USB::Midi_Out,  Direction::out, EndPointType::Bulk);
 
-
+	EndPointTransfer(Direction::out, USB::Midi_Out, USB::ep_maxPacket);
+}
 
 
 uint32_t MidiHandler::ConstructSysEx(const uint8_t* dataBuffer, uint32_t dataLen, const uint8_t* headerBuffer, const uint32_t headerLen, const bool noSplit)

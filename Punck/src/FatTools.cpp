@@ -84,7 +84,7 @@ void FatTools::Read(uint8_t* writeAddress, const uint32_t readSector, const uint
 void FatTools::Write(const uint8_t* readBuff, const uint32_t writeSector, const uint32_t sectorCount)
 {
 	if (writeSector < fatCacheSectors) {
-		// Update the bit array of dirty blocks [There are 8 x 512 byte sectors in a block (4096)]
+		// Update the bit array of dirty blocks [There are 2 x 8 x 512 byte sectors in a block (8192)]
 		dirtyCacheBlocks |= (1 << (writeSector / fatEraseSectors));
 
 		uint8_t* writeAddress = &(headerCache[writeSector * fatSectorSize]);

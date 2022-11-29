@@ -9,7 +9,7 @@
 #include <cstring>
 
 // Enables capturing of debug data for output over STLink UART on dev boards
-#define USB_DEBUG true
+#define USB_DEBUG false
 #if (USB_DEBUG)
 #include "uartHandler.h"
 #define USB_DEBUG_COUNT 1000
@@ -35,11 +35,7 @@ class USB {
 	friend class USBHandler;
 public:
 	enum Interface {NoInterface = -1, AudioInterface = 0, MidiInterface = 1, MSCInterface = 2, CDCCmdInterface = 3, CDCDataInterface = 4, interfaceCount = 5};
-	//enum Interface {NoInterface = -1, AudioInterface = 1, MidiInterface = 2, MSCInterface = 0, CDCCmdInterface = 3, CDCDataInterface = 4, interfaceCount = 1};
-
 	enum EndPoint {Midi_In = 0x81, Midi_Out = 0x1, MSC_In = 0x82, MSC_Out = 0x2, CDC_In = 0x83, CDC_Out = 0x3, CDC_Cmd = 0x84};
-	//enum EndPoint {Midi_In = 0x82, Midi_Out = 0x2, MSC_In = 0x81, MSC_Out = 0x1, CDC_In = 0x83, CDC_Out = 0x3, CDC_Cmd = 0x84};
-
 	enum EndPointType {Control = 0, Isochronous = 1, Bulk = 2, Interrupt = 3};
 	enum class DeviceState {Default, Addressed, Configured, Suspended};
 	enum RequestRecipient {RequestRecipientDevice = 0x0, RequestRecipientInterface = 0x1, RequestRecipientEndpoint = 0x2};

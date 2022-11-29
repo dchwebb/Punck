@@ -62,16 +62,18 @@ void UART::ProcessCommand()
 	}
 	std::string_view cmd {command};
 
-	if (cmd.compare("printdebug\n") == 0) {
+	if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
+		fatTools.PrintDirInfo();
+
+	#if (USB_DEBUG)
+	} else if (cmd.compare("printdebug\n") == 0) {
 		usb.OutputDebug();
 
 	} else if (cmd.compare("debugon\n") == 0) {
 		extern volatile bool debugStart;
 		debugStart = true;
 		SendString("Debug activated\r\n");
-
-	} else if (cmd.compare("dirdetails\n") == 0) {				// Get detailed FAT directory info
-		fatTools.PrintDirInfo();
+#endif
 
 	} else {
 		SendString("Unrecognised command\r\n");

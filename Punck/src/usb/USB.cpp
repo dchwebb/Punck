@@ -720,6 +720,10 @@ void USB::StdDevReq()
 			if (devState == DeviceState::Addressed) {
 				devState = DeviceState::Configured;
 
+				for (auto c : classByEP) {
+					c->ActivateEP();
+				}
+				/*
 				ActivateEndpoint(Midi_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
 				ActivateEndpoint(Midi_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
 				ActivateEndpoint(MSC_In,   Direction::in,  Bulk);			// Activate MSC in endpoint
@@ -727,34 +731,13 @@ void USB::StdDevReq()
 				ActivateEndpoint(CDC_In,   Direction::in,  Bulk);			// Activate CDC in endpoint
 				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
 				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
-/*
-				// FIXME - this should be specific to MSC and done after activateendpoint??
-				// Flush RX FIFO
-				volatile uint32_t i = 0;
-				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) == 0U);		// Wait for AHB master IDLE state
-				for (i = 0; i < 1000; ++i) {};
-				USB_OTG_FS->GRSTCTL = USB_OTG_GRSTCTL_RXFFLSH;						// Flush RX Fifo
-				for (i = 0; i < 1000; ++i) {};
-				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_RXFFLSH) == USB_OTG_GRSTCTL_RXFFLSH);
 
-				// Flush TX Fifo
-				for (i = 0; i < 1000; ++i) {};
-				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) == 0U);
-				USB_OTG_FS->GRSTCTL = (USB_OTG_GRSTCTL_TXFFLSH | ((Midi_Out | CDC_Out | MSC_Out) << 6));
-				for (i = 0; i < 1000; ++i) {};
-				while ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == USB_OTG_GRSTCTL_TXFFLSH);
-				for (i = 0; i < 1000; ++i) {};
-
+				EPStartXfer(Direction::out, Midi_Out, ep_maxPacket);
+				EPStartXfer(Direction::out, CDC_Out, ep_maxPacket);
+				EPStartXfer(Direction::out, MSC_Out, ep_maxPacket);
 */
-				EPStartXfer(Direction::out, Midi_Out, 64);
-				EPStartXfer(Direction::out, CDC_Out, 64);
-
-				// Prepare EP to Receive First BOT Cmd
-				EPStartXfer(Direction::out, MSC_Out, 0x1F);		//MSC_Handler.cbwSize
-
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
-
 			}
 			break;
 

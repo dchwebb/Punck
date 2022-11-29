@@ -4,6 +4,14 @@
 #include "ExtFlash.h"
 #include "FatTools.h"
 
+void MSCHandler::ActivateEP()
+{
+	EndPointActivate(USB::MSC_In,   Direction::in,  EndPointType::Bulk);
+	EndPointActivate(USB::MSC_Out,  Direction::out, EndPointType::Bulk);
+
+	EndPointTransfer(Direction::out, USB::MSC_Out, USB::ep_maxPacket);
+}
+
 void MSCHandler::DataIn()
 {
 	switch (bot_state) {
