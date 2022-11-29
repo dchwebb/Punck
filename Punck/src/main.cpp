@@ -49,7 +49,7 @@ int main(void) {
 	InitIO();						// Initialise buttons, switches and Tempo out
 	configManager.RestoreConfig();	// Restore configuration settings (voice config, MIDI mapping, drum sequences)
 
-	usb.Init();
+	usb.Init(false);				// Pass false to indicate hard reset
 	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 	while (1) {

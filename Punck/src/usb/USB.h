@@ -53,7 +53,7 @@ public:
 	static constexpr uint8_t ep_maxPacket = 0x40;
 
 	void InterruptHandler();
-	void Init();
+	void Init(bool softReset);
 	size_t SendData(const uint8_t *data, uint16_t len, uint8_t endpoint);
 	void SendString(const char* s);
 	void SendString(const std::string s);
