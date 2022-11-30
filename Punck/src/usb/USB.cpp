@@ -314,8 +314,8 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_TRDT;
 		USB_OTG_FS->GUSBCFG |= (6 << 10);
 
-		DeactivateEndpoint(MSC_Out, Direction::out);			// FIXME - all or no endpoints?
-		DeactivateEndpoint(MSC_In, Direction::in);
+//		DeactivateEndpoint(MSC_Out, Direction::out);			// FIXME - all or no endpoints?
+//		DeactivateEndpoint(MSC_In, Direction::in);
 
 		ActivateEndpoint(0, Direction::out, Control);			// Open EP0 OUT
 		ActivateEndpoint(0, Direction::in, Control);			// Open EP0 IN
@@ -370,22 +370,20 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 void USB::Init(bool softReset)
 {
 	if (!softReset) {
-		RCC->CR |= RCC_CR_HSI48ON;							// Enable Internal High Speed oscillator for USB
-		while ((RCC->CR & RCC_CR_HSI48RDY) == 0);			// Wait till internal USB oscillator is ready
-		RCC->D2CCIP2R |= RCC_D2CCIP2R_USBSEL;				// Set the USB CLock MUX to RC48
-		RCC->AHB1ENR |= RCC_AHB1ENR_USB2OTGHSEN;			// USB2OTG (OTG_HS2) Peripheral Clocks Enable
-		PWR->CR3 |= PWR_CR3_USB33DEN;						// Enable VDD33USB supply level detector
+		RCC->CR |= RCC_CR_HSI48ON;						// Enable Internal High Speed oscillator for USB
+		while ((RCC->CR & RCC_CR_HSI48RDY) == 0);		// Wait till internal USB oscillator is ready
+		RCC->D2CCIP2R |= RCC_D2CCIP2R_USBSEL;			// Set the USB CLock MUX to RC48
+		RCC->AHB1ENR |= RCC_AHB1ENR_USB2OTGHSEN;		// USB2OTG (OTG_HS2) Peripheral Clocks Enable
+		PWR->CR3 |= PWR_CR3_USB33DEN;					// Enable VDD33USB supply level detector
 
 		// USB_OTG_FS GPIO Configuration: PA8: USB_OTG_FS_SOF; PA9: USB_OTG_FS_VBUS; PA10: USB_OTG_FS_ID; PA11: USB_OTG_FS_DM; PA12: USB_OTG_FS_DP
-		RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;				// GPIO port clock
+		RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;			// GPIO port clock
 
 		// PA8 (SOF), PA10 (ID), PA11 (DM), PA12 (DP) (NB PA9 - VBUS uses default values)
 		GPIOA->MODER &= ~GPIO_MODER_MODE9;
 		GPIOA->MODER &= ~GPIO_MODER_MODE11_0;
 		GPIOA->MODER &= ~GPIO_MODER_MODE12_0;
-		//GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEED11 | GPIO_OSPEEDR_OSPEED12;		// 11: High speed FIXME - set to low in HAL
 		GPIOA->AFR[1] |= (10 << GPIO_AFRH_AFSEL11_Pos) | (10 << GPIO_AFRH_AFSEL12_Pos);		// Alternate Function 10 is OTG_FS
-
 
 		NVIC_SetPriority(OTG_FS_IRQn, 2);
 		NVIC_EnableIRQ(OTG_FS_IRQn);
@@ -409,7 +407,6 @@ void USB::Init(bool softReset)
 
 	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBDEN; 			// Enable HW VBUS sensing
 
-	// FIXME - delay here???
 	USBx_DEVICE->DCFG |= USB_OTG_DCFG_DSPD;				// 11: Full speed using internal FS PHY
 
 	USB_OTG_FS->GRSTCTL |= USB_OTG_GRSTCTL_TXFNUM_4;	// Select buffers to flush. 10000: Flush all the transmit FIFOs in device or host mode
@@ -621,7 +618,7 @@ void USB::GetDescriptor()
 			return;
 	}
 
-	if (req.Length == 0U) {
+	if (req.Length == 0) {
 		EPStartXfer(Direction::in, 0, 0);			// FIXME - this never seems to happen
 	}
 }
@@ -723,19 +720,7 @@ void USB::StdDevReq()
 				for (auto c : classByEP) {
 					c->ActivateEP();
 				}
-				/*
-				ActivateEndpoint(Midi_In,  Direction::in,  Bulk);			// Activate MIDI in endpoint
-				ActivateEndpoint(Midi_Out, Direction::out, Bulk);			// Activate MIDI out endpoint
-				ActivateEndpoint(MSC_In,   Direction::in,  Bulk);			// Activate MSC in endpoint
-				ActivateEndpoint(MSC_Out,  Direction::out, Bulk);			// Activate MSC out endpoint
-				ActivateEndpoint(CDC_In,   Direction::in,  Bulk);			// Activate CDC in endpoint
-				ActivateEndpoint(CDC_Out,  Direction::out, Bulk);			// Activate CDC out endpoint
-				ActivateEndpoint(CDC_Cmd,  Direction::in,  Interrupt);		// Activate Command IN EP
 
-				EPStartXfer(Direction::out, Midi_Out, ep_maxPacket);
-				EPStartXfer(Direction::out, CDC_Out, ep_maxPacket);
-				EPStartXfer(Direction::out, MSC_Out, ep_maxPacket);
-*/
 				ep0State = EP0State::StatusIn;
 				EPStartXfer(Direction::in, 0, 0);
 			}

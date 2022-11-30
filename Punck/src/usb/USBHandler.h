@@ -53,7 +53,7 @@ public:
 protected:
 	// Proxy functions to allow access to USB private methods
 	void EndPointTransfer(const Direction d, const uint8_t ep, const uint32_t len);
-	void EndPointActivate(uint8_t ep, const Direction d, const EndPointType eptype);
+	void EndPointActivate(const uint8_t ep, const Direction d, const EndPointType eptype);
 	void SetupIn(const uint32_t size, const uint8_t* buff);
 };
 

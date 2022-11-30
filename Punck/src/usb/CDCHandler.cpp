@@ -103,6 +103,8 @@ void CDCHandler::ProcessCommand()
 				"samplelist  -  Show details of all samples found in flash\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
 				"reboot      -  Reboot device\r\n"
+				"leds:x      -  Set all LEDs to brightness from 1-100%"
+				"revertleds  -  Reset all LEDs"
 				"\r\n"
 				"Flash Tools:\r\n"
 				"------------\r\n"
@@ -111,7 +113,8 @@ void CDCHandler::ProcessCommand()
 				"printflash:A   Print 512 bytes of flash (A = decimal address)\r\n"
 				"printcluster:A Print 2048 bytes of cluster address A (>=2)\r\n"
 				"clusterchain   List chain of FAT clusters\r\n"
-				"cacheinfo   -  Show all bytes changed in header cache\r\n"
+				"cacheinfo   -  Summary of unwritten changes in header cache\r\n"
+				"cachechanges   Show all bytes changed in header cache\r\n"
 				"flushcache  -  Flush any changed data in cache to flash\r\n"
 				"eraseflash  -  Erase all sample storage flash data\r\n"
 				"format      -  Format sample storage flash\r\n"
@@ -261,7 +264,6 @@ void CDCHandler::ProcessCommand()
 
 
 
-
 	//--------------------------------------------------------------------------------------------------
 	// All flash commands that rely on memory mapped data to follow this guard
 	} else if (extFlash.flashCorrupt) {
@@ -312,7 +314,6 @@ void CDCHandler::ProcessCommand()
 			const bool blockDirty = (fatTools.dirtyCacheBlocks & (1 << blk));
 			printf("Block %2lu: %s  Dirty bytes: %lu from %lu to %lu\r\n",
 					blk, (blockDirty ? "dirty" : "     "), dirtyBytes, firstDirtyByte, lastDirtyByte);
-
 		}
 
 		// the write cache holds any blocks currently being written to to avoid multiple block erasing when writing large data
@@ -463,7 +464,6 @@ void CDCHandler::ProcessCommand()
 
 
 	} else {
-		//usb->SendString("Unrecognised command: " + cmd + "\r\nType 'help' for supported commands\r\n");
 		printf("Unrecognised command: %s\r\nType 'help' for supported commands\r\n", cmd.data());
 	}
 	cmdPending = false;

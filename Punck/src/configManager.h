@@ -13,7 +13,7 @@ extern USB usb;
 // Class used to store calibration settings - note this uses the Standard Peripheral Driver code
 class Config {
 public:
-	static constexpr uint32_t configVersion = 2;
+	static constexpr uint32_t configVersion = 3;
 	static constexpr uint32_t BufferSize = 16384;
 	static constexpr bool eraseConfig = true;
 

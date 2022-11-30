@@ -1,8 +1,7 @@
-
 #include "USB.h"
 #include "MSCHandler.h"
-#include "ExtFlash.h"
 #include "FatTools.h"
+
 
 void MSCHandler::ActivateEP()
 {
@@ -11,6 +10,7 @@ void MSCHandler::ActivateEP()
 
 	EndPointTransfer(Direction::out, USB::MSC_Out, USB::ep_maxPacket);
 }
+
 
 void MSCHandler::DataIn()
 {

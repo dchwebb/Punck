@@ -24,8 +24,8 @@ VoiceManager::VoiceManager()
 	s.drumVoice = &snarePlayer;
 	s.trigger = {GPIOB, 5, GPIOD, 3};
 	s.pwmLed = {&TIM8->CCR3};			// PC8: Red
-	s.midiLow = 83;
-	s.midiHigh = 83;
+	s.midiLow = 53;
+	s.midiHigh = 59;
 
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
@@ -58,6 +58,12 @@ VoiceManager::VoiceManager()
 	t.drumVoice = &tomsPlayer;
 	t.midiLow = 48;
 	t.midiHigh = 52;
+
+	NoteMapper& c = noteMapper[Voice::claps];
+	clapsPlayer.noteMapper = &c;
+	c.drumVoice = &clapsPlayer;
+	c.midiLow = 83;
+	c.midiHigh = 83;
 }
 
 
