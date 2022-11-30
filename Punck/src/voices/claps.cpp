@@ -5,10 +5,16 @@ void Claps::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 {
 	playing = true;
 
-	velocityScale = velocity;
+	//velocityScale = velocity;
+	velocityScale = 1.0f;
 	level = config.initLevel;
-	noteRange = noteRange == 0 ? 128 : noteRange;
+	state = State::hit1;
+	stateCounter = 0;
+
+//	noteRange = noteRange == 0 ? 128 : noteRange;
 //	sustainRate = 0.001f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// note offset allows for longer sustained hits
+
+	filter.SetCutoff(config.filterCutoff, config.filterQ);
 }
 
 
@@ -28,14 +34,51 @@ void Claps::CalcOutput()
 	}
 
 	if (playing) {
-		const float rand1 = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Initial random number used for noise
+		float output = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Initial random number used for noise
+		output = filter.CalcFilter(output);
 
-		level *= config.decay;
+		++stateCounter;
 
-		outputLevel[left]  = velocityScale * (rand1 * level);
-		outputLevel[right] = velocityScale * (rand1 * level);
+		switch (state) {
+		case State::start:
+			output = 1.0f;
+			if (stateCounter > 5) {
+				state = State::hit1;
+			}
+			break;
+		case State::hit1:
+			if (stateCounter > 460) {		// approx 9.6ms
+				level = config.initLevel;
+				stateCounter = 0;
+				state = State::hit2;
+			}
+			break;
+		case State::hit2:
+			if (stateCounter > 547) {		// approx 11.4ms
+				level = config.initLevel;
+				stateCounter = 0;
+				state = State::hit3;
+			}
+			break;
+		case State::hit3:
+			if (stateCounter > 336) {		// approx 7ms
+				level = config.initLevel;
+				stateCounter = 0;
+				state = State::hit4;
+			}
+			break;
+		default:
+			break;
+		}
 
-		if (level < 0.00001f) {
+		output += config.unfilteredNoiseLevel * intToFloatMult * static_cast<int32_t>(RNG->DR);		// Add some additional non-filtered noise back in
+
+		level *= (state == State::hit4 ? config.reverbDecay : config.initDecay);
+
+		outputLevel[left]  = velocityScale * (output * level);
+		outputLevel[right] = outputLevel[left];
+
+		if (level < 0.00001f && state == State::hit4) {
 			playing = false;
 		}
 

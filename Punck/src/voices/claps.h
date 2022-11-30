@@ -1,7 +1,7 @@
 #pragma once
 #include "initialisation.h"
 #include "DrumVoice.h"
-#include "Filter.h"
+#include "BPFilter.h"
 
 class NoteMapper;
 
@@ -23,12 +23,20 @@ private:
 	float level;
 	float velocityScale;
 
+	enum class State {start, hit1, hit2, hit3, hit4};
+	State state;
+	uint32_t stateCounter;
+
 	struct Config {
-		float initLevel = 1.0f;
-		float decay = 0.9980f;				// Decay rate
+		float initLevel = 5.0f;
+		float initDecay = 0.9930f;				// Decay rate of first hits
+		float reverbDecay = 0.9990f;		// Decay rate of 'reverb' section
+		float filterCutoff = 1200.0f;
+		float filterQ = 2.0f;
+		float unfilteredNoiseLevel = 0.05f;
 	} config;
 
 
-//	Filter filter{2, filterPass::LowPass, &(ADC_array[ADC_SnareFilter])};		// Filters combined partial and noise elements of sound
+	BPFilter filter;		// Band pass filter
 };
 
