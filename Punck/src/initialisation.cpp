@@ -4,9 +4,8 @@
 #include <cstring>
 
 // Clock overview:
-// Main clock (Nucelo): 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz
+// [Main clock (Nucleo): 8MHz (HSE) / 2 (M) * 200 (N) / 2 (P) = 400MHz]
 // Main clock (v1): 12MHz (HSE) / 3 (M) * 200 (N) / 2 (P) = 400MHz
-// SDRAM: 200MHz: Defaulted to D1 domain AHB prescaler (RCC_D1CFGR_HPRE_3) ie main clock /2 = 200MHz (AKA HCLK3)
 // I2S: Peripheral Clock (AKA per_ck) set to HSI = 64MHz
 // ADC: Peripheral Clock (AKA per_ck) set to HSI = 64MHz
 
@@ -18,35 +17,7 @@
 #define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
 #define PLL_Q1 4			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 200 (N) / 4 (Q) = 200MHz
 #define PLL_R1 2
-#elif CPUCLOCK == 320
-// 8MHz (HSE) / 2 (M) * 160 (N) / 2 (P) = 320MHz
-#define PLL_M1 2
-#define PLL_N1 160
-#define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
-#define PLL_Q1 2			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 160 (N) / 2 (Q) = 320MHz
-#define PLL_R1 2
 
-#elif CPUCLOCK == 280
-// 8MHz (HSE) / 2 (M) * 140 (N) / 2 (P) = 280MHz
-#define PLL_M1 2
-#define PLL_N1 140
-#define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
-#define PLL_Q1 2			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 140 (N) / 2 (Q) = 280MHz
-#define PLL_R1 2
-#elif CPUCLOCK == 240
-// 8MHz (HSE) / 2 (M) * 120 (N) / 2 (P) = 240MHz
-#define PLL_M1 2
-#define PLL_N1 120
-#define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
-#define PLL_Q1 2			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 120 (N) / 2 (Q) = 240MHz
-#define PLL_R1 2
-#elif CPUCLOCK == 200
-// 8MHz (HSE) / 2 (M) * 100 (N) / 2 (P) = 200MHz
-#define PLL_M1 2
-#define PLL_N1 100
-#define PLL_P1 1			// 0000001: pll1_p_ck = vco1_ck / 2
-#define PLL_Q1 2			// This is used for I2S clock: 8MHz (HSE) / 2 (M) * 100 (N) / 2 (Q) = 200MHz FIXME - problems using this PLL divider and FMC
-#define PLL_R1 2
 #else
 // 8MHz (HSE) / 2 (M) * 240 (N) / 2 (P) = 480MHz
 #define PLL_M1 2
@@ -56,15 +27,6 @@
 #define PLL_R1 2
 #endif
 
-#ifdef PLL2ON
-// PLL2R used for SDRAM clock - not currently used as was interfering with timing on I2S
-// 8MHz (HSE) / 4 (M) * 200 (N) / 2 (R) = 200MHz (Maximum speed successfully tested 230MHz)
-// PPL2P used for ADC: 8MHz / 4 (M) * 200 (N) / 5 (P) = 80MHz
-#define PLL_M2 4
-#define PLL_N2 200
-#define PLL_R2 1			// 0000001: pll2_r_ck = vco2_ck / 2
-#define PLL_P2 4			// 0000100: pll2_p_ck = vco2_ck / 5
-#endif
 
 void SystemClock_Config()
 {
@@ -72,15 +34,7 @@ void SystemClock_Config()
 
 	// Voltage scaling - see Datasheet page 113. VOS1 > 300MHz; VOS2 > 200MHz; VOS3 < 200MHz
 	PWR->CR3 &= ~PWR_CR3_SCUEN;						// Supply configuration update enable - this must be deactivated or VOS ready does not come on
-#if CPUCLOCK <= 200
-	PWR->D3CR |= PWR_D3CR_VOS_0;					// Configure voltage scaling level 2 (0b10 = VOS2)
-	PWR->D3CR &= ~PWR_D3CR_VOS_1;
-#elif CPUCLOCK <= 280
-	PWR->D3CR |= PWR_D3CR_VOS_1;					// Configure voltage scaling level 2 (0b10 = VOS2)
-	PWR->D3CR &= ~PWR_D3CR_VOS_0;
-#else
 	PWR->D3CR |= PWR_D3CR_VOS;						// Configure voltage scaling level 1 before engaging overdrive (0b11 = VOS1)
-#endif
 	while ((PWR->CSR1 & PWR_CSR1_ACTVOSRDY) == 0);	// Check Voltage ready 1= Ready, voltage level at or above VOS selected level
 
 #if CPUCLOCK > 400
@@ -110,23 +64,6 @@ void SystemClock_Config()
 	RCC->CR |= RCC_CR_PLL1ON;						// Turn on main PLL
 	while ((RCC->CR & RCC_CR_PLL1RDY) == 0);		// Wait till PLL is ready
 
-#ifdef PLL2ON
-	RCC->PLLCKSELR |= PLL_M2 << RCC_PLLCKSELR_DIVM2_Pos;
-
-	// PLL 2 dividers
-	RCC->PLL2DIVR = (PLL_N2 - 1) << RCC_PLL2DIVR_N2_Pos |
-			        PLL_R2 << RCC_PLL2DIVR_R2_Pos |
-					PLL_P2 << RCC_PLL2DIVR_P2_Pos;
-
-	RCC->PLLCFGR |= RCC_PLLCFGR_PLL2RGE_1;			// 01: The PLL2 input (ref1_ck) clock range frequency is between 2 and 4 MHz (Will be 2MHz for 8MHz clock divided by 4)
-	RCC->PLLCFGR |= RCC_PLLCFGR_PLL2VCOSEL;			// 1: Medium VCO range:150 to 420 MHz
-	RCC->PLLCFGR |= RCC_PLLCFGR_DIVR2EN;			// Enable R divider output for SDRAM clock
-	RCC->PLLCFGR |= RCC_PLLCFGR_DIVP2EN;			// Enable P divider output for ADC clock
-
-	RCC->CR |= RCC_CR_PLL2ON;						// Turn on PLL 2
-	while ((RCC->CR & RCC_CR_PLL2RDY) == 0);		// Wait till PLL is ready
-#endif
-
 	// Peripheral scalers
 	RCC->D1CFGR |= RCC_D1CFGR_HPRE_3;				// D1 domain AHB prescaler - divide 400MHz by 2 for 200MHz - this is then divided for all APB clocks below
 	RCC->D1CFGR |= RCC_D1CFGR_D1PPRE_2; 			// Clock divider for APB3 clocks - set to 4 for 100MHz: 100: hclk / 2
@@ -141,9 +78,6 @@ void SystemClock_Config()
 	// By default Flash latency is set to 7 wait states - set to 4 for now but may need to increase
 	FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_4WS;
 	while ((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != FLASH_ACR_LATENCY_4WS);
-
-	// Note that the peripherals can use different clock sources - eg for UART configured thus:
-	// RCC->D2CCIP2R |= RCC_D2CCIP2R_USART28SEL;
 }
 
 
@@ -278,14 +212,6 @@ void InitAdcPins(ADC_TypeDef* ADC_No, const std::initializer_list<uint8_t> chann
 // Settings used for both ADC1 and ADC2
 void InitADC()
 {
-	// If using web editor to control ADC settings initialise all values to halfway point
-	if (WEB_EDITOR_ADC) {
-		for (uint8_t i; i < ADC2_BUFFER_LENGTH; ++i) {
-			ADC_array[i] = 32767;
-		}
-		return;
-	}
-
 	// Configure clocks
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;			// GPIO port clock
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;

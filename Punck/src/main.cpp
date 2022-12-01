@@ -13,9 +13,7 @@ volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER
 
 // TODO:
 // Sample panning (naming? web interface?)
-// Problem where sampler voice triggered by MIDI occasionally does not play during sequence
 // Performance updates
-// Add claps voice
 
 USB usb;
 
@@ -35,10 +33,11 @@ int main(void) {
 #endif
 
 	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
+	InitDebugTimer();				// Timer 3 used for performance testing
 	InitRNG();						// Init random number generator
 	InitMidiUART();					// UART for receiving serial MIDI
 	InitADC();						// ADCs used to monitor potentiometer inputs
-	InitDAC();						// Available on debug pins
+	//InitDAC();					// Available on debug pins
 	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
 	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
 
@@ -50,9 +49,7 @@ int main(void) {
 	InitI2S();						// Initialise I2S which will start main sample interrupts
 
 	while (1) {
-#if !DEBUG_MSC
 		usb.cdc.ProcessCommand();	// Check for incoming USB serial commands
-#endif
 		fatTools.CheckCache();		// Check if any outstanding cache changes need to be written to Flash
 		voiceManager.IdleTasks();	// Check if filter coefficients need to be updated
 

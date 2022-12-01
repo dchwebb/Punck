@@ -3,9 +3,13 @@
 
 class BPFilter {
 public:
-	void SetCutoff(float cutoff, float Q);
-	float CalcFilter(float x);
+	void SetCutoff(const float cutoff, const float Q);
+	float CalcFilter(const float x);
 	void Init();
+
+private:
+	float currentCutoff;
+	float currentQ;
 
 	float xn2 = 0.0f, xn1 = 0.0f, yn2 = 0.0f, yn1 = 0.0f;
 
@@ -17,4 +21,5 @@ public:
 		float b1;
 		float b2;
 	} iirCoeff;
+
 };

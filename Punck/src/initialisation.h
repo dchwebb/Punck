@@ -8,14 +8,10 @@
 
 extern volatile uint32_t SysTickVal;
 
-#define ADC1_BUFFER_LENGTH 8				// currently unused
+#define ADC1_BUFFER_LENGTH 8
 #define ADC2_BUFFER_LENGTH 7
-#define WEB_EDITOR_ADC false				// Web editor controls ADC settings
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms
-#define ADC_OFFSET_DEFAULT 33800
 #define CPUCLOCK 400
-
-#define DEBUG_MSC false
 
 constexpr double pi = 3.14159265358979323846;
 constexpr float intToFloatMult = 1.0f / std::pow(2.0f, 31.0f);		// Multiple to convert 32 bit int to -1.0 - 1.0 float
@@ -56,17 +52,13 @@ enum channel {left = 0, right = 1};
 void SystemClock_Config();
 void InitCache();
 void InitSysTick();
-void uartSendChar(char c);
-void uartSendString(const char* s);
 void InitADC();
 void InitADC1();
-void TriggerADC1();
 void InitADC2();
 void InitDAC();
 void InitI2S();
 void suspendI2S();
 void resumeI2S();
-void InitTempoClock();
 void InitIO();
 void InitDebugTimer();
 void InitQSPI();

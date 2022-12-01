@@ -129,6 +129,36 @@ void CDCHandler::ProcessCommand()
 		debugStart = true;
 #endif
 
+	} else if (cmd.compare("timing") == 0) {					// Print timing debug info
+		printf("Maximum Timings:\r\n");
+		for (auto note : voiceManager.noteMapper) {
+			switch (note.voice) {
+			case VoiceManager::kick:
+				printf("Kick    ");
+				break;
+			case VoiceManager::snare:
+				printf("Snare   ");
+				break;
+			case VoiceManager::hihat:
+				printf("Hi Hats ");
+				break;
+			case VoiceManager::samplerA:
+				printf("Sample A");
+				break;
+			case VoiceManager::samplerB:
+				printf("Sample B");
+				break;
+			case VoiceManager::toms:
+				printf("Toms    ");
+				break;
+			case VoiceManager::claps:
+				printf("Claps   ");
+				break;
+			}
+			printf(": %ld\r\n", note.drumVoice->debugMaxTime);
+		}
+
+
 	} else if (cmd.compare("saveconfig") == 0) {				// Serialise config to internal flash
 		printf("Saving config\r\n");
 		configManager.SaveConfig();
@@ -162,6 +192,7 @@ void CDCHandler::ProcessCommand()
 		Reboot();
 
 	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
+		printf("MIDI mapping:\r\n");
 		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
 			case VoiceManager::kick:
@@ -171,7 +202,7 @@ void CDCHandler::ProcessCommand()
 				printf("Snare   ");
 				break;
 			case VoiceManager::hihat:
-				printf("Close HH");
+				printf("Hi Hats ");
 				break;
 			case VoiceManager::samplerA:
 				printf("Sample A");
@@ -181,6 +212,9 @@ void CDCHandler::ProcessCommand()
 				break;
 			case VoiceManager::toms:
 				printf("Toms    ");
+				break;
+			case VoiceManager::claps:
+				printf("Claps   ");
 				break;
 			}
 			printf(" : %3d, %3d\r\n", note.midiLow, note.midiHigh);

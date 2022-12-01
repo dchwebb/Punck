@@ -8,6 +8,7 @@ class DrumVoice {
 public:
 	float outputLevel[2];
 	bool playing;
+	uint32_t debugMaxTime = 0;
 
 	virtual void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity) = 0;
 	virtual void Play(const uint8_t voice, const uint32_t index) = 0;
@@ -24,6 +25,8 @@ public:
 		uint32_t noteRange;
 		float velocity;
 	} queuedNote;
+
+	// When note is triggered outside main interrupt queue to play in main interrupt
 	void QueuePlay(const uint8_t voice, const uint32_t offset, const uint32_t range, const float velocity) {
 		noteQueued = false;
 		queuedNote.voice = voice;
@@ -31,6 +34,14 @@ public:
 		queuedNote.noteRange = range;
 		queuedNote.velocity = velocity;
 		noteQueued = true;
+	}
+
+	// Called in main interrupt to check if queued note should be played
+	void PlayQueued() {
+		if (noteQueued) {
+			Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
+			noteQueued = false;
+		}
 	}
 
 	constexpr float FreqToInc(const float frequency)

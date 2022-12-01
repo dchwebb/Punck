@@ -11,7 +11,7 @@ var barClip = null;			// Clipboard for copying and pasting bars
 
 // enum from c++ code to match voice
 var voiceEnum = {
-    Kick: 0, Snare: 1, HiHat: 2, Sampler_A: 3, Sampler_B: 4, Toms: 5
+    Kick: 0, Snare: 1, HiHat: 2, Sampler_A: 3, Sampler_B: 4, Toms: 5, Claps: 6
 };
 
 var requestEnum = {
@@ -28,17 +28,6 @@ var kickSettings = [
 	{name: 'Sine Slow Down Rate'},
 ];
 
-var tomsSettings = [
-	{name: 'Decay Partial 1'},
-	{name: 'Decay Partial 2'},
-	{name: 'Ramp Inc'},
-	{name: 'Init Sine Freq'},
-	{name: 'Sine 1 freq scale'},
-	{name: 'Sine 2 freq scale'},
-	{name: 'Sine 1 level'},
-	{name: 'Sine 2 level'},
-	{name: 'sineSlowDownRate'},
-];
 
 var snareSettings = [
 	{name: 'Noise level'},
@@ -86,6 +75,28 @@ var hihatSettings = [
 	{name: 'Partial 5 Frequency'},
 ];
 
+var tomsSettings = [
+	{name: 'Decay Partial 1'},
+	{name: 'Decay Partial 2'},
+	{name: 'Ramp Inc'},
+	{name: 'Init Sine Freq'},
+	{name: 'Sine 1 freq scale'},
+	{name: 'Sine 2 freq scale'},
+	{name: 'Sine 1 level'},
+	{name: 'Sine 2 level'},
+	{name: 'sineSlowDownRate'},
+];
+
+var clapSettings = [
+	{name: 'Initial Level'},
+	{name: 'Reverb Initial Level'},
+	{name: 'Initial Decay Rate'},
+	{name: 'Reverb Decay Rate'},
+	{name: 'BP Filter Cutoff'},
+	{name: 'BP Filter Q'},
+	{name: 'Unfiltered Noise Level'},
+];
+
 
 var pickerTypeEnum = {discrete: 0, range: 1};
 
@@ -100,9 +111,10 @@ var variationPicker = [
 
 var drumSettings = [
 	{heading: "Kick Settings", id: voiceEnum.Kick, settings: kickSettings},
-	{heading: "Toms Settings", id: voiceEnum.Toms, settings: tomsSettings},
 	{heading: "Snare Settings", id: voiceEnum.Snare, settings: snareSettings},
 	{heading: "Hihat Settings", id: voiceEnum.HiHat, settings: hihatSettings},
+	{heading: "Toms Settings", id: voiceEnum.Toms, settings: tomsSettings},
+	{heading: "Clap Settings", id: voiceEnum.Claps, settings: clapSettings},
 ]
 
 // Settings related to drum sequence editing

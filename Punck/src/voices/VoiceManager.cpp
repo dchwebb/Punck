@@ -24,8 +24,8 @@ VoiceManager::VoiceManager()
 	s.drumVoice = &snarePlayer;
 	s.trigger = {GPIOB, 5, GPIOD, 3};
 	s.pwmLed = {&TIM8->CCR3};			// PC8: Red
-	s.midiLow = 53;
-	s.midiHigh = 59;
+	s.midiLow = 72;
+	s.midiHigh = 77;
 
 	NoteMapper& hh = noteMapper[Voice::hihat];
 	hihatPlayer.noteMapper = &hh;
@@ -41,8 +41,8 @@ VoiceManager::VoiceManager()
 	sa.voiceIndex = 0;
 	sa.trigger = {GPIOB, 7, GPIOE, 14};
 	sa.pwmLed = {&TIM4->CCR3};			// PD14: Green
-	sa.midiLow = 60;
-	sa.midiHigh = 67;
+	sa.midiLow = 48;
+	sa.midiHigh = 55;
 
 	NoteMapper& sb = noteMapper[samplerB];
 	samples.sampler[1].noteMapper = &sb;
@@ -50,14 +50,14 @@ VoiceManager::VoiceManager()
 	sb.voiceIndex = 1;
 	sb.trigger = {GPIOG, 13, GPIOE, 15};
 	sb.pwmLed = {&TIM4->CCR4};			// PD15: Yellow
-	sb.midiLow = 72;
-	sb.midiHigh = 77;
+	sb.midiLow = 60;
+	sb.midiHigh = 71;
 
 	NoteMapper& t = noteMapper[Voice::toms];
 	tomsPlayer.noteMapper = &k;
 	t.drumVoice = &tomsPlayer;
-	t.midiLow = 48;
-	t.midiHigh = 52;
+	t.midiLow = 56;
+	t.midiHigh = 59;
 
 	NoteMapper& c = noteMapper[Voice::claps];
 	clapsPlayer.noteMapper = &c;
@@ -117,7 +117,18 @@ void VoiceManager::Output()
 
 	for (auto& nm : noteMapper) {
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+			nm.drumVoice->PlayQueued();			// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt
+
+			TIM3->EGR |= TIM_EGR_UG;						// 1: Re-initialize the counter and generates an update of the registers
+
 			nm.drumVoice->CalcOutput();
+
+			uint32_t time = TIM3->CNT;
+
+
+			if (time > nm.drumVoice->debugMaxTime) {
+				nm.drumVoice->debugMaxTime = time;
+			}
 		}
 	}
 }
@@ -150,8 +161,10 @@ void VoiceManager::NoteOn(MidiHandler::MidiNote midiNote)
 
 			// Switch to next voice Once high value is assigned
 			midiLearnState = MidiLearnState::lowNote;
-			noteMapper[midiLearnVoice].pwmLed.Level(0.0f);
-			if (++midiLearnVoice > Voice::samplerB) {
+			for (auto& nm : noteMapper) {
+				nm.pwmLed.Level(0.0f);
+			}
+			if (++midiLearnVoice == Voice::count) {
 				midiLearnVoice = Voice::kick;
 			}
 		}
@@ -185,7 +198,17 @@ void VoiceManager::CheckButtons()
 		} else {
 			// Pulse LED to show MIDI Learn state - slow is low note, fast is high note
 			midiLearnCounter += midiLearnState == MidiLearnState::lowNote ? 5 : 10;
-			noteMapper[midiLearnVoice].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+
+			// Toms and claps do not have dedicated LEDs so pulse combinations
+			if (midiLearnVoice == Voice::toms) {
+				noteMapper[Voice::kick].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+				noteMapper[Voice::snare].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+			} else if (midiLearnVoice == Voice::claps) {
+				noteMapper[Voice::samplerA].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+				noteMapper[Voice::samplerB].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+			} else {
+				noteMapper[midiLearnVoice].pwmLed.Level(midiLearnCounter > 0 ? 1.0f : 0.0f);
+			}
 		}
 	} else if ((GPIOC->IDR & GPIO_IDR_ID6) == 0) {		// PC6: Sequence Select
 		buttonMode = ButtonMode::drumPattern;

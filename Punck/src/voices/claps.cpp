@@ -5,14 +5,10 @@ void Claps::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 {
 	playing = true;
 
-	//velocityScale = velocity;
-	velocityScale = 1.0f;
+	velocityScale = velocity;
 	level = config.initLevel;
 	state = State::hit1;
 	stateCounter = 0;
-
-//	noteRange = noteRange == 0 ? 128 : noteRange;
-//	sustainRate = 0.001f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// note offset allows for longer sustained hits
 
 	filter.SetCutoff(config.filterCutoff, config.filterQ);
 }
@@ -40,12 +36,6 @@ void Claps::CalcOutput()
 		++stateCounter;
 
 		switch (state) {
-		case State::start:
-			output = 1.0f;
-			if (stateCounter > 5) {
-				state = State::hit1;
-			}
-			break;
 		case State::hit1:
 			if (stateCounter > 460) {		// approx 9.6ms
 				level = config.initLevel;
@@ -62,9 +52,9 @@ void Claps::CalcOutput()
 			break;
 		case State::hit3:
 			if (stateCounter > 336) {		// approx 7ms
-				level = config.initLevel;
+				level = config.reverbInitLevel;
 				stateCounter = 0;
-				state = State::hit4;
+				state = State::reverb;
 			}
 			break;
 		default:
@@ -73,12 +63,12 @@ void Claps::CalcOutput()
 
 		output += config.unfilteredNoiseLevel * intToFloatMult * static_cast<int32_t>(RNG->DR);		// Add some additional non-filtered noise back in
 
-		level *= (state == State::hit4 ? config.reverbDecay : config.initDecay);
+		level *= (state == State::reverb ? config.reverbDecay : config.initDecay);
 
 		outputLevel[left]  = velocityScale * (output * level);
 		outputLevel[right] = outputLevel[left];
 
-		if (level < 0.00001f && state == State::hit4) {
+		if (level < 0.00001f && state == State::reverb) {
 			playing = false;
 		}
 
@@ -88,7 +78,7 @@ void Claps::CalcOutput()
 
 void Claps::UpdateFilter()
 {
-//	filter.Update();
+
 }
 
 
