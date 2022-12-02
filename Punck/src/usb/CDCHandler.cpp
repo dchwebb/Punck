@@ -83,6 +83,8 @@ int32_t CDCHandler::ParseInt(const std::string_view cmd, const char precedingCha
 	return val;
 }
 
+// Timing debug variables
+extern uint32_t loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun;
 
 void CDCHandler::ProcessCommand()
 {
@@ -129,8 +131,11 @@ void CDCHandler::ProcessCommand()
 		debugStart = true;
 #endif
 
+#ifdef TIMINGDEBUG
+
 	} else if (cmd.compare("timing") == 0) {					// Print timing debug info
-		printf("Maximum Timings:\r\n");
+		printf("Timings: Loop: %ld, Max: %ld, Output: %ld, Max: %ld, Underrun: %ld\r\n",
+				loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun);
 		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
 			case VoiceManager::kick:
@@ -157,6 +162,21 @@ void CDCHandler::ProcessCommand()
 			}
 			printf(": %ld\r\n", note.drumVoice->debugMaxTime);
 		}
+
+
+	} else if (cmd.compare("resettiming") == 0) {					// Print timing debug info
+		loopTime = 0;
+		maxLoopTime = 0;
+		outputTime = 0;
+		maxOutputTime = 0;
+		spiUnderrun = 0;
+
+		for (auto note : voiceManager.noteMapper) {
+			note.drumVoice->debugMaxTime = 0;
+		}
+		printf("Reset Debug Timings\r\n");
+
+#endif
 
 
 	} else if (cmd.compare("saveconfig") == 0) {				// Serialise config to internal flash

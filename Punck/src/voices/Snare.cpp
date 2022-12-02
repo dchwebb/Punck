@@ -33,12 +33,6 @@ void Snare::Play(const uint8_t voice, const uint32_t index)
 
 void Snare::CalcOutput()
 {
-	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
-	if (noteQueued) {
-		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
-		noteQueued = false;
-	}
-
 	if (playing) {
 		const float rand1 = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Left channel random number used for noise
 

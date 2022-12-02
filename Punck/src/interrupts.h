@@ -4,11 +4,23 @@ void OTG_FS_IRQHandler(void)
 }
 
 uint32_t spiUnderrun = 0;		// Debug
-void SPI2_IRQHandler()
-{
-	// I2S Interrupt
+#ifdef TIMINGDEBUG
+uint32_t loopTime = 0;
+uint32_t maxLoopTime = 0;
+uint32_t outputTime = 0;
+uint32_t maxOutputTime = 0;
+#endif
 
-	//GPIOD->ODR |= GPIO_ODR_OD9;							// PD9: use tempo out as debug pin
+void SPI2_IRQHandler()									// I2S Interrupt
+{
+#ifdef TIMINGDEBUG
+	GPIOD->ODR |= GPIO_ODR_OD9;							// PD9: use tempo out as debug pin
+	loopTime = TIM3->CNT;
+	if (loopTime > maxLoopTime) {
+		maxLoopTime = loopTime;
+	}
+	TIM3->EGR |= TIM_EGR_UG;							// 1: Re-initialize debug counter
+#endif
 
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		SPI2->IFCR |= SPI_IFCR_UDRC;					// Clear underrun condition
@@ -18,7 +30,13 @@ void SPI2_IRQHandler()
 
 	voiceManager.Output();
 
-	//GPIOD->ODR &= ~GPIO_ODR_OD9;						// PD9: use tempo out as debug pin
+#ifdef TIMINGDEBUG
+	outputTime = TIM3->CNT;
+	if (outputTime > maxOutputTime) {
+		maxOutputTime = outputTime;
+	}
+	GPIOD->ODR &= ~GPIO_ODR_OD9;						// PD9: use tempo out as debug pin
+#endif
 }
 
 

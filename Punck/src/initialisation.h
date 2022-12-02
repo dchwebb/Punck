@@ -8,6 +8,8 @@
 
 extern volatile uint32_t SysTickVal;
 
+#define TIMINGDEBUG true
+
 #define ADC1_BUFFER_LENGTH 8
 #define ADC2_BUFFER_LENGTH 7
 #define SYSTICK 1000						// Set in uS so 1000uS = 1ms

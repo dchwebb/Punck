@@ -23,12 +23,6 @@ void Claps::Play(const uint8_t voice, const uint32_t index)
 
 void Claps::CalcOutput()
 {
-	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
-	if (noteQueued) {
-		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
-		noteQueued = false;
-	}
-
 	if (playing) {
 		float output = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Initial random number used for noise
 		output = filter.CalcFilter(output);

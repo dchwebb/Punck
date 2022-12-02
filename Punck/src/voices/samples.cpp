@@ -75,12 +75,6 @@ static inline int32_t readBytes(const uint8_t* address, const uint8_t bytes, con
 
 void Samples::CalcOutput()
 {
-	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
-	if (noteQueued) {
-		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
-		noteQueued = false;
-	}
-
 	playing = (sampler[playerA].playing || sampler[playerB].playing);
 	for (auto& sp : sampler) {
 		if (sp.playing) {
@@ -192,28 +186,32 @@ bool Samples::UpdateSampleList()
 
 	while (dirEntry->name[0] != 0) {
 
-		if (dirEntry->attr == FATFileInfo::LONG_NAME) {
+		if (dirEntry->name[0] != FATFileInfo::fileDeleted && dirEntry->attr == FATFileInfo::LONG_NAME) {
 			// Store long file name in temporary buffer as this may contain volume and panning information
 			const FATLongFilename* lfn = (FATLongFilename*)dirEntry;
 			const char tempFileName[13] {lfn->name1[0], lfn->name1[2], lfn->name1[4], lfn->name1[6], lfn->name1[8],
 				lfn->name2[0], lfn->name2[2], lfn->name2[4], lfn->name2[6], lfn->name2[8], lfn->name2[10],
 				lfn->name3[0], lfn->name3[2]};
 
-			memcpy(&longFileName[((lfn->order & 0x3F) - 1) * 13], tempFileName, 13);		// strip 0x40 marker from first LFN entry order field
+			const uint32_t pos = ((lfn->order & 0x3F) - 1) * 13;
+			if (pos + 13 < sizeof(tempFileName)) {
+				memcpy(&longFileName[pos], tempFileName, 13);		// strip 0x40 marker from first LFN entry order field
+			}
 			lfnPosition += 13;
 
 		// Valid sample: not LFN, not deleted, not directory, extension = WAV
-		} else if (dirEntry->name[0] != 0xE5 && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
+		} else if (dirEntry->name[0] != FATFileInfo::fileDeleted && (dirEntry->attr & AM_DIR) == 0 && strncmp(&(dirEntry->name[8]), "WAV", 3) == 0) {
 			Sample* sample = &(sampleList[pos++]);
 
 			// If directory entry preceeded by long file name use that to check for volume/panning information
 			float newVolume = 1.0f;
 			if (lfnPosition > 0) {
 				longFileName[lfnPosition] = '\0';
-				const int32_t vol = ParseInt(longFileName, ".v", 0, 100);
+				const int32_t vol = ParseInt(longFileName, ".v", 0, 200);
 				if (vol > 0) {
 					newVolume = static_cast<float>(vol) / 100.0f;
 				}
+				lfnPosition = 0;
 			}
 
 			// Check if any fields have changed

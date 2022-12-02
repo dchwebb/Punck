@@ -119,16 +119,16 @@ void VoiceManager::Output()
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
 			nm.drumVoice->PlayQueued();			// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt
 
-			TIM3->EGR |= TIM_EGR_UG;						// 1: Re-initialize the counter and generates an update of the registers
-
+#ifdef TIMINGDEBUG
+			uint32_t debugStart = TIM3->CNT;
+#endif
 			nm.drumVoice->CalcOutput();
-
-			uint32_t time = TIM3->CNT;
-
-
-			if (time > nm.drumVoice->debugMaxTime) {
-				nm.drumVoice->debugMaxTime = time;
+#ifdef TIMINGDEBUG
+			uint32_t debugTime = TIM3->CNT - debugStart;
+			if (debugTime > nm.drumVoice->debugMaxTime) {
+				nm.drumVoice->debugMaxTime = debugTime;
 			}
+#endif
 		}
 	}
 }

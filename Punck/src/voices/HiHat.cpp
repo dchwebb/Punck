@@ -2,7 +2,6 @@
 #include "VoiceManager.h"
 #include <cstring>
 
-
 void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity)
 {
 	playing = true;
@@ -44,12 +43,6 @@ void HiHat::Play(const uint8_t voice, const uint32_t index)
 
 void HiHat::CalcOutput()
 {
-	// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt loop
-	if (noteQueued) {
-		Play(queuedNote.voice, queuedNote.noteOffset, queuedNote.noteRange, queuedNote.velocity);
-		noteQueued = false;
-	}
-
 	if (playing) {
 
 		const int32_t noise = static_cast<int32_t>(RNG->DR);		// Get noise level here to give time for next noise value to be calculated
@@ -85,6 +78,7 @@ void HiHat::CalcOutput()
 			lpFilter.SetCutoff(lpFilterCutoff);
 		}
 
+
 		// Add a burst of noise at the beginning of the note (both channels use the sample partials, but different noise)
 		noiseScale *= config.noiseDecay;
 		currentLevel[left] += noiseScale * noise;
@@ -115,7 +109,7 @@ void HiHat::CalcOutput()
 
 		// Filter and scale the output levels
 		outputLevel[0] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[left], left), left) - 0.0001f;
-		outputLevel[1] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[right], right), right) - 0.0001f;;
+		outputLevel[1] = envScale * lpFilter.CalcFilter(hpFilter.CalcFilter(currentLevel[right], right), right) - 0.0001f;
 
 		noteMapper->pwmLed.Level(velocityScale);
 	}

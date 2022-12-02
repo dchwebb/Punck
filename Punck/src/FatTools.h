@@ -54,6 +54,7 @@ extern uint8_t headerCacheDebug[fatSectorSize * fatCacheSectors];
 // Struct to hold regular 32 byte directory entries (SFN)
 struct FATFileInfo {
 	enum FileAttribute {READ_ONLY = 0x01, HIDDEN = 0x02, SYSTEM = 0x04, VOLUME_ID = 0x08, DIRECTORY = 0x10, ARCHIVE = 0x20, LONG_NAME = 0xF};
+	static const uint8_t fileDeleted = 0xE5;
 
 	char name[11];						// Short name: If name[0] == 0xE5 directory entry is free (0x00 also means free and rest of directory is free)
 	uint8_t attr;						// READ_ONLY 0x01; HIDDEN 0x02; SYSTEM 0x04; VOLUME_ID 0x08; DIRECTORY 0x10; ARCHIVE 0x20; LONG_NAME 0xF
