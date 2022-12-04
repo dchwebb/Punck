@@ -3,6 +3,7 @@
 #include "USB.h"
 #include "VoiceManager.h"
 #include "FatTools.h"
+#include "Reverb.h"
 
 
 volatile uint32_t SysTickVal;		// 1 ms resolution
