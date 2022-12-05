@@ -5,6 +5,9 @@
 
 VoiceManager voiceManager;
 
+#ifdef TIMINGDEBUG
+	uint32_t reverbTime = 0, maxReverbTime = 0;
+#endif
 
 VoiceManager::VoiceManager()
 {
@@ -114,9 +117,16 @@ void VoiceManager::Output()
 
 
 	// reverb
+#ifdef TIMINGDEBUG
+			uint32_t reverbStart = TIM3->CNT;
+#endif
 	std::tie(combinedOutput[left], combinedOutput[right])  = reverb.Process(combinedOutput[left], combinedOutput[right]);
-//	combinedOutput[left] = revl;
-//	combinedOutput[right] = revr;
+#ifdef TIMINGDEBUG
+			reverbTime = TIM3->CNT - reverbStart;
+			if (reverbTime > maxReverbTime) {
+				maxReverbTime = reverbTime;
+			}
+#endif
 
 	const float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);

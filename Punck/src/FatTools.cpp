@@ -412,7 +412,7 @@ void FatTools::MakeDummyFiles()
 	// Create 'IndexerVolumeGuid' and 'WPSettings.dat' files
 	LFNDirEntries(cluster2Addr + 64, "INDEXE~1   ", "Guid", "IndexerVolume", 0xff, AM_ARC, 3, 76);
 	uint8_t* cluster3Addr = cluster2Addr + fatClusterSize;
-	memcpy(cluster3Addr, "{DC903617-185C-4094-875D-7E83AE4C738E}", 76);		// Create file - no idea if the actual GUID matters but whatever
+	memcpy(cluster3Addr, "{DC903617-185C-4094-875D-7E83AE4C738E}", 39);		// Create file - no idea if the actual GUID matters but whatever
 
 	LFNDirEntries(cluster2Addr + 160, "WPSETT~1DAT", "t", "WPSettings.da", 0xce, AM_ARC, 4, 12);
 	uint32_t file[3] = {0x0000000c, 0x5e3739ac, 0x0b1690d4};				// This random file is just what it creates on my PC - undocumented

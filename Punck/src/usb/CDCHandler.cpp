@@ -84,7 +84,7 @@ int32_t CDCHandler::ParseInt(const std::string_view cmd, const char precedingCha
 }
 
 // Timing debug variables
-extern uint32_t loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun;
+extern uint32_t loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun, reverbTime, maxReverbTime;
 
 void CDCHandler::ProcessCommand()
 {
@@ -162,6 +162,7 @@ void CDCHandler::ProcessCommand()
 			}
 			printf(": %ld\r\n", note.drumVoice->debugMaxTime);
 		}
+		printf("Reverb current: %ld maximum: %ld\r\n", reverbTime, maxReverbTime);
 
 
 	} else if (cmd.compare("resettiming") == 0) {					// Print timing debug info
@@ -170,6 +171,8 @@ void CDCHandler::ProcessCommand()
 		outputTime = 0;
 		maxOutputTime = 0;
 		spiUnderrun = 0;
+		reverbTime = 0;
+		maxReverbTime = 0;
 
 		for (auto note : voiceManager.noteMapper) {
 			note.drumVoice->debugMaxTime = 0;

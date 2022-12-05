@@ -679,8 +679,8 @@ void USB::SerialToUnicode()
 
 	stringDescr[0] = usbSerialNoSize * 2 + 2;				// length is 24 bytes (x2 for unicode padding) + 2 for header
 	stringDescr[1] = StringDescriptor;
-	for (uint8_t i = 0; i < usbSerialNoSize * 2; ++i) {
-		const uint8_t sumUid = uidAddr[i] + uidAddr[i + 12];
+	for (uint8_t i = 0; i < usbSerialNoSize; ++i) {
+		//const uint8_t sumUid = uidAddr[i] + uidAddr[i + 12];
 		stringDescr[i * 2 + 2] = uidBuff[i];
 	}
 }

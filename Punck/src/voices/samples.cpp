@@ -286,7 +286,7 @@ uint32_t Samples::SerialiseSampleNames(uint8_t** buff, const uint8_t voiceIndex)
 	}
 
 	// Check that there are no characters with ASCII code > 127 for sysex transmission (replace with "_")
-	for (uint8_t i; i < s * 8; ++i) {
+	for (uint8_t i = 0; i < s * 8; ++i) {
 		if (configManager.configBuffer[i] & 0x80) {
 			configManager.configBuffer[i] = '_';
 		}
@@ -304,7 +304,6 @@ int32_t Samples::ParseInt(const std::string_view cmd, const std::string_view pre
 		val = std::stoi(&cmd[pos + precedingChar.size()]);
 	}
 	if (high > low && (val > high || val < low)) {
-		printf("Must be a value between %ld and %ld\r\n", low, high);
 		return low - 1;
 	}
 	return val;
