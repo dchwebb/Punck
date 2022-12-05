@@ -3,7 +3,7 @@
 #include "initialisation.h"
 
 
-
+/*
 
 struct PCG {
 	struct pcg32_random_t {
@@ -80,7 +80,7 @@ constexpr std::array<uint32_t, channels> getDelays()
 
 	return delayLengths;
 }
-
+*/
 
 // Use like `Hadamard<float, 8>::inPlace(data)` - size must be a power of 2
 template<typename Sample, int size>
@@ -118,45 +118,34 @@ public:
 
 template<int channels = 8>
 class DiffuserStep {
-
-	static constexpr std::array<uint32_t, channels> delayLen = getDelays();			// Stores randomised delay lengths for each channel
-	float delays0[delayLen[0]];
-	float delays1[delayLen[1]];
-	float delays2[delayLen[2]];
-	float delays3[delayLen[3]];
-	float delays4[delayLen[4]];
-	float delays5[delayLen[5]];
-	float delays6[delayLen[6]];
-	float delays7[delayLen[7]];
-
-
-	struct Delays {
-		float* delay;
-		size_t size;
-		uint32_t writePos;
-
-		void write(float sample) {
-			delay[writePos++] = sample;
-			if (writePos == size) writePos = 0;
-		}
-	} delays[channels] = {{delays0, delayLen[0], 0},
-			  {delays1, delayLen[1], 0},
-			  {delays2, delayLen[2], 0},
-			  {delays3, delayLen[3], 0},
-			  {delays4, delayLen[4], 0},
-			  {delays5, delayLen[5], 0},
-			  {delays6, delayLen[6], 0},
-			  {delays7, delayLen[7], 0}};
-
-	std::array<bool, channels> flipPolarity{false, true, true, false, true, false, true, false};
-
 public:
+
+	DiffuserStep() {
+		// Generate array of randomised delay lengths distributed semi-evenly across the diffusion time
+		delays[0].delay = delayBuffer;
+
+		for (uint32_t i = 0; i < channels; ++i) {
+			const float rangeLow = delaySamplesRange * i / channels;
+			const float rangeHigh = delaySamplesRange * (i + 1) / channels;
+			delays[i].size = std::max(static_cast<uint32_t>(rangeLow +  (rand() / double(RAND_MAX)) * (rangeHigh - rangeLow)), 10UL);
+
+			// Set the start pointer to the start of the current delay line within the combined delay buffer
+			if (i < channels) {
+				delays[i + 1].delay = delays[i].delay + delays[i].size;
+			}
+			delays[i].writePos = 0;
+
+			flipPolarity[i] = (rand() & 1);
+		}
+	}
+
+
 	std::array<float, channels> Process(std::array<float, channels> input) {
 		// Delay
 		std::array<float, channels> delayed;
 		for (int c = 0; c < channels; ++c) {
 			delays[c].write(input[c]);
-			delayed[c] = delays[c].delay[delayLen[c]];
+			delayed[c] = delays[c].delay[delays[c].readPos];
 		}
 
 		// Mix with a Hadamard matrix
@@ -173,17 +162,46 @@ public:
 		return mixed;
 	}
 
+private:
+	static constexpr float delayMsRange = 50;
+	static constexpr float delaySamplesRange = delayMsRange * 0.001 * systemSampleRate;		// 2400 at 48kHz
+
+	// Create a buffer to hold delay samples - the length of each delay line randomised but grouped in ascending sizes
+	// For 8 channels with a delay range of 50ms this means each delay line will a random number partitioned thusly:
+	// | 0 - 300 | 300 - 600 | 600 - 900 | 900 - 1200 | 1200 - 1500 | 1500 - 1800 | 1800 - 2100 | 2100 - 2400 |
+	float delayBuffer[static_cast<uint32_t>(delaySamplesRange * (channels + 1) / 2)];
+
+	// Hold randomised list of channels to flip polarity of when mixing
+	std::array<bool, channels> flipPolarity;
+
+	struct Delays {
+		float* delay;			// pointer to location of samples in delayBuffer
+		size_t size;			// size of delay buffer
+		uint32_t writePos;		// current sample write position
+		uint32_t readPos;		// current sample read position
+
+		void write(float sample) {
+			delay[writePos++] = sample;
+			if (writePos == size) writePos = 0;
+			readPos = writePos + 1;				// delay length is constant so always one past the write position
+			if (readPos == size) readPos = 0;
+		}
+	} delays[channels];
+
+
+
 
 };
 
 class Reverb {
 
-	DiffuserStep<8> diffuserStep;
+	DiffuserStep<8> diffuserStep[2];
 public:
-	std::tuple<float, float> Process(float left, float right) {
+	std::pair<float, float> Process(float left, float right) {
 		std::array<float, 8> samples {left, left, left, left, right, right, right, right};
-		std::array<float, 8> output = diffuserStep.Process(samples);
-		std::tuple<float, float> ret = {(output[0] + output[1] + output[2] + output[3]) / 4, (output[4] + output[5] + output[6] + output[7]) / 4};
+		std::array<float, 8> output1 = diffuserStep[0].Process(samples);
+		std::array<float, 8> output = diffuserStep[1].Process(output1);
+		std::pair<float, float> ret = {(output[0] + output[1] + output[2] + output[3]) / 4, (output[4] + output[5] + output[6] + output[7]) / 4};
 		return ret;
 	}
 };

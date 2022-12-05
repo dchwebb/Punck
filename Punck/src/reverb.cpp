@@ -1,3 +1,5 @@
 #include "reverb.h"
 
-Reverb reverb;
+Reverb __attribute__((section (".ram_d1_data"))) reverb;
+
+
