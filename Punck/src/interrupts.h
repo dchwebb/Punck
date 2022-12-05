@@ -13,6 +13,7 @@ uint32_t maxOutputTime = 0;
 
 void SPI2_IRQHandler()									// I2S Interrupt
 {
+
 #ifdef TIMINGDEBUG
 	GPIOD->ODR |= GPIO_ODR_OD9;							// PD9: use tempo out as debug pin
 	loopTime = TIM3->CNT;
@@ -37,6 +38,7 @@ void SPI2_IRQHandler()									// I2S Interrupt
 	}
 	GPIOD->ODR &= ~GPIO_ODR_OD9;						// PD9: use tempo out as debug pin
 #endif
+
 }
 
 

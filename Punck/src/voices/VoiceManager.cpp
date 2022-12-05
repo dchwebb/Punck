@@ -1,6 +1,7 @@
 #include <configManager.h>
 #include "VoiceManager.h"
 #include "Sequencer.h"
+#include "reverb.h"
 
 VoiceManager voiceManager;
 
@@ -111,6 +112,12 @@ void VoiceManager::Output()
 	combinedOutput[left] = FastTanh(combinedOutput[left]);
 	combinedOutput[right] = FastTanh(combinedOutput[right]);
 
+/*
+	// reverb
+	auto [revl, revr] = reverb.Process(combinedOutput[left], combinedOutput[right]);
+	combinedOutput[left] = revl;
+	combinedOutput[right] = revr;
+*/
 	const float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);
 	SPI2->TXDR = (int32_t)((combinedOutput[right] + adjOffset) * outputScale);
