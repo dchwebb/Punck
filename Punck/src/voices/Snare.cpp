@@ -69,7 +69,7 @@ void Snare::CalcOutput()
 
 void Snare::UpdateFilter()
 {
-	filter.Update();
+	filter.Update(false);
 }
 
 

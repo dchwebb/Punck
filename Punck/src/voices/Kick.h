@@ -19,7 +19,7 @@ public:
 
 private:
 	enum class Phase {Off, Ramp1, Ramp2, Ramp3, FastSine, SlowSine} phase;
-	Filter filter{2, filterPass::LowPass, &(ADC_array[ADC_KickAttack])};
+	Filter<2> filter{filterPass::LowPass, &(ADC_array[ADC_KickAttack])};
 
 	float position;
 	float currentLevel;

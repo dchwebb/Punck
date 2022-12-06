@@ -92,7 +92,7 @@ void Kick::CalcOutput()
 
 void Kick::UpdateFilter()
 {
-	filter.Update();
+	filter.Update(false);
 }
 
 

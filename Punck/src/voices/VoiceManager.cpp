@@ -115,7 +115,7 @@ void VoiceManager::Output()
 	combinedOutput[left] = FastTanh(combinedOutput[left]);
 	combinedOutput[right] = FastTanh(combinedOutput[right]);
 
-
+/*
 	// reverb
 #ifdef TIMINGDEBUG
 			uint32_t reverbStart = TIM3->CNT;
@@ -127,6 +127,7 @@ void VoiceManager::Output()
 				maxReverbTime = reverbTime;
 			}
 #endif
+*/
 
 	const float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);

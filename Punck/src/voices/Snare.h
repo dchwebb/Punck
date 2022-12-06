@@ -41,6 +41,6 @@ private:
 	} config;
 
 
-	Filter filter{2, filterPass::LowPass, &(ADC_array[ADC_SnareFilter])};		// Filters combined partial and noise elements of sound
+	Filter<2> filter{filterPass::LowPass, &(ADC_array[ADC_SnareFilter])};		// Filters combined partial and noise elements of sound
 };
 

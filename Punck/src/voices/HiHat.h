@@ -41,8 +41,8 @@ private:
 		uint8_t partialFM[6] = {0, 8, 1, 6, 1, 0};
 	} config;
 
-	Filter hpFilter{2, filterPass::HighPass, nullptr};
-	Filter lpFilter{2, filterPass::LowPass, nullptr};
+	Filter<2> hpFilter{filterPass::HighPass, nullptr};
+	Filter<2> lpFilter{filterPass::LowPass, nullptr};
 
 	float velocityScale;
 	float decayScale;
