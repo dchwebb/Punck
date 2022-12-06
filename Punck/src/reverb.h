@@ -6,6 +6,22 @@
 #include "initialisation.h"
 #include <cstring>
 
+extern float reverbMixBuffer[94000];
+
+struct DelayLines {
+	float* delay;							// pointer to location of samples in delay buffer
+	size_t size;							// size of delay buffer
+	uint32_t writePos;						// current sample write position
+	uint32_t readPos;						// current sample read position
+
+	void write(float sample) {
+		delay[writePos++] = sample;
+		if (writePos == size) writePos = 0;
+		readPos = writePos + 1;				// delay length is constant so always one past the write position
+		if (readPos == size) readPos = 0;
+	}
+};
+
 // Usage: `Hadamard<float, 8>::inPlace(data)` - size must be a power of 2
 template<typename Sample, int size>
 class Hadamard {
@@ -45,15 +61,18 @@ class DiffuserStep {
 public:
 
 	DiffuserStep() {
+
+		//RCC->AHB2ENR |= (RCC_AHB2ENR_D2SRAM1EN | RCC_AHB2ENR_D2SRAM2EN | RCC_AHB2ENR_D2SRAM3EN);
+
 		// Clear delay line buffer
 		memset(delayBuffer, 0, sizeof(delayBuffer));
-		delays[0].delay = delayBuffer;
+		delays[0].delay = &delayBuffer[0];
 
 		// Generate array of randomised delay lengths distributed semi-evenly across the diffusion time
 		for (uint32_t i = 0; i < channels; ++i) {
 			const float rangeLow = delaySamplesRange * i / channels;
 			const float rangeHigh = delaySamplesRange * (i + 1) / channels;
-			delays[i].size = std::max(static_cast<uint32_t>(rangeLow +  (rand() / double(RAND_MAX)) * (rangeHigh - rangeLow)), 10UL);
+			delays[i].size = std::max(static_cast<uint32_t>(rangeLow +  (rand() / float(RAND_MAX)) * (rangeHigh - rangeLow)), 10UL);
 
 			// Set the start pointer to the start of the current delay line within the combined delay buffer
 			if (i < channels) {
@@ -96,22 +115,58 @@ private:
 	// Hold randomised list of channels to flip polarity of when mixing
 	std::array<bool, channels> flipPolarity;
 
-	struct Delays {
-		float* delay;							// pointer to location of samples in delayBuffer
-		size_t size;							// size of delay buffer
-		uint32_t writePos;						// current sample write position
-		uint32_t readPos;						// current sample read position
-
-		void write(float sample) {
-			delay[writePos++] = sample;
-			if (writePos == size) writePos = 0;
-			readPos = writePos + 1;				// delay length is constant so always one past the write position
-			if (readPos == size) readPos = 0;
-		}
-	} delays[channels];
-
-
+	DelayLines delays[channels];
 };
+
+
+
+
+
+template<int channels = 8>
+class MixedFeedback {
+	using Array = std::array<float, channels>;
+	static constexpr float delayMs = 150.0f;
+	static constexpr float decayGain = 0.85f;
+	static constexpr float delaySamplesBase = delayMs * 0.001 * systemSampleRate;		// 7200
+
+	MixedFeedback() {
+
+		memset(reverbMixBuffer, 0, sizeof(reverbMixBuffer));		// Clear delay line buffer
+		delays[0].delay = reverbMixBuffer;
+
+		// Generate array of randomised delay lengths distributed semi-evenly across the diffusion time
+		for (uint32_t i = 0; i < channels; ++i) {
+			float r = i / channels;
+			delays[i].size = std::pow(2.0f, r) * delaySamplesBase;
+
+			// Set the start pointer to the start of the current delay line within the combined delay buffer
+			if (i < channels) {
+				delays[i + 1].delay = delays[i].delay + delays[i].size;
+			}
+			delays[i].writePos = 0;
+		}
+	}
+
+	Array process(Array input) {
+
+		std::array<float, channels> output;
+		for (int c = 0; c < channels; ++c) {
+			output[c] = delays[c].delay[delays[c].readPos];		// Read out oldest delayed sample
+		}
+
+		//Householder<float, channels>::inPlace(output.data());		// Mix using a Householder matrix
+
+		for (int c = 0; c < channels; ++c) {
+			float sum = input[c] + output[c] * decayGain;
+			delays[c].write(sum);							// Write current sample into delay line
+		}
+
+		return output;
+	}
+private:
+	DelayLines delays[channels];
+};
+
 
 class Reverb {
 public:

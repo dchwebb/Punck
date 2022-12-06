@@ -46,7 +46,6 @@ MEMORY
   RAM_D2    (xrw) : ORIGIN = 0x30000000, LENGTH = 288K
   RAM_D3    (xrw) : ORIGIN = 0x38000000, LENGTH = 64K
   FLASH     (rx)  : ORIGIN = 0x8000000,  LENGTH = 2048K
-  MEMORY_B2 (xrw) : ORIGIN = 0xD0000000, LENGTH = 32768K
 }
 
 /* Sections */
@@ -194,24 +193,16 @@ SECTIONS
   } >RAM_D1
   
 
-  /* DW External SDRAM storage
-     The `(NOLOAD)' directive will mark a section to not be loaded at run time. The linker will process the section normally,
-     but will mark it so that a program loader will not load it into memory. */
-  .sdramSection (NOLOAD) :
+  /* DW D2 RAM Area */
+  .ram_d2_data (NOLOAD) :
   {
-    KEEP(*(.sdramSection)) 
-  } >MEMORY_B2
-
+    KEEP(*(.ram_d2_data))
+  } >RAM_D2
+  
   /* DW RAM Area for non-cached DMA buffers (ADC) */
   .dma_buffer (NOLOAD) :
   {
     *(.dma_buffer)
-  } >RAM_D2
-  
-  /* DW RAM Area for SPI6 BDMA buffers (LED Controller) */
-  .led_buffer (NOLOAD) :
-  {
-    *(.led_buffer)
   } >RAM_D3
 
   /* Remove information from the compiler libraries */
