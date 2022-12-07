@@ -92,7 +92,6 @@ uint32_t Config::SetConfig()
 // Restore configuration settings from flash memory
 void Config::RestoreConfig()
 {
-
 	uint8_t* flashConfig = reinterpret_cast<uint8_t*>(addrFlashBank2Sector7);
 
 	// Check for config start and version number
@@ -149,8 +148,8 @@ void Config::FlashEraseSector(uint8_t Sector, uint32_t bank)
 	volatile uint32_t* bankCR = &(bank == 1 ? FLASH->CR1 : FLASH->CR2);
 
 	*bankCR &= ~(FLASH_CR_PSIZE | FLASH_CR_SNB);
-	*bankCR |= (FLASH_CR_SER |					// Sector erase request
-			FLASH_CR_PSIZE_1 |					// Write 32 bits at a time
+	*bankCR |= (FLASH_CR_SER |							// Sector erase request
+			FLASH_CR_PSIZE_1 |							// Write 32 bits at a time
 			(Sector << FLASH_CR_SNB_Pos) |
 			FLASH_CR_START);
 }

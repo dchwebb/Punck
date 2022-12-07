@@ -111,23 +111,24 @@ void VoiceManager::Output()
 	if (std::abs(combinedOutput[left])  > 1.0f) { ++leftOverflow; }		// Debug
 	if (std::abs(combinedOutput[right]) > 1.0f) { ++rightOverflow; }
 
-	// Apply some soft clipping
-	combinedOutput[left] = FastTanh(combinedOutput[left]);
-	combinedOutput[right] = FastTanh(combinedOutput[right]);
-
-/*
 	// reverb
 #ifdef TIMINGDEBUG
-			uint32_t reverbStart = TIM3->CNT;
+	uint32_t reverbStart = TIM3->CNT;
 #endif
-	std::tie(combinedOutput[left], combinedOutput[right])  = reverb.Process(combinedOutput[left], combinedOutput[right]);
-#ifdef TIMINGDEBUG
-			reverbTime = TIM3->CNT - reverbStart;
-			if (reverbTime > maxReverbTime) {
-				maxReverbTime = reverbTime;
-			}
+
+	auto [reverbL, reverbR] = reverb.Process(combinedOutput[left], combinedOutput[right]);
+
+	#ifdef TIMINGDEBUG
+	reverbTime = TIM3->CNT - reverbStart;
+	if (reverbTime > maxReverbTime) {
+		maxReverbTime = reverbTime;
+	}
 #endif
-*/
+
+	// Apply some soft clipping
+	combinedOutput[left] = FastTanh(combinedOutput[left] + reverbL);
+	combinedOutput[right] = FastTanh(combinedOutput[right] + reverbR);
+
 
 	const float outputScale = 2147483648.0f * adjOutputScale;
 	SPI2->TXDR = (int32_t)((combinedOutput[left] + adjOffset) *  outputScale);

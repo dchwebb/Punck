@@ -5,7 +5,6 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 {
 	playing = true;
 
-	partialInc[0] = FreqToInc(config.baseFreq);			// First Mode 0,1 frequency
 	partialpos[0] = config.basePos;						// Create discontinuity to create initial click
 	partialpos[1] = 0.0f;
 	partialpos[2] = 0.0f;
@@ -61,8 +60,6 @@ void Snare::CalcOutput()
 
 		noteMapper->pwmLed.Level(maxLevel);
 	}
-
-
 
 }
 

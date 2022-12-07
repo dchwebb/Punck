@@ -24,7 +24,6 @@ void Samples::Play(const uint8_t sp, uint32_t noteOffset, const uint32_t noteRan
 	}
 	sampler[sp].playing = true;
 
-
 	// Get sample from sorted bank list based on player and note offset
 	if (noteOffset == sampler[sp].bankLen) {								// Random mode
 		noteOffset = RNG->DR % (sampler[sp].bankLen - 1);

@@ -15,7 +15,7 @@ var voiceEnum = {
 };
 
 var requestEnum = {
-    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x2B, GetVoiceConfig: 0x1C, SetVoiceConfig: 0x2C, GetSamples: 0x1D, GetStatus: 0x1E, SaveConfig: 0x1F
+    StartStop: 0x1A, GetSequence: 0x1B, SetSequence: 0x1C, GetVoiceConfig: 0x1D, SetVoiceConfig: 0x1E, GetSamples: 0x1F, GetStatus: 0x20, SaveConfig: 0x21, GetReverbConfig: 0x22, SetReverbConfig: 0x23
 };
 
 
@@ -95,6 +95,13 @@ var clapSettings = [
 	{name: 'BP Filter Cutoff'},
 	{name: 'BP Filter Q'},
 	{name: 'Unfiltered Noise Level'},
+];
+
+
+var reverbSettings = [
+	{name: 'Reverb Level'},
+	{name: 'Mixer Base Delay'},
+	{name: 'Diffuser Count'},
 ];
 
 
@@ -299,6 +306,7 @@ function afterLoad()
 		html += `<button id="btnSeq${s}" class="topcoat-button-bar__button--large" onclick="RefreshSequence(${s})" >${s + 1}</button> `;
 	}
 	html += `&nbsp;&nbsp;<button id="btnEditConfig" class="topcoat-button-bar__button--large" onclick="RefreshConfig();" style="background-color: rgb(74, 77, 78)">Drum Settings</button>
+			 &nbsp;&nbsp;<button id="btnReverb" class="topcoat-button-bar__button--large" onclick="RefreshReverb();" style="background-color: rgb(74, 77, 78)">Reverb Settings</button>
 		</div>`;
 	document.getElementById("buttonBar").innerHTML = html;
 	ClearButtonBar();
@@ -654,6 +662,14 @@ function RequestConfig(voice)
     output.send(message);
 }
 
+function RefreshReverb()
+{
+	var message = [0xF0, requestEnum.GetReverbConfig, 0, 0xF7];
+	PrintMessage(message);			// Print contents of payload to console
+    output.send(message);
+}
+
+
 
 function RequestSamples(bank)
 {
@@ -842,7 +858,20 @@ function getMIDIMessage(midiMessage)
 				}
 				break;
 			
-		}
+			case requestEnum.GetReverbConfig:
+				var sysEx = DecodeSysEx(midiMessage.data, 2);		// 2 is length of header
+				PrintMessage(sysEx, true);							// Print contents of payload to console
+
+				BuildReverbHtml();
+
+				// Store the values encoded in the SysEx data into the html fields
+				for (var s = 0; s < reverbSettings.length; s++) {
+					document.getElementById(`reverbSettings${s}`).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
+				}
+
+				break;
+	
+			}
 	}
 }
 

@@ -91,6 +91,7 @@ public:
 	Claps clapsPlayer;
 
 	NoteMapper noteMapper[Voice::count];
+
 private:
 	float FastTanh(const float x);
 	uint8_t config[Voice::count * 2];							// Buffer to store config data (currently used to store midi note mapping]

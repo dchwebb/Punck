@@ -2,6 +2,7 @@
 #include "VoiceManager.h"
 #include <cstring>
 
+
 void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRange, const float velocity)
 {
 	playing = true;
@@ -13,11 +14,9 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 
 	hpFilter.Init();
 	hpFilterCutoff = config.hpInitCutoff;
-	hpFilter.SetCutoff(hpFilterCutoff);
 
 	lpFilter.Init();
 	lpFilterCutoff = config.lpInitCutoff;
-	lpFilter.SetCutoff(lpFilterCutoff);
 
 	// Control over decay note index sets initial level; scaled by pot
 	noteRange = noteRange == 0 ? 128 : noteRange;
@@ -26,11 +25,11 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 	decayScale = std::min(0.9985f + (0.0015f * closed), 0.99998f);
 
 	for (uint8_t i = 0; i < 6; ++i) {
-		partialPeriod[i] = freqToSqPeriod / config.partialFreq[i];
 		partialPos[i] = 0;
 		partialLevel[i] = config.partialScale[i];
 	}
 }
+
 
 
 void HiHat::Play(const uint8_t voice, const uint32_t index)
@@ -134,6 +133,11 @@ void HiHat::StoreConfig(uint8_t* buff, const uint32_t len)
 {
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);
+	}
+
+	// Apply any settings that are constant until configuration changes
+	for (uint8_t i = 0; i < 6; ++i) {
+		partialPeriod[i] = freqToSqPeriod / config.partialFreq[i];
 	}
 }
 

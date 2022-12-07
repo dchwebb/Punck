@@ -72,8 +72,8 @@ private:
 	{
 		uint32_t n = 0;
 
-		for (uint8_t j = 0; j < poles / 2; j++) {
-			const float theta = pi * static_cast<float>(2 * j + poles + 1) / static_cast<float>(2 * poles);
+		for (uint8_t i = 0; i < poles / 2; ++i) {
+			const float theta = pi * static_cast<float>(2 * i + poles + 1) / static_cast<float>(2 * poles);
 			roots[n++] = complex_t(cos(theta), sin(theta));
 			roots[n++] = complex_t(cos(theta), -sin(theta));
 		}
@@ -93,29 +93,29 @@ private:
 
 		// This forms the 2nd order coefficients from the root value. Ignore roots in the Right Hand Plane.
 		uint32_t polyCount = 0;
-		for (uint32_t j = 0; j < poles; ++j) {
-			if (roots[j].real() > 0.0)
+		for (uint32_t i = 0; i < poles; ++i) {
+			if (roots[i].real() > 0.0)
 				continue;							// Right Hand Plane
-			if (roots[j].real() == 0.0 && roots[j].imag() == 0.0)
+			if (roots[i].real() == 0.0 && roots[i].imag() == 0.0)
 				continue;							// At the origin.  This should never happen.
 
-			if (roots[j].real() == 0.0) {			// Imag Root (A poly zero)
+			if (roots[i].real() == 0.0) {			// Imag Root (A poly zero)
 				coeff.D2[polyCount] = 1.0;
 				coeff.D1[polyCount] = 0.0;
-				coeff.D0[polyCount] = roots[j].imag() * roots[j].imag();
-				j++;
-				polyCount++;
-			} else if (roots[j].imag() == 0.0) {	// Real Pole
+				coeff.D0[polyCount] = roots[i].imag() * roots[i].imag();
+				++i;
+				++polyCount;
+			} else if (roots[i].imag() == 0.0) {	// Real Pole
 				coeff.D2[polyCount] = 0.0;
 				coeff.D1[polyCount] = 1.0;
-				coeff.D0[polyCount] = -roots[j].real();
-				polyCount++;
+				coeff.D0[polyCount] = -roots[i].real();
+				++polyCount;
 			} else { 								// Complex Pole
 				coeff.D2[polyCount] = 1.0;
-				coeff.D1[polyCount] = -2.0 * roots[j].real();
-				coeff.D0[polyCount] = roots[j].real() * roots[j].real() + roots[j].imag() * roots[j].imag();
-				j++;
-				polyCount++;
+				coeff.D1[polyCount] = -2.0 * roots[i].real();
+				coeff.D0[polyCount] = roots[i].real() * roots[i].real() + roots[i].imag() * roots[i].imag();
+				++i;
+				++polyCount;
 			}
 		}
 	}
@@ -147,22 +147,20 @@ public:
 		cutoffFreq = omega;
 
 		// Set the number of IIR filter sections we will be generating.
-		//sections = (poles + 1) / 2;
-
 		if (passType == filterPass::BandPass) {
 			constexpr float bw = 0.001f;
 			constexpr float R = 1.0f - 3.0 * bw;
 			const float c2 = 2.0f * std::cos(2.0f * pi * omega);
 			const float K = (1.0f - (R * c2) + (R * R)) / (2.0f - c2);
 
-			for (uint32_t j = 0; j < sections; j++) {
-				iirCoeff.b0[j] = 1.0f - K;
-				iirCoeff.b1[j] = (K - R) * c2;
-				iirCoeff.b2[j] = (R * R) - K;
+			for (uint32_t i = 0; i < sections; ++i) {
+				iirCoeff.b0[i] = 1.0f - K;
+				iirCoeff.b1[i] = (K - R) * c2;
+				iirCoeff.b2[i] = (R * R) - K;
 
-				iirCoeff.a0[j] = 1.0f;
-				iirCoeff.a1[j] = R * c2;
-				iirCoeff.a2[j] = -(R * R);
+				iirCoeff.a0[i] = 1.0f;
+				iirCoeff.a1[i] = R * c2;
+				iirCoeff.a2[i] = -(R * R);
 			}
 			return;
 		}
@@ -172,56 +170,56 @@ public:
 		const float T = 2.0 * tan(omega * pi / 2);
 
 		// Calc the IIR coefficients. SPlaneCoeff.sections is the number of 1st and 2nd order s plane factors.
-		for (uint32_t j = 0; j < sections; j++) {
-			const float A = iirProto.coeff.D2[j];				// Always one
-			const float B = iirProto.coeff.D1[j];
-			const float C = iirProto.coeff.D0[j];				// Always one
+		for (uint32_t i = 0; i < sections; ++i) {
+			const float A = iirProto.coeff.D2[i];				// Always one
+			const float B = iirProto.coeff.D1[i];
+			const float C = iirProto.coeff.D0[i];				// Always one
 
 			// b's are the numerator, a's are the denominator
 			if (passType == filterPass::LowPass) {
 				if (A == 0.0) {						// 1 pole case
 					const float arg = (2.0 * B + C * T);
-					iirCoeff.a2[j] = 0.0;
-					iirCoeff.a1[j] = (-2.0 * B + C * T) / arg;
-					iirCoeff.a0[j] = 1.0;
+					iirCoeff.a2[i] = 0.0;
+					iirCoeff.a1[i] = (-2.0 * B + C * T) / arg;
+					iirCoeff.a0[i] = 1.0;
 
-					iirCoeff.b2[j] = 0.0;
-					iirCoeff.b1[j] = T / arg * C;
-					iirCoeff.b0[j] = T / arg * C;
+					iirCoeff.b2[i] = 0.0;
+					iirCoeff.b1[i] = T / arg * C;
+					iirCoeff.b0[i] = T / arg * C;
 				} else {							// 2 poles
 
 					const float arg = (4.0 * A + 2.0 * B * T + C * T * T);
-					iirCoeff.a2[j] = (4.0 * A - 2.0 * B * T + C * T * T) / arg;
-					iirCoeff.a1[j] = (2.0 * C * T * T - 8.0 * A) / arg;
-					iirCoeff.a0[j] = 1.0;
+					iirCoeff.a2[i] = (4.0 * A - 2.0 * B * T + C * T * T) / arg;
+					iirCoeff.a1[i] = (2.0 * C * T * T - 8.0 * A) / arg;
+					iirCoeff.a0[i] = 1.0;
 
 					// With all pole filters, LPF numerator is (z+1)^2, so all Z Plane zeros are at -1
-					iirCoeff.b2[j] = (T * T) / arg * C;
-					iirCoeff.b1[j] = (2.0 * T * T) / arg * C;
-					iirCoeff.b0[j] = (T * T) / arg * C;
+					iirCoeff.b2[i] = (T * T) / arg * C;
+					iirCoeff.b1[i] = (2.0 * T * T) / arg * C;
+					iirCoeff.b0[i] = (T * T) / arg * C;
 				}
 			}
 
 			if (passType == filterPass::HighPass) {
 				if (A == 0.0) {						// 1 pole
 					const float arg = 2.0 * C + B * T;
-					iirCoeff.a2[j] = 0.0;
-					iirCoeff.a1[j] = (B * T - 2.0 * C) / arg;
-					iirCoeff.a0[j] = 1.0;
+					iirCoeff.a2[i] = 0.0;
+					iirCoeff.a1[i] = (B * T - 2.0 * C) / arg;
+					iirCoeff.a0[i] = 1.0;
 
-					iirCoeff.b2[j] = 0.0;
-					iirCoeff.b1[j] = -2.0 / arg * C;
-					iirCoeff.b0[j] = 2.0 / arg * C;
+					iirCoeff.b2[i] = 0.0;
+					iirCoeff.b1[i] = -2.0 / arg * C;
+					iirCoeff.b0[i] = 2.0 / arg * C;
 				} else {							// 2 poles
 					const float arg = A * T * T + 4.0 * C + 2.0 * B * T;
-					iirCoeff.a2[j] = (A * T * T + 4.0 * C - 2.0 * B * T) / arg;
-					iirCoeff.a1[j] = (2.0 * A * T * T - 8.0 * C) / arg;
-					iirCoeff.a0[j] = 1.0;
+					iirCoeff.a2[i] = (A * T * T + 4.0 * C - 2.0 * B * T) / arg;
+					iirCoeff.a1[i] = (2.0 * A * T * T - 8.0 * C) / arg;
+					iirCoeff.a0[i] = 1.0;
 
 					// With all pole filters, HPF numerator is (z-1)^2, so all Z Plane zeros are at 1
-					iirCoeff.b2[j] = 4.0 / arg * C;
-					iirCoeff.b1[j] = -8.0 / arg * C;
-					iirCoeff.b0[j] = 4.0 / arg * C;
+					iirCoeff.b2[i] = 4.0 / arg * C;
+					iirCoeff.b1[i] = -8.0 / arg * C;
+					iirCoeff.b0[i] = 4.0 / arg * C;
 				}
 			}
 		}
@@ -262,7 +260,7 @@ private:
 		// Zero the registers on an overflow condition
 		if (MaxRegVal > 1.0E6) {
 			MaxRegVal = 1.0E-12;
-			for (uint8_t i = 0; i < sections; i++) {
+			for (uint8_t i = 0; i < sections; ++i) {
 				registers.x1[i] = 0.0;
 				registers.x2[i] = 0.0;
 				registers.y1[i] = 0.0;
@@ -306,7 +304,6 @@ public:
 		return filter.FilterSample(sample, iirReg);
 	}
 
-
 private:
 	IIRFilter<poles> filter;
 	IIRRegisters<poles> iirReg;
@@ -328,7 +325,7 @@ public:
 	void Init()
 	{
 		iirReg[0].Init();
-		iirReg[0].Init();
+		iirReg[1].Init();
 	}
 
 
@@ -363,7 +360,6 @@ public:
 		//	Take a new sample and return filtered value
 		return iirFilter[activeFilter].FilterSample(sample, iirReg[c]);
 	}
-
 
 private:
 	float potCentre = 29000;				// Configurable in calibration

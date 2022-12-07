@@ -11,7 +11,6 @@ void Kick::Play(const uint8_t voice, const uint32_t noteOffset, const uint32_t n
 	position = 0.0f;
 	currentLevel = 0.0f;
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_KickLevel]) / 32768.0f);
-	fastSinInc = FreqToInc(config.fastSinFreq);
 	slowSinInc = FreqToInc(config.initSlowSinFreq);
 	slowSinLevel = 1.0f;
 }
@@ -39,7 +38,7 @@ void Kick::CalcOutput()
 		currentLevel = currentLevel + (config.ramp2Inc * (1.0f - currentLevel));
 
 		if (currentLevel > 0.82f) {
-			currentLevel = 0.78f;				// discontinuity sharply falls at first
+			currentLevel = 0.78f;					// discontinuity sharply falls at first
 			phase = Phase::Ramp3;
 		}
 		break;
@@ -108,6 +107,9 @@ void Kick::StoreConfig(uint8_t* buff, const uint32_t len)
 	if (len <= sizeof(config)) {
 		memcpy(&config, buff, len);
 	}
+
+	// Apply any settings that are constant until configuration changes
+	fastSinInc = FreqToInc(config.fastSinFreq);
 }
 
 uint32_t Kick::ConfigSize()

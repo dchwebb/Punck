@@ -3,7 +3,7 @@
 #include "MidiHandler.h"
 #include "VoiceManager.h"
 #include "sequencer.h"
-
+#include "reverb.h"
 
 void MidiHandler::DataIn()
 {
@@ -166,6 +166,19 @@ void MidiHandler::ProcessSysex()
 				voiceManager.noteMapper[sysEx[1]].drumVoice->StoreConfig(configManager.configBuffer, bytes);
 			}
 			break;
+
+		case GetReverbConfig:
+		{
+			// Insert header data
+			const uint8_t cfgHeader = GetReverbConfig;
+
+			uint8_t* cfgBuffer = nullptr;
+			const uint32_t bytes = reverb.SerialiseConfig(&cfgBuffer);
+			const uint32_t len = ConstructSysEx(cfgBuffer, bytes, &cfgHeader, 1, split);
+
+			usb->SendData(sysExOut, len, inEP);
+			break;
+		}
 
 		case StartStopSeq:
 			sequencer.StartStop(sysEx[1]);

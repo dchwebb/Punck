@@ -143,8 +143,6 @@ private:
 template<int channels = 8>
 class MixedFeedback {
 public:
-	using Array = std::array<float, channels>;
-
 	MixedFeedback()
 	{
 		memset(reverbMixBuffer, 0, sizeof(reverbMixBuffer));		// Clear delay line buffer
@@ -164,9 +162,9 @@ public:
 		}
 	}
 
-	Array Process(Array input)
+	std::array<float, channels> Process(std::array<float, channels> input)
 	{
-		Array output;
+		std::array<float, channels> output;
 		for (uint32_t c = 0; c < channels; ++c) {
 			output[c] = delays[c].delay[delays[c].readPos];			// Read out oldest delayed sample
 		}
@@ -181,9 +179,11 @@ public:
 	}
 
 private:
-	static constexpr float delayMs = 100.0f;
+	static constexpr float maxDelayMs = 150.0f;						// Sets size of delay buffer
 	static constexpr float decayGain = 0.75f;
-	static constexpr float baseDelayLength = delayMs * 0.001f * systemSampleRate;		// 150 * .001 * 48000 = 7200
+	static constexpr float baseDelayLength = maxDelayMs * 0.001f * systemSampleRate;		// 150 * .001 * 48000 = 7200
+
+	float delayMs = 100.0f;
 
 	DelayLines delays[channels];
 };
@@ -198,15 +198,37 @@ public:
 			samples = d.Process(samples);
 		}
 		samples = feedback.Process(samples);
-		std::pair<float, float> ret = {(samples[0] + samples[2] + samples[4] + samples[6]) / 4, (samples[1] + samples[3] + samples[5] + samples[7]) / 4};
+		std::pair<float, float> ret = {(samples[0] + samples[2] + samples[4] + samples[6]) * config.reverbLevel,
+									   (samples[1] + samples[3] + samples[5] + samples[7]) * config.reverbLevel};
 		return ret;
+	}
+
+	uint32_t SerialiseConfig(uint8_t** buff)
+	{
+		*buff = reinterpret_cast<uint8_t*>(&config);
+		return sizeof(config);
+	}
+
+
+	void StoreConfig(uint8_t* buff, const uint32_t len)
+	{
+		if (len <= sizeof(config)) {
+			memcpy(&config, buff, len);
+		}
 	}
 
 private:
 	static constexpr uint32_t diffusionSteps = 3;
 	static constexpr uint32_t delayChannels = 8;
+
 	DiffuserStep<delayChannels> diffuserStep[diffusionSteps];
 	MixedFeedback<8> feedback;
+
+	struct Config {
+		float reverbLevel = 0.01f;							// Wet reverb Level
+		float mixerBaseDelay = 150.0f;						// Starting delay of feedback mixer
+		float diffuserCount = 3.0f;							// Number of active diffusers
+	} config;
 };
 
 

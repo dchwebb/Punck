@@ -12,6 +12,10 @@ extern uint32_t SystemCoreClock;
 // Create DMA buffer that need to live in non-cached memory area
 volatile uint16_t __attribute__((section (".dma_buffer"))) ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
 
+// Reverb delay lines are large so need to be placed in appropriate memory regions
+Reverb __attribute__((section (".ram_d2_data"))) reverb;
+float __attribute__((section (".ram_d1_data"))) reverbMixBuffer[94000];
+
 // TODO:
 // Sample panning (naming? web interface?)
 // Performance updates
