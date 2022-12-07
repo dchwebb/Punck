@@ -79,7 +79,7 @@ uint32_t Snare::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 
 void Snare::StoreConfig(uint8_t* buff, const uint32_t len)
 {
-	if (len <= sizeof(config)) {
+	if (buff != nullptr && len <= sizeof(config)) {
 		memcpy(&config, buff, len);
 	}
 }

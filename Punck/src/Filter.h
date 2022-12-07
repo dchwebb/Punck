@@ -364,7 +364,7 @@ public:
 private:
 	float potCentre = 29000;				// Configurable in calibration
 
-	filterPass passType;
+	const filterPass passType;
 	bool activeFilter = 0;					// choose which set of coefficients to use (so coefficients can be calculated without interfering with current filtering)
 	float currentCutoff;
 

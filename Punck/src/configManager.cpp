@@ -2,6 +2,7 @@
 #include <cmath>
 #include "VoiceManager.h"
 #include "Sequencer.h"
+#include "Reverb.h"
 
 Config configManager;
 
@@ -72,6 +73,11 @@ uint32_t Config::SetConfig()
 		}
 	}
 
+	// Reverb settings
+	configSize = reverb.SerialiseConfig(&cfgBuffer);
+	memcpy(&configBuffer[configPos], cfgBuffer, configSize);
+	configPos += configSize;
+
 	// MIDI note map
 	configSize = voiceManager.GetConfig(&cfgBuffer);
 	memcpy(&configBuffer[configPos], cfgBuffer, configSize);
@@ -107,12 +113,26 @@ void Config::RestoreConfig()
 			}
 		}
 
+		// Reverb Settings
+		configPos += reverb.StoreConfig(&flashConfig[configPos]);
+
 		// MIDI note map
 		configPos += voiceManager.StoreConfig(&flashConfig[configPos]);
 
 		// Drum sequences
 		sequencer.StoreSequences(&flashConfig[configPos]);
 		configPos += sequencer.SequencesSize();
+	} else {
+		// Call Store Config to initialise values as required
+		for (auto& nm : voiceManager.noteMapper) {
+			if (nm.voiceIndex == 0) {		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
+				nm.drumVoice->StoreConfig(nullptr, 0);
+			}
+		}
+
+		// Reverb Settings
+		reverb.StoreConfig(nullptr);
+
 	}
 }
 

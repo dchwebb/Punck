@@ -102,6 +102,7 @@ var reverbSettings = [
 	{name: 'Reverb Level'},
 	{name: 'Mixer Base Delay'},
 	{name: 'Diffuser Count'},
+	{name: 'Filter Cutoff'},
 ];
 
 
@@ -335,6 +336,7 @@ function ClearButtonBar()
 		document.getElementById(`btnSeq${s}`).style.backgroundColor = "rgb(74, 77, 78)";
 	}
 	document.getElementById(`btnEditConfig`).style.backgroundColor = "rgb(74, 77, 78)";
+	document.getElementById(`btnReverb`).style.backgroundColor = "rgb(74, 77, 78)";
 }
 
 
@@ -346,7 +348,7 @@ function BuildConfigHtml()
 		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">${drumSettings[i].heading}</div>`;
 		for (var s = 0; s < drumSettings[i].settings.length; s++) {
 	 		html += `<div class="grid-container3">${drumSettings[i].settings[s].name}</div>` +
-					`<div class="grid-container3"><input type="text" id="drumSettings${i}${s}" onchange="updateConfig(${i});"></div>`;		//id="${drumSettings[i].settings[s].value}"
+					`<div class="grid-container3"><input type="text" id="drumSettings${i}${s}" onchange="updateConfig(${i});"></div>`;
 		}
 	}
 	html += '</div>'
@@ -357,6 +359,22 @@ function BuildConfigHtml()
 	document.getElementById(`btnEditConfig`).style.backgroundColor = "#737373";
 }
 
+
+function BuildReverbHtml()
+{
+	// Build html lists of settings for each drum voice
+	var html = '<div style="display: grid; grid-template-columns: 250px 100px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.3);">';
+	for (var s = 0; s < reverbSettings.length; s++) {
+		html += `<div class="grid-container3">${reverbSettings[s].name}</div>` +
+				`<div class="grid-container3"><input type="text" id="reverbSettings${s}" onchange="updateReverb();"></div>`;
+	}
+	html += '</div>'
+
+	document.getElementById("drumEditor").innerHTML = html;
+
+	ClearButtonBar();
+	document.getElementById(`btnReverb`).style.backgroundColor = "#737373";
+}
 
 function BeatGotFocus(button)
 {
@@ -903,6 +921,38 @@ function updateConfig(index)
     message[1] = requestEnum.SetVoiceConfig;                        // Set config command
     message[2] = drumSettings[index].id;
     var msgPos = 3;
+   
+	// Since the upper bit of a sysex byte cannot be set, split each byte into an upper and lower nibble for transmission
+	var lowerNibble = true;
+    for (i = 0; i < byteArray.length * 2; ++i) {
+		if (lowerNibble) {
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] & 0xF;
+		} else {
+			message[msgPos++] = byteArray[Math.trunc(i / 2)] >> 4;
+		}
+        lowerNibble = !lowerNibble;
+    }
+    message[msgPos] = 0xF7;
+
+	PrintMessage(message);			// Print contents of payload to console
+    output.send(message);
+}
+
+
+function updateReverb()
+{
+	// Copy the values of the html fields into a float array for serialisation
+	var floatArray = new Float32Array(reverbSettings.length)
+	for (var s = 0; s < floatArray.length; s++) {
+		floatArray[s] = document.getElementById(`reverbSettings${s}`).value;
+	}
+    var byteArray = new Uint8Array(floatArray.buffer);   			// use the buffer of Float32Array view
+
+    // Convert to sysex information
+    var message = new Uint8Array(3 + (byteArray.length * 2));
+    message[0] = 0xF0;
+    message[1] = requestEnum.SetReverbConfig;                        // Set config command
+     var msgPos = 2;
    
 	// Since the upper bit of a sysex byte cannot be set, split each byte into an upper and lower nibble for transmission
 	var lowerNibble = true;

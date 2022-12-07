@@ -180,6 +180,13 @@ void MidiHandler::ProcessSysex()
 			break;
 		}
 
+		case SetReverbConfig:
+		{
+			const uint32_t bytes = ReadCfgSysEx(1);
+			reverb.StoreConfig(configManager.configBuffer);
+			break;
+		}
+
 		case StartStopSeq:
 			sequencer.StartStop(sysEx[1]);
 			break;

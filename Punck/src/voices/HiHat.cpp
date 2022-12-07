@@ -131,7 +131,7 @@ uint32_t HiHat::SerialiseConfig(uint8_t** buff, const uint8_t voiceIndex)
 
 void HiHat::StoreConfig(uint8_t* buff, const uint32_t len)
 {
-	if (len <= sizeof(config)) {
+	if (buff != nullptr && len <= sizeof(config)) {
 		memcpy(&config, buff, len);
 	}
 

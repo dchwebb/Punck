@@ -4,6 +4,7 @@
 #pragma once
 
 #include "initialisation.h"
+#include "Filter.h"
 #include <cstring>
 
 extern float reverbMixBuffer[94000];
@@ -138,10 +139,11 @@ private:
 
 
 
-
+class Reverb;
 
 template<int channels = 8>
 class MixedFeedback {
+	friend Reverb;
 public:
 	MixedFeedback()
 	{
@@ -162,6 +164,21 @@ public:
 		}
 	}
 
+
+	void SetDelay(float delay) {
+		// Update the size of the delay lines without changing the pointer start positions
+		if (delay != delayMs) {
+			delayMs = delay;
+			for (uint32_t i = 0; i < channels; ++i) {
+				const float baseLength = delay * 0.001f * systemSampleRate;		// 150 * .001 * 48000 = 7200
+				float r = static_cast<float>(i) / channels;
+				delays[i].size = static_cast<uint32_t>(std::pow(2.0f, r) * baseLength);
+				delays[i].writePos = 0;
+				delays[i].readPos = 1;
+			}
+		}
+	}
+
 	std::array<float, channels> Process(std::array<float, channels> input)
 	{
 		std::array<float, channels> output;
@@ -178,12 +195,13 @@ public:
 		return output;
 	}
 
+
 private:
 	static constexpr float maxDelayMs = 150.0f;						// Sets size of delay buffer
 	static constexpr float decayGain = 0.75f;
 	static constexpr float baseDelayLength = maxDelayMs * 0.001f * systemSampleRate;		// 150 * .001 * 48000 = 7200
 
-	float delayMs = 100.0f;
+	float delayMs = maxDelayMs;
 
 	DelayLines delays[channels];
 };
@@ -192,12 +210,20 @@ private:
 
 class Reverb {
 public:
-	std::pair<float, float> Process(float left, float right) {
-		std::array<float, delayChannels> samples {left, left, left, left, right, right, right, right};
-		for (auto& d : diffuserStep) {
-			samples = d.Process(samples);
+	Reverb()
+	{
+		filter.SetCutoff(config.filterCutoff);		// FIXME this should be done through config setting
+	}
+
+
+	std::pair<float, float> Process(float sampleL, float sampleR) {
+		sampleL = filter.CalcFilter(sampleL, channel::left);
+		sampleR = filter.CalcFilter(sampleR, channel::right);
+		std::array<float, delayChannels> samples {sampleL, sampleR, sampleL, sampleR, sampleL, sampleR, sampleL, sampleR};
+		for (uint8_t i = 0; i < config.diffuserCount; ++i) {
+			samples = diffuserStep[i].Process(samples);
 		}
-		samples = feedback.Process(samples);
+		samples = feedbackMixer.Process(samples);
 		std::pair<float, float> ret = {(samples[0] + samples[2] + samples[4] + samples[6]) * config.reverbLevel,
 									   (samples[1] + samples[3] + samples[5] + samples[7]) * config.reverbLevel};
 		return ret;
@@ -210,24 +236,34 @@ public:
 	}
 
 
-	void StoreConfig(uint8_t* buff, const uint32_t len)
+	uint32_t StoreConfig(uint8_t* buff)
 	{
-		if (len <= sizeof(config)) {
-			memcpy(&config, buff, len);
+		if (buff != nullptr) {
+			memcpy(&config, buff, sizeof(config));
 		}
+
+		// Verify settings and update as required
+		config.diffuserCount = std::clamp(std::round(config.diffuserCount), 0.0f, static_cast<float>(maxDiffusers));
+		config.mixerBaseDelay = std::clamp(std::round(config.mixerBaseDelay), 20.0f, static_cast<float>(feedbackMixer.maxDelayMs));
+		feedbackMixer.SetDelay(config.mixerBaseDelay);
+		filter.SetCutoff(config.filterCutoff);
+
+		return sizeof(config);
 	}
 
 private:
-	static constexpr uint32_t diffusionSteps = 3;
+	static constexpr uint32_t maxDiffusers = 3;
 	static constexpr uint32_t delayChannels = 8;
 
-	DiffuserStep<delayChannels> diffuserStep[diffusionSteps];
-	MixedFeedback<8> feedback;
+	DiffuserStep<delayChannels> diffuserStep[maxDiffusers];
+	MixedFeedback<delayChannels> feedbackMixer;
+	Filter<2> filter{filterPass::LowPass, nullptr};
 
 	struct Config {
 		float reverbLevel = 0.01f;							// Wet reverb Level
 		float mixerBaseDelay = 150.0f;						// Starting delay of feedback mixer
 		float diffuserCount = 3.0f;							// Number of active diffusers
+		float filterCutoff = 0.1f;
 	} config;
 };
 
