@@ -19,6 +19,8 @@ float __attribute__((section (".ram_d1_data"))) reverbMixBuffer[94000];
 // TODO:
 // Sample panning (naming? web interface?)
 // Performance updates
+// hihat partials to floats?
+// web editor rounding
 
 USB usb;
 

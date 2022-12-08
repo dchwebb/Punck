@@ -25,11 +25,11 @@ struct DelayLines {
 
 
 // Usage: `Householder<double, 8>::inPlace(data)` - size must be ≥ 1
-template<typename Sample, int size>
+template<uint32_t size>
 class Householder {
-	static constexpr Sample multiplier = -2.0f / size;
+	static constexpr float multiplier = -2.0f / size;
 public:
-	static void InPlace(Sample *arr) {
+	static void InPlace(float* arr) {
 		float sum = 0.0f;
 		for (uint32_t i = 0; i < size; ++i) {
 			sum += arr[i];
@@ -105,7 +105,7 @@ public:
 	}
 
 
-	std::array<float, channels> Process(std::array<float, channels> input)
+	std::array<float, channels> Process(const std::array<float, channels>& input)
 	{
 		std::array<float, channels> output;
 		for (uint32_t c = 0; c < channels; ++c) {
@@ -115,7 +115,7 @@ public:
 
 		Hadamard<float, channels>::inPlace(output.data());		// Mix with a Hadamard matrix
 
-		for (uint32_t c = 0; c < channels; ++c) {					// Flip polarities according to randomised table
+		for (uint32_t c = 0; c < channels; ++c) {				// Flip polarities according to randomised table
 			if (flipPolarity[c]) {
 				output[c] *= -1;
 			}
@@ -180,14 +180,14 @@ public:
 		}
 	}
 
-	std::array<float, channels> Process(std::array<float, channels> input)
+	std::array<float, channels> Process(const std::array<float, channels>& input)
 	{
 		std::array<float, channels> output;
 		for (uint32_t c = 0; c < channels; ++c) {
 			output[c] = delays[c].delay[delays[c].readPos];			// Read out oldest delayed sample
 		}
 
-		Householder<float, channels>::InPlace(output.data());		// Mix using a Householder matrix
+		Householder<channels>::InPlace(output.data());		// Mix using a Householder matrix
 
 		for (uint32_t c = 0; c < channels; ++c) {
 			float sum = input[c] + output[c] * decayGain;
@@ -221,13 +221,25 @@ public:
 		sampleL = filter.CalcFilter(sampleL, channel::left);
 		sampleR = filter.CalcFilter(sampleR, channel::right);
 		std::array<float, delayChannels> samples {sampleL, sampleR, sampleL, sampleR, sampleL, sampleR, sampleL, sampleR};
+
+		// Generate short diffusion
 		for (uint8_t i = 0; i < config.diffuserCount; ++i) {
 			samples = diffuserStep[i].Process(samples);
 		}
-		samples = feedbackMixer.Process(samples);
-		std::pair<float, float> ret = {(samples[0] + samples[2] + samples[4] + samples[6]) * config.reverbLevel,
-									   (samples[1] + samples[3] + samples[5] + samples[7]) * config.reverbLevel};
-		return ret;
+
+		// Generate long tails with feedback mixer
+		if (mixerChannels > 0.0f) {
+			samples = feedbackMixer.Process(samples);
+		}
+
+		if (mixerChannels == 4.0f) {
+			return {(samples[0] + samples[2]) * config.reverbLevel,
+				    (samples[1] + samples[3]) * config.reverbLevel};
+		} else {
+			return {(samples[0] + samples[2] + samples[4] + samples[6]) * config.reverbLevel,
+				    (samples[1] + samples[3] + samples[5] + samples[7]) * config.reverbLevel};
+		}
+
 	}
 
 	uint32_t SerialiseConfig(uint8_t** buff)
@@ -246,8 +258,11 @@ public:
 		// Verify settings and update as required
 		config.diffuserCount = std::clamp(std::round(config.diffuserCount), 0.0f, static_cast<float>(maxDiffusers));
 		config.mixerBaseDelay = std::clamp(std::round(config.mixerBaseDelay), 20.0f, static_cast<float>(feedbackMixer.maxDelayMs));
+		if ((config.mixerChannels == 0.0f || config.mixerChannels == 4.0f || config.mixerChannels == 8.0f)) {
+			mixerChannels = static_cast<uint32_t>(config.mixerChannels);
+		}
 		feedbackMixer.SetDelay(config.mixerBaseDelay);
-		filter.SetCutoff(config.filterCutoff);
+		filter.SetCutoff(config.filterCutoff / (systemSampleRate / 2));
 
 		return sizeof(config);
 	}
@@ -259,12 +274,14 @@ private:
 	DiffuserStep<delayChannels> diffuserStep[maxDiffusers];
 	MixedFeedback<delayChannels> feedbackMixer;
 	Filter<2> filter{filterPass::LowPass, nullptr};
+	uint32_t mixerChannels = 8;
 
 	struct Config {
 		float reverbLevel = 0.01f;							// Wet reverb Level
-		float mixerBaseDelay = 100.0f;						// Starting delay of feedback mixer
+		float mixerBaseDelay = 75.0f;						// Starting delay of feedback mixer
 		float diffuserCount = 2.0f;							// Number of active diffusers
-		float filterCutoff = 0.1f;
+		float mixerChannels = 8.0f;							// 0, 4 or 8 feedback mixer channels
+		float filterCutoff = 2400.0f;						// Cutoff in Hertz
 	} config;
 };
 

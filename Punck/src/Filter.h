@@ -335,8 +335,8 @@ public:
 		if (iirFilter[activeFilter].cutoffFreq != cutoff) {
 			const bool inactiveFilter = !activeFilter;
 			iirFilter[inactiveFilter].CalcCoeff(cutoff);
-			activeFilter = inactiveFilter;				// Switch active filter
-			currentCutoff = cutoff;						// Debug
+			activeFilter = inactiveFilter;			// Switch active filter
+			currentCutoff = cutoff;					// Debug
 		}
 	}
 
@@ -359,8 +359,7 @@ public:
 
 	float CalcFilter(const float sample, const channel c)
 	{
-		//	Take a new sample and return filtered value
-		return iirFilter[activeFilter].FilterSample(sample, iirReg[c]);
+		return iirFilter[activeFilter].FilterSample(sample, iirReg[c]);		//	Take a new sample and return filtered value
 	}
 
 private:
@@ -386,9 +385,9 @@ private:
 
 		const bool inactiveFilter = !activeFilter;
 
-		if (passType == filterPass::HighPass || passType == filterPass::BandPass) {					// Want a sweep from 0.03 to 0.99 with most travel at low end
+		if (passType == filterPass::HighPass || passType == filterPass::BandPass) {		// Want a sweep from 0.03 to 0.99 with most travel at low end
 			cutoff = pow((tone / 100000.0), 3.0) + HPMin;
-		} else {									// Want a sweep from 0.001 to 0.2-0.3
+		} else {																		// Want a sweep from 0.001 to 0.2-0.3
 			cutoff = std::min(0.03f + std::pow(tone / 65536.0f, 2.0f), LPMax);
 		}
 		iirFilter[inactiveFilter].CalcCoeff(cutoff);

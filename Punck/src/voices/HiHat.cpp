@@ -64,14 +64,12 @@ void HiHat::CalcOutput()
 		}
 
 
-		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
+		// Apply an envelope to the HP filter
 		if (hpFilterCutoff < config.hpFinalCutoff) {
 			hpFilterCutoff *= config.hpCutoffInc;
-
 		}
 
-
-		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
+		// Apply an envelope to the LP filter
 		if (lpFilterCutoff > config.lpFinalCutoff) {
 			lpFilterCutoff *= config.lpCutoffInc;
 

@@ -27,7 +27,7 @@ private:
 
 	float slowSinInc;
 	float slowSinLevel;
-	float fastSinInc;
+	float fastSinInc = FreqToInc(config.fastSinFreq);
 
 	struct Config {
 		float ramp1Inc = 0.22f;					// Initial steep ramp

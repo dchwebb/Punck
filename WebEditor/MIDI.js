@@ -101,8 +101,9 @@ var clapSettings = [
 var reverbSettings = [
 	{name: 'Reverb Level'},
 	{name: 'Mixer Base Delay'},
-	{name: 'Diffuser Count'},
-	{name: 'Filter Cutoff'},
+	{name: 'Diffuser Count 0-3'},
+	{name: 'Mixer Channels 0/4/8'},
+	{name: 'Filter Cutoff Hz'},
 ];
 
 
@@ -334,7 +335,9 @@ function ClearButtonBar()
 	// Reset all button bar colours so selected button/tab can be lightened
 	for (var s = 0; s < 5; ++s) {
 		document.getElementById(`btnSeq${s}`).style.backgroundColor = "rgb(74, 77, 78)";
+		document.getElementById(`btnSeq${s}`).style.color = "";
 	}
+	document.getElementById(`btnSeq${seqSettings.seq}`).style.color = "rgb(125, 206, 115)";
 	document.getElementById(`btnEditConfig`).style.backgroundColor = "rgb(74, 77, 78)";
 	document.getElementById(`btnReverb`).style.backgroundColor = "rgb(74, 77, 78)";
 }
@@ -345,7 +348,7 @@ function BuildConfigHtml()
 	// Build html lists of settings for each drum voice
 	var html = '<div style="display: grid; grid-template-columns: 250px 100px; padding: 10px; border: 1px solid rgba(0, 0, 0, 0.3);">';
 	for (var i = 0; i < drumSettings.length; ++i) {
-		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px" onclick="ShowSetting();">${drumSettings[i].heading}</div>`;
+		html += `<div id="settingsBlock${i}" style="grid-column: 1 / 3;  padding: 10px">${drumSettings[i].heading}</div>`;
 		for (var s = 0; s < drumSettings[i].settings.length; s++) {
 	 		html += `<div class="grid-container3">${drumSettings[i].settings[s].name}</div>` +
 					`<div class="grid-container3"><input type="text" id="drumSettings${i}${s}" onchange="updateConfig(${i});"></div>`;

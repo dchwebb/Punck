@@ -46,7 +46,7 @@ private:
 
 	float velocityScale;
 	float decayScale;
-	bool attack;						// True during the envelope attack phase
+	bool attack;							// True during the envelope attack phase
 	float attackLevel;
 	float noiseScale;
 
@@ -56,8 +56,8 @@ private:
 	// multiplier to convert frequency to half a period of a square wave
 	static constexpr uint32_t freqToSqPeriod = systemSampleRate / 2;
 
-	float partialLevel[6];				// Output level of each partial
-	uint32_t partialPeriod[6];			// Square wave period
-	uint32_t partialPos[6];				// partial position counter
+	float partialLevel[6];					// Output level of each partial
+	uint32_t partialPeriod[6];				// Square wave period
+	uint32_t partialPos[6];					// partial position counter
 
 };
