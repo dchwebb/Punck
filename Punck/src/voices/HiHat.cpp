@@ -67,14 +67,14 @@ void HiHat::CalcOutput()
 		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
 		if (hpFilterCutoff < config.hpFinalCutoff) {
 			hpFilterCutoff *= config.hpCutoffInc;
-			hpFilter.SetCutoff(hpFilterCutoff);
+
 		}
 
 
 		// Apply an envelope to the HP filter to allow more low frequencies through at the beginning of the note
 		if (lpFilterCutoff > config.lpFinalCutoff) {
 			lpFilterCutoff *= config.lpCutoffInc;
-			lpFilter.SetCutoff(lpFilterCutoff);
+
 		}
 
 
@@ -104,6 +104,8 @@ void HiHat::CalcOutput()
 			playing = false;
 			currentLevel[left] = 0.0f;
 			currentLevel[right] = 0.0f;
+			hpFilterCutoff = config.hpInitCutoff;			// Reset filter cutoff so initial cofficients can be recalculated in idle time
+			lpFilterCutoff = config.lpInitCutoff;
 		}
 
 		// Filter and scale the output levels
@@ -118,7 +120,8 @@ void HiHat::CalcOutput()
 
 void HiHat::UpdateFilter()
 {
-
+	hpFilter.SetCutoff(hpFilterCutoff);
+	lpFilter.SetCutoff(lpFilterCutoff);
 }
 
 

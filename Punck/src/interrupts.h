@@ -3,6 +3,8 @@ void OTG_FS_IRQHandler(void)
 	usb.InterruptHandler();
 }
 
+bool debugSuspend = false;
+
 uint32_t spiUnderrun = 0;		// Debug
 #ifdef TIMINGDEBUG
 uint32_t loopTime = 0;
@@ -26,6 +28,9 @@ void SPI2_IRQHandler()									// I2S Interrupt
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		SPI2->IFCR |= SPI_IFCR_UDRC;					// Clear underrun condition
 		++spiUnderrun;
+		if (debugSuspend) {
+			volatile int susp = 1;
+		}
 		return;
 	}
 

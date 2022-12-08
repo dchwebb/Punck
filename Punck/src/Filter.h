@@ -127,6 +127,7 @@ template<uint32_t poles = 2>
 class IIRFilter {
 	static constexpr uint32_t sections = (poles + 1) / 2;
 public:
+	float cutoffFreq = 0.0f;
 
 	// constructors
 	IIRFilter(filterPass pass) : passType{pass}, iirProto(IIRPrototype()) {};
@@ -239,7 +240,6 @@ public:
 
 private:
 	filterPass passType = filterPass::LowPass;
-	float cutoffFreq = 0.0f;
 	IIRPrototype<poles> iirProto;						// Standard Butterworth is default
 
 	struct IIRCoeff {
@@ -332,10 +332,12 @@ public:
 	void SetCutoff(const float cutoff)
 	{
 		// cutoff passed as omega - ie cutoff_frequency / nyquist
-		const bool inactiveFilter = !activeFilter;
-		iirFilter[inactiveFilter].CalcCoeff(cutoff);
-		activeFilter = inactiveFilter;				// Switch active filter
-		currentCutoff = cutoff;						// Debug
+		if (iirFilter[activeFilter].cutoffFreq != cutoff) {
+			const bool inactiveFilter = !activeFilter;
+			iirFilter[inactiveFilter].CalcCoeff(cutoff);
+			activeFilter = inactiveFilter;				// Switch active filter
+			currentCutoff = cutoff;						// Debug
+		}
 	}
 
 

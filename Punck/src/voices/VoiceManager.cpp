@@ -276,8 +276,9 @@ void VoiceManager::IdleTasks()
 {
 	for (auto& nm : noteMapper) {
 		// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
-		if (nm.drumVoice != nullptr && nm.voiceIndex == 0 && nm.drumVoice->playing) {
-			nm.drumVoice->UpdateFilter();					// Check if filter coefficients need to be updated
+		// Calculate filters even when not playing so ready for next hit (coefficients will only be updated if cut off has changed)
+		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {
+			nm.drumVoice->UpdateFilter();
 		}
 	}
 }

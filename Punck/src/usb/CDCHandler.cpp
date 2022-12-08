@@ -132,6 +132,10 @@ void CDCHandler::ProcessCommand()
 #endif
 
 #ifdef TIMINGDEBUG
+	} else if (cmd.compare("timingon") == 0) {					// Print timing debug info
+		extern bool debugSuspend;
+		debugSuspend = true;
+
 
 	} else if (cmd.compare("timing") == 0) {					// Print timing debug info
 		printf("Timings: Loop: %ld, Max: %ld, Output: %ld, Max: %ld, Underrun: %ld\r\n",
