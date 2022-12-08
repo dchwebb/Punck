@@ -193,7 +193,7 @@ bool Samples::UpdateSampleList()
 				lfn->name3[0], lfn->name3[2]};
 
 			const uint32_t pos = ((lfn->order & 0x3F) - 1) * 13;
-			if (pos + 13 < sizeof(tempFileName)) {
+			if (pos + 13 < sizeof(longFileName)) {
 				memcpy(&longFileName[pos], tempFileName, 13);		// strip 0x40 marker from first LFN entry order field
 			}
 			lfnPosition += 13;

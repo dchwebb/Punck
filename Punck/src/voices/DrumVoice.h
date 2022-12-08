@@ -9,6 +9,7 @@ public:
 	float outputLevel[2];
 	bool playing;
 	uint32_t debugMaxTime = 0;
+	uint32_t debugTime = 0;
 
 	virtual void Play(uint8_t voice, uint32_t noteOffset, uint32_t noteRange, float velocity) = 0;
 	virtual void Play(const uint8_t voice, const uint32_t index) = 0;

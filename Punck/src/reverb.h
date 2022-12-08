@@ -27,9 +27,9 @@ struct DelayLines {
 // Usage: `Householder<double, 8>::inPlace(data)` - size must be ≥ 1
 template<typename Sample, int size>
 class Householder {
-	static constexpr Sample multiplier{-2.0f / size};
+	static constexpr Sample multiplier = -2.0f / size;
 public:
-	static void inPlace(Sample *arr) {
+	static void InPlace(Sample *arr) {
 		float sum = 0.0f;
 		for (uint32_t i = 0; i < size; ++i) {
 			sum += arr[i];
@@ -42,6 +42,7 @@ public:
 		}
 	};
 };
+
 
 // Usage: `Hadamard<float, 8>::inPlace(data)` - size must be a power of 2
 template<typename Sample, int size>
@@ -186,7 +187,7 @@ public:
 			output[c] = delays[c].delay[delays[c].readPos];			// Read out oldest delayed sample
 		}
 
-		Householder<float, channels>::inPlace(output.data());		// Mix using a Householder matrix
+		Householder<float, channels>::InPlace(output.data());		// Mix using a Householder matrix
 
 		for (uint32_t c = 0; c < channels; ++c) {
 			float sum = input[c] + output[c] * decayGain;
@@ -261,8 +262,8 @@ private:
 
 	struct Config {
 		float reverbLevel = 0.01f;							// Wet reverb Level
-		float mixerBaseDelay = 150.0f;						// Starting delay of feedback mixer
-		float diffuserCount = 3.0f;							// Number of active diffusers
+		float mixerBaseDelay = 100.0f;						// Starting delay of feedback mixer
+		float diffuserCount = 2.0f;							// Number of active diffusers
 		float filterCutoff = 0.1f;
 	} config;
 };

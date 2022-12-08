@@ -120,7 +120,7 @@ void VoiceManager::Output()
 
 	#ifdef TIMINGDEBUG
 	reverbTime = TIM3->CNT - reverbStart;
-	if (reverbTime > maxReverbTime) {
+	if (reverbTime > maxReverbTime && SysTickVal > 100) {
 		maxReverbTime = reverbTime;
 	}
 #endif
@@ -143,9 +143,9 @@ void VoiceManager::Output()
 #endif
 			nm.drumVoice->CalcOutput();
 #ifdef TIMINGDEBUG
-			uint32_t debugTime = TIM3->CNT - debugStart;
-			if (debugTime > nm.drumVoice->debugMaxTime) {
-				nm.drumVoice->debugMaxTime = debugTime;
+			nm.drumVoice->debugTime = TIM3->CNT - debugStart;
+			if (nm.drumVoice->debugTime > nm.drumVoice->debugMaxTime) {
+				nm.drumVoice->debugMaxTime = nm.drumVoice->debugTime;
 			}
 #endif
 		}
