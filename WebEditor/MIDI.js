@@ -73,6 +73,14 @@ var hihatSettings = [
 	{name: 'Partial 3 Frequency'},
 	{name: 'Partial 4 Frequency'},
 	{name: 'Partial 5 Frequency'},
+/*
+	{name: 'Partial 0 FM', type: '8'},
+	{name: 'Partial 1 FM', type: '8'},
+	{name: 'Partial 2 FM', type: '8'},
+	{name: 'Partial 3 FM', type: '8'},
+	{name: 'Partial 4 FM', type: '8'},
+	{name: 'Partial 5 FM', type: '8'},
+	*/
 ];
 
 var tomsSettings = [
@@ -865,10 +873,16 @@ function getMIDIMessage(midiMessage)
 				// locate settings that match the enum passed
 				for (var i = 0; i < drumSettings.length; ++i) {
 					if (drumSettings[i].id == midiMessage.data[2]) {
+						var pos = 0;
 						for (var s = 0; s < drumSettings[i].settings.length; s++) {
 							// Store the values encoded in the SysEx data into the html fields
-							document.getElementById(`drumSettings${i}${s}`).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
-							//document.getElementById(drumSettings[i].settings[s].value).value = BytesToFloat(sysEx.slice(s * 4, s * 4 + 4));
+							if (drumSettings[i].settings[s].type == '8') {
+								document.getElementById(`drumSettings${i}${s}`).value = BytesToUInt8(sysEx.slice(pos, pos + 4));
+								pos += 1;
+							} else {
+								document.getElementById(`drumSettings${i}${s}`).value = BytesToFloat(sysEx.slice(pos, pos + 4));
+								pos += 4;
+							}
 						}
 					}
 				}
@@ -900,7 +914,7 @@ function getMIDIMessage(midiMessage)
 function BytesToFloat(buff) 
 {
     var fl = new Float32Array(new Uint8Array(buff).buffer)[0];
-	return Math.trunc(fl * 1000000) / 1000000;
+	return Math.round(fl * 1000000) / 1000000;
 }
 
 
@@ -908,6 +922,13 @@ function BytesToUInt16(buff)
 {
     return new Uint16Array(new Uint8Array(buff).buffer)[0];
 }
+
+
+function BytesToUInt8(buff) 
+{
+    return new Uint8Array(buff)[0];
+}
+
 
 function updateConfig(index)
 {

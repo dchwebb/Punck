@@ -31,7 +31,6 @@ void HiHat::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 }
 
 
-
 void HiHat::Play(const uint8_t voice, const uint32_t index)
 {
 	// Called when button is pressed
@@ -141,6 +140,7 @@ void HiHat::StoreConfig(uint8_t* buff, const uint32_t len)
 		partialPeriod[i] = freqToSqPeriod / config.partialFreq[i];
 	}
 }
+
 
 uint32_t HiHat::ConfigSize()
 {

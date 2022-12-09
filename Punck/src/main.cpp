@@ -19,8 +19,8 @@ float __attribute__((section (".ram_d1_data"))) reverbMixBuffer[94000];
 // TODO:
 // Sample panning (naming? web interface?)
 // Performance updates
-// hihat partials to floats?
-// web editor rounding
+// Web editor: finish handling non-float values in config
+// Band pass filter to main filter class
 
 USB usb;
 
