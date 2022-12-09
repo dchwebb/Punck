@@ -72,8 +72,9 @@ Internal drum voice and reverb settings can also be edited:
 
 
 
-Prototype
----------
+Prototype and Assembly
+----------------------
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Dev.jpg "icon")
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/build.jpg "icon")
 
