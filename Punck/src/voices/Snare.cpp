@@ -49,7 +49,7 @@ void Snare::CalcOutput()
 			}
 		}
 
-		const float rand2 = intToFloatMult * (int32_t)RNG->DR;		// Get right channel noise value: calc here to give time for peripheral to update
+		const float rand2 = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Get right channel noise value: calc here to give time for peripheral to update
 
 		outputLevel[left]  = velocityScale * filter.CalcFilter(partialOutput + (rand1 * noiseLevel), left);
 		outputLevel[right] = velocityScale * filter.CalcFilter(partialOutput + (rand2 * noiseLevel), right);

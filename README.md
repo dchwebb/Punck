@@ -15,6 +15,33 @@ Samples are stored on 32MB of internal Flash memory. This storage space is made 
 A browser-based editor allows drum sequences to be entered graphically and detailed parameters of internal voices to be edited.
 
 
+Audio DSP
+---------
+
+### Kick
+The kick drum is modelled on a Roland TR-808 kick. This is generated in five phases, the first three providing an initial steep ramp and discontinuity for the 'click', a fast sine wave at 130Hz and then a slowly decelerating sine wave starting at 60Hz. A potentiometer-controlled 2-pole low pass filter softens the attack and a decay control adjusts the rate at which the level is reduced.
+
+### Snare
+The snare is formed of 3 pitched sine wave partials representing the body of the drum and a noise component representing the snare. The partials form the first three modes of vibration of the body. The initial frequency is potentiometer-controlled and the next two partials pitched at multiples of 1.588 and 1.833. The noise component is derived from two random number readings (left and right) and has a decay rate separate from the overall volume envelope. A potentiometer-controlled 2-pole low pass filter attenuates the high frequencies.
+
+### Hi hat
+The hi hat consists of 6 square waves with varying rates and levels of frequency modulation. In addition a stereo noise component is used at the beginning of the note. Separate 2-pole high and low pass filters use different ramp envelopes to increase the frequency of the HP filter and reduce the frequency of the LP filter as the note sustains. The decay of the noise and FM partials are separately configurable. When a range of MIDI notes is used to control the hi hat each note will result in a successively more 'open' hi hat sound.
+
+### Sampler A and B
+Two independent sample playback voices are provided. These play wave files (8, 16, 24 or 32 bit) stored in the internal flash storage. Each sampler can only play a single sample at a time allowing a maximum of two simultaneously playing voices. Each sampler has a speed control allowing a playback range of 0.5 - 1.5 original speed. Base playback speed is normalised to 48kHz from the original sample rate.
+
+The sample's file name determines the bank (A or B) and index of the sample. Optionally adding suffix '.vNN' to the sample name will set the initial volume of the sample where NN is a value from 0 - 200% and 100% is the original sample level. Eg naming a sample 'B3crash.v150.wav' will make it the 3rd sample on bank B and will play at 150% of its original level.
+
+### Toms
+The Toms voice has no UI but is accessible from MIDI and the internal sequencer. An initial fast ramp is followed by a decelerating sine wave. Allocating multiple MIDI notes to playback will allow a range of pitches to be mapped over the MIDI notes.
+
+### Claps
+The Claps have no UI but are accessible from MIDI and the internal sequencer. Four 'claps' are played at slightly varying intervals with a sustained phase at the end of the fourth. Each clap is formed of band-pass filtered noise with a center frequency of 1250Hz and a Q of 3.
+
+### Reverb
+The reverb engine is derived from Geraint Luff's design [Signalsmith Audio](https://signalsmith-audio.co.uk/writing/2021/lets-write-a-reverb/). This divides the stereo dry audio into 8 channels which then pass through various diffusion stages followed by a feedback mixer. The diffusion stages use short delay lines and a Hadamard mixing matrix to create a short diffused reverb. The feedback mixer uses longer delays to spread the diffusion channels. The 8 reverb channels are then mixed down to stereo and blended with the dry signal. A 2-pole Low pass filter is used at the input to control high end.
+
+
 Architecture
 ------------
 
@@ -59,7 +86,7 @@ The 3.3V MCU and DAC digital power supplies are provided by a TI TPS561201 switc
 Web Editor
 ----------
 
-A web editor allows editing of the 5 internal drum sequences:
+A Chrome-based web editor allows editing of the 5 internal drum sequences:
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/seqedit.png "icon")
 
