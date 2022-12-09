@@ -39,7 +39,7 @@ The Toms voice has no UI but is accessible from MIDI and the internal sequencer.
 The Claps have no UI but are accessible from MIDI and the internal sequencer. Four 'claps' are played at slightly varying intervals with a sustained phase at the end of the fourth. Each clap is formed of band-pass filtered noise with a center frequency of 1250Hz and a Q of 3.
 
 ### Reverb
-The reverb engine is derived from Geraint Luff's design [Signalsmith Audio](https://signalsmith-audio.co.uk/writing/2021/lets-write-a-reverb/). This divides the stereo dry audio into 8 channels which then pass through various diffusion stages followed by a feedback mixer. The diffusion stages use short delay lines and a Hadamard mixing matrix to create a short diffused reverb. The feedback mixer uses longer delays to spread the diffusion channels. The 8 reverb channels are then mixed down to stereo and blended with the dry signal. A 2-pole Low pass filter is used at the input to control high end.
+The reverb engine is derived from Geraint Luff's design: [Signalsmith Audio](https://signalsmith-audio.co.uk/writing/2021/lets-write-a-reverb/). This divides the stereo dry audio into 8 channels which then pass through various diffusion stages followed by a feedback mixer. The diffusion stages use short delay lines and a Hadamard mixing matrix to create a short diffused reverb. The feedback mixer uses longer delays to spread the diffusion channels. The 8 reverb channels are then mixed down to stereo and blended with the dry signal. A 2-pole Low pass filter is used at the input to control high end.
 
 
 Architecture
@@ -53,7 +53,7 @@ An STM32H743 microcontroller is responsible for voice generation, USB and MIDI h
 
 Two internal ADCs read the various potentiometers using DMA circular mode. Timers in PWM mode are used to variably illuminate the LEDs integrated into the push buttons.
 
-An external crystal provides clocking at 12MHz which is scaled using the internal PLL to a main system clock of 400MHz. USB is clocked from the internal 48 MHz RC oscillator.
+An external crystal clocked at 12MHz is scaled using the internal PLL to a main system clock of 400MHz. USB is clocked from the internal 48 MHz RC oscillator.
 
 The microcontroller operates in device mode simultaneously managing three USB classes:
 
@@ -63,7 +63,7 @@ Used to provide access to the internal sample flash memory so the storage can be
 - MIDI/Audio Class: 
 Bi-directional MIDI is supported to enable playback of drum voices from a USB host. A sysex implementation allows the Browser editor to exchange configuration and playback information with the module.
 
-- Communication Device Class
+- Communication Device Class:
 A console application is provided to manage and debug the module. This provides information general maintenance tools, configuration options and tools for managing the internal flash storage (formatting, directory listings, disk analysis etc).
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/serial.png "icon")
@@ -76,12 +76,35 @@ Punck uses a TI PCM5100APW Audio DAC clocked at 48kHz in stereo. The MCU interfa
 
 ### Audio and Input Conditioning
 The stereo audio signal is amplified with a gain of -2.74 using a TL074 op-amp. This also amplifies the tempo clock out signal to around a 5V level. Input clamping is done with MMBT3904 transistors.
+
 ### Power Supplies
 
-The 3.3V MCU and DAC digital power supplies are provided by a TI TPS561201 switched-mode synchronous step-down power supply. An LD1117-3.3 linear regulator supplies the analog 3.3V power supplies.
+The Eurorack +/-12V rails have reverse polarity protection and filtering and are then scaled to separate digital and analog 3.3V rails. The 3.3V MCU and DAC digital power supplies are provided by a TI TPS561201 switched-mode synchronous step-down power supply. An LD1117-3.3 linear regulator supplies the analog 3.3V power. A common digital/analog ground plane is used.
 
 - +12V Current Draw: 123mA
 - -12V Current Draw: 8mA
+
+Construction
+------------
+
+The module is constructed using a sandwich of three PCBs. Schematic and PCB layout carried out in Kicad v6.08.
+
+The component board is a four layer PCB with top mounted components, two inner ground layers and mainly power routing on the bottom layer. 
+
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/components.png "icon")
+
+The control board is a two layer board on which are mounted the jacks, potentiometers, buttons and USB. 
+
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/controls.png "icon")
+
+The front panel is a two layer black PCB with exposed coated copper labels and marking.
+
+The prototype was hand-soldered in sections to test each part of the hardware in isolation. This picture shows the power supplies (right), microcontroller (center) and two flash chips (above and to the left of the MCU). The audio DAC and op-amp will be placed on the left hand side:
+
+![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/build.jpg "icon")
+
+
+
 
 Web Editor
 ----------
@@ -103,5 +126,5 @@ Prototype and Assembly
 ----------------------
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Dev.jpg "icon")
-![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/build.jpg "icon")
+
 

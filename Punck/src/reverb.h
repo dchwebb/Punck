@@ -187,7 +187,7 @@ public:
 			output[c] = delays[c].delay[delays[c].readPos];			// Read out oldest delayed sample
 		}
 
-		Householder<channels>::InPlace(output.data());		// Mix using a Householder matrix
+		Householder<channels>::InPlace(output.data());				// Mix using a Householder matrix
 
 		for (uint32_t c = 0; c < channels; ++c) {
 			float sum = input[c] + output[c] * decayGain;
@@ -213,7 +213,7 @@ class Reverb {
 public:
 	Reverb()
 	{
-		filter.SetCutoff(config.filterCutoff);		// FIXME this should be done through config setting
+		filter.SetCutoff(config.filterCutoff);
 	}
 
 
