@@ -595,7 +595,7 @@ const uint8_t CDCHandler::Descriptor[] = {
 	0x05,									// bFunctionLength
 	USB::ClassSpecificInterfaceDescriptor,	// bDescriptorType: CS_INTERFACE
 	0x06,									// bDescriptorSubtype: Union func desc
-	0x00,									// bMasterInterface: Communication class interface FIXME
+	0x00,									// bMasterInterface: Communication class interface
 	0x01,									// bSlaveInterface0: Data Class Interface
 
 	// Endpoint 2 Descriptor

@@ -77,8 +77,8 @@ uint32_t leftOverflow = 0, rightOverflow = 0;	// Debug
 //float leftOutput = 0.0f, rightOutput = 0.0f;
 //float outInc = 0.005;
 //uint32_t waitCrossing = 0;
-float adjOffset = -0.03f;
-float adjOutputScale = 0.92f;
+constexpr float adjOffset = 0.0f;
+constexpr float adjOutputScale = 0.92f;
 void VoiceManager::Output()
 {
 	CheckButtons();										// Handle buttons playing note or activating MIDI learn

@@ -30,12 +30,12 @@ private:
 
 	struct Config {
 		float noiseInitLevel = 1.0f;
-		float noiseDecay = 0.9985f;				// Decay rate of noise (increased by decay amount in MIDI mode)
+		float noiseDecay = 0.9982f;				// Decay rate of noise (increased by decay amount in MIDI mode)
 
 		float baseFreq = 150.0f;				// Lowest frequency which partials will be non-integer multiples of
 		float basePos = 0.5f;					// Starting position of initial partial in radians
 
-		float partialDecay = 0.9985f;			// Decay rate of partials (increased by decay amount in MIDI mode)
+		float partialDecay = 0.9982f;			// Decay rate of partials (increased by decay amount in MIDI mode)
 		float partialInitLevel[partialCount] = {0.7f, 0.5f, -0.4};
 		float partialFreqOffset[partialCount] = {1.0f, 1.588f, 1.833f};
 	} config;

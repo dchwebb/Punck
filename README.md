@@ -49,7 +49,7 @@ Architecture
 
 ### Microcontroller
 
-An STM32H743 microcontroller is responsible for voice generation, USB and MIDI handling, interfacing with the Flash storage devices via QSPI and true random number generation used to generate white noise for various voices.
+An STM32H743 microcontroller is responsible for voice generation, USB and MIDI handling, interfacing with the Flash storage devices via QSPI and true random number generation used to generate white noise for various voices. Code is written in C++ 20 using the STM32CubeIDE Eclipse-based IDE. All hardware interfacing is carried out through custom code (ie no STM HAL libraries).
 
 Two internal ADCs read the various potentiometers using DMA circular mode. Timers in PWM mode are used to variably illuminate the LEDs integrated into the push buttons.
 
@@ -58,7 +58,7 @@ An external crystal clocked at 12MHz is scaled using the internal PLL to a main 
 The microcontroller operates in device mode simultaneously managing three USB classes:
 
 - Mass Storage Class:
-Used to provide access to the internal sample flash memory so the storage can be accessed as a normal USB Flash drive.
+Used to provide access to the internal sample flash memory so the storage can be accessed as a normal USB Flash drive. The storage is formatted using FAT16 file system.
 
 - MIDI/Audio Class: 
 Bi-directional MIDI is supported to enable playback of drum voices from a USB host. A sysex implementation allows the Browser editor to exchange configuration and playback information with the module.
@@ -122,8 +122,10 @@ Internal drum voice and reverb settings can also be edited:
 
 
 
-Prototype and Assembly
-----------------------
+Prototype
+---------
+
+Development was done on an STM Nucleo development board with external surface mount ICs (flash, DAC) soldered to breakout boards for prototyping:
 
 ![Image](https://raw.githubusercontent.com/dchwebb/Punck/master/Graphics/Punck_Dev.jpg "icon")
 

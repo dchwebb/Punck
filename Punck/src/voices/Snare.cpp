@@ -19,7 +19,7 @@ void Snare::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 	velocityScale = velocity * (static_cast<float>(ADC_array[ADC_SnareLevel]) / 32768.0f);
 
 	noteRange = noteRange == 0 ? 128 : noteRange;
-	sustainRate = 0.001f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// note offset allows for longer sustained hits
+	sustainRate = 0.0012f * sqrt((static_cast<float>(noteOffset) + 1.0f) / noteRange);		// note offset allows for longer sustained hits
 }
 
 

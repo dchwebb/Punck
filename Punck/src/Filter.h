@@ -96,7 +96,7 @@ private:
 		for (uint32_t i = 0; i < poles; ++i) {
 			if (roots[i].real() > 0.0)
 				continue;							// Right Hand Plane
-			if (roots[i].real() == 0.0 && roots[i].imag() == 0.0)
+			if (roots[i].real() == 0.0f && roots[i].imag() == 0.0)
 				continue;							// At the origin.  This should never happen.
 
 			if (roots[i].real() == 0.0) {			// Imag Root (A poly zero)
@@ -112,7 +112,7 @@ private:
 				++polyCount;
 			} else { 								// Complex Pole
 				coeff.D2[polyCount] = 1.0;
-				coeff.D1[polyCount] = -2.0 * roots[i].real();
+				coeff.D1[polyCount] = -2.0f * roots[i].real();
 				coeff.D0[polyCount] = roots[i].real() * roots[i].real() + roots[i].imag() * roots[i].imag();
 				++i;
 				++polyCount;
@@ -128,6 +128,7 @@ class IIRFilter {
 	static constexpr uint32_t sections = (poles + 1) / 2;
 public:
 	float cutoffFreq = 0.0f;
+	float bandwidthQ = 0.0f;
 
 	// constructors
 	IIRFilter(filterPass pass) : passType{pass}, iirProto(IIRPrototype()) {};
@@ -139,36 +140,32 @@ public:
 	 See http://www.iowahills.com/A4IIRBilinearTransform.html
 	 function originally CalcIIRFilterCoeff()
 	 cutoff freq = omega * (sampling_rate / 2)
+	 NB all calculations normalised to use a0 = 1.0f so removed coefficient
 	 */
-	void CalcCoeff(const float omega)
+	void CalcCoeff(const float omega, const float Q = 0.0f)		// omega = cutoff frequency / half sampling rate
 	{
-		if (cutoffFreq == omega) {		// Avoid recalculating coefficients when already found
+		if (cutoffFreq == omega && bandwidthQ == Q) {			// Avoid recalculating coefficients when already found
 			return;
 		}
 		cutoffFreq = omega;
+		bandwidthQ = Q;
 
-		// Set the number of IIR filter sections we will be generating.
 		if (passType == filterPass::BandPass) {
-			constexpr float bw = 0.001f;
-			constexpr float R = 1.0f - 3.0 * bw;
-			const float c2 = 2.0f * std::cos(2.0f * pi * omega);
-			const float K = (1.0f - (R * c2) + (R * R)) / (2.0f - c2);
+			// See http://shepazu.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
+			const float w0 = pi * cutoffFreq;
+			const float n = (2.0f * Q) / (2.0f * Q + sin(w0));			// Use normalised alpha to set a0 = 1.0
+			iirCoeff.b0[0] = 1.0f - n;
+			iirCoeff.b1[0] = 0.0f;
+			iirCoeff.b2[0] = n - 1.0f;
 
-			for (uint32_t i = 0; i < sections; ++i) {
-				iirCoeff.b0[i] = 1.0f - K;
-				iirCoeff.b1[i] = (K - R) * c2;
-				iirCoeff.b2[i] = (R * R) - K;
-
-				iirCoeff.a0[i] = 1.0f;
-				iirCoeff.a1[i] = R * c2;
-				iirCoeff.a2[i] = -(R * R);
-			}
+			iirCoeff.a1[0] = -2.0f * n * cos(w0);
+			iirCoeff.a2[0] = 2.0f * n - 1.0f;
 			return;
 		}
 
 		// T sets the IIR filter's corner frequency, or center frequency
 		// The Bilinear transform is defined as:  s = 2/T * tan(Omega/2) = 2/T * (1 - z^-1)/(1 + z^-1)
-		const float T = 2.0 * tan(omega * pi / 2);
+		const float T = 2.0f * tan(omega * pi / 2);
 
 		// Calc the IIR coefficients. SPlaneCoeff.sections is the number of 1st and 2nd order s plane factors.
 		for (uint32_t i = 0; i < sections; ++i) {
@@ -179,48 +176,44 @@ public:
 			// b's are the numerator, a's are the denominator
 			if (passType == filterPass::LowPass) {
 				if (A == 0.0) {						// 1 pole case
-					const float arg = (2.0 * B + C * T);
-					iirCoeff.a2[i] = 0.0;
-					iirCoeff.a1[i] = (-2.0 * B + C * T) / arg;
-					iirCoeff.a0[i] = 1.0;
+					const float arg = (2.0f * B + C * T);
+					iirCoeff.a2[i] = 0.0f;
+					iirCoeff.a1[i] = (-2.0f * B + C * T) / arg;
 
-					iirCoeff.b2[i] = 0.0;
+					iirCoeff.b2[i] = 0.0f;
 					iirCoeff.b1[i] = T / arg * C;
 					iirCoeff.b0[i] = T / arg * C;
 				} else {							// 2 poles
 
-					const float arg = (4.0 * A + 2.0 * B * T + C * T * T);
-					iirCoeff.a2[i] = (4.0 * A - 2.0 * B * T + C * T * T) / arg;
-					iirCoeff.a1[i] = (2.0 * C * T * T - 8.0 * A) / arg;
-					iirCoeff.a0[i] = 1.0;
+					const float arg = (4.0f * A + 2.0f * B * T + C * T * T);
+					iirCoeff.a2[i] = (4.0f * A - 2.0f * B * T + C * T * T) / arg;
+					iirCoeff.a1[i] = (2.0f * C * T * T - 8.0f * A) / arg;
 
 					// With all pole filters, LPF numerator is (z+1)^2, so all Z Plane zeros are at -1
 					iirCoeff.b2[i] = (T * T) / arg * C;
-					iirCoeff.b1[i] = (2.0 * T * T) / arg * C;
+					iirCoeff.b1[i] = (2.0f * T * T) / arg * C;
 					iirCoeff.b0[i] = (T * T) / arg * C;
 				}
 			}
 
 			if (passType == filterPass::HighPass) {
 				if (A == 0.0) {						// 1 pole
-					const float arg = 2.0 * C + B * T;
+					const float arg = 2.0f * C + B * T;
 					iirCoeff.a2[i] = 0.0;
-					iirCoeff.a1[i] = (B * T - 2.0 * C) / arg;
-					iirCoeff.a0[i] = 1.0;
+					iirCoeff.a1[i] = (B * T - 2.0f * C) / arg;
 
 					iirCoeff.b2[i] = 0.0;
-					iirCoeff.b1[i] = -2.0 / arg * C;
-					iirCoeff.b0[i] = 2.0 / arg * C;
+					iirCoeff.b1[i] = -2.0f / arg * C;
+					iirCoeff.b0[i] = 2.0f / arg * C;
 				} else {							// 2 poles
-					const float arg = A * T * T + 4.0 * C + 2.0 * B * T;
-					iirCoeff.a2[i] = (A * T * T + 4.0 * C - 2.0 * B * T) / arg;
-					iirCoeff.a1[i] = (2.0 * A * T * T - 8.0 * C) / arg;
-					iirCoeff.a0[i] = 1.0;
+					const float arg = A * T * T + 4.0f * C + 2.0f * B * T;
+					iirCoeff.a2[i] = (A * T * T + 4.0f * C - 2.0f * B * T) / arg;
+					iirCoeff.a1[i] = (2.0f * A * T * T - 8.0f * C) / arg;
 
 					// With all pole filters, HPF numerator is (z-1)^2, so all Z Plane zeros are at 1
-					iirCoeff.b2[i] = 4.0 / arg * C;
-					iirCoeff.b1[i] = -8.0 / arg * C;
-					iirCoeff.b0[i] = 4.0 / arg * C;
+					iirCoeff.b2[i] = 4.0f / arg * C;
+					iirCoeff.b1[i] = -8.0f / arg * C;
+					iirCoeff.b0[i] = 4.0f / arg * C;
 				}
 			}
 		}
@@ -231,9 +224,9 @@ public:
 	//	Take a new sample and return filtered value
 	float FilterSample(const float sample, IIRRegisters<poles>& registers)
 	{
-		float y = CalcSection(0, sample, registers);
-		for (uint8_t k = 1; k < sections; k++) {
-			y = CalcSection(k, y, registers);
+		float y = CalcSection(0, sample, registers);		// FIXME bandpass filter should only have one section
+		for (uint8_t i = 1; i < sections; i++) {
+			y = CalcSection(i, y, registers);
 		}
 		return y;
 	}
@@ -243,7 +236,6 @@ private:
 	IIRPrototype<poles> iirProto;						// Standard Butterworth is default
 
 	struct IIRCoeff {
-		float a0[sections];
 		float a1[sections];
 		float a2[sections];
 		float b0[sections];
@@ -269,7 +261,7 @@ private:
 		}
 
 		centerTap = x * iirCoeff.b0[k] + iirCoeff.b1[k] * registers.x1[k] + iirCoeff.b2[k] * registers.x2[k];
-		y = iirCoeff.a0[k] * centerTap - iirCoeff.a1[k] * registers.y1[k] - iirCoeff.a2[k] * registers.y2[k];
+		y = centerTap - iirCoeff.a1[k] * registers.y1[k] - iirCoeff.a2[k] * registers.y2[k];
 
 		registers.x2[k] = registers.x1[k];
 		registers.x1[k] = x;

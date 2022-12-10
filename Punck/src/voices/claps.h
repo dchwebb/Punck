@@ -1,7 +1,7 @@
 #pragma once
 #include "initialisation.h"
 #include "DrumVoice.h"
-#include "BPFilter.h"
+#include "Filter.h"
 
 class NoteMapper;
 
@@ -30,14 +30,15 @@ private:
 	struct Config {
 		float initLevel = 5.0f;
 		float reverbInitLevel = 4.0f;
-		float initDecay = 0.9930f;				// Decay rate of first hits
-		float reverbDecay = 0.999f;				// Decay rate of 'reverb' section
+		float initDecay = 0.9930f;					// Decay rate of first hits
+		float reverbDecay = 0.999f;					// Decay rate of 'reverb' section
 		float filterCutoff = 1250.0f;
 		float filterQ = 3.0f;
 		float unfilteredNoiseLevel = 0.06f;
 	} config;
 
 
-	BPFilter filter;		// Band pass filter
+	IIRFilter<2> filter{filterPass::BandPass};		// Band pass filter
+	IIRRegisters<2> iirReg;
 };
 

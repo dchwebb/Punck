@@ -10,7 +10,8 @@ void Claps::Play(const uint8_t voice, const uint32_t noteOffset, uint32_t noteRa
 	state = State::hit1;
 	stateCounter = 0;
 
-	filter.SetCutoff(config.filterCutoff, config.filterQ);
+	const float omega = 2.0f * config.filterCutoff / systemSampleRate;		// omega = cutoff in Hz / half sampling frequency
+	filter.CalcCoeff(omega, config.filterQ);
 }
 
 
@@ -25,10 +26,16 @@ void Claps::CalcOutput()
 {
 	if (playing) {
 		float output = intToFloatMult * static_cast<int32_t>(RNG->DR);		// Initial random number used for noise
-		output = filter.CalcFilter(output);
+		output = filter.FilterSample(output, iirReg);
 
 		++stateCounter;
 
+#ifdef DEBUGFILTER			// will just output filtered white noise for a few seconds to allow frequency analysis of filter
+	if (stateCounter == 1000000) {
+		playing = false;
+	}
+
+#else
 		switch (state) {
 		case State::hit1:
 			if (stateCounter > 460) {		// approx 9.6ms
@@ -58,7 +65,7 @@ void Claps::CalcOutput()
 		output += config.unfilteredNoiseLevel * intToFloatMult * static_cast<int32_t>(RNG->DR);		// Add some additional non-filtered noise back in
 
 		level *= (state == State::reverb ? config.reverbDecay : config.initDecay);
-
+#endif
 		outputLevel[left]  = velocityScale * (output * level);
 		outputLevel[right] = outputLevel[left];
 

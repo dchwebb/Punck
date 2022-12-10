@@ -314,9 +314,6 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 		USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_TRDT;
 		USB_OTG_FS->GUSBCFG |= (6 << 10);
 
-//		DeactivateEndpoint(MSC_Out, Direction::out);			// FIXME - all or no endpoints?
-//		DeactivateEndpoint(MSC_In, Direction::in);
-
 		ActivateEndpoint(0, Direction::out, Control);			// Open EP0 OUT
 		ActivateEndpoint(0, Direction::in, Control);			// Open EP0 IN
 
@@ -352,10 +349,6 @@ void USB::InterruptHandler()					// In Drivers\STM32F4xx_HAL_Driver\Src\stm32f4x
 			devState = DeviceState::Default;
 
 			Init(true);
-
-			// FIXME for each endpoint:
-			//DeactivateEndpoint(MSC_Out, Direction::out);
-			//DeactivateEndpoint(MSC_In, Direction::in);
 		}
 
 		USB_OTG_FS->GOTGINT |= temp;
