@@ -4,7 +4,9 @@
 Overview
 --------
 
-Punck is drum machine designed for use with Eurorack modular synthesizers. Its five primary voices are Kick, Snare, High Hat and two sample playback channels. In addition a Tom voice is available via MIDI.
+Audio Demo: [Punck.wav](https://raw.githubusercontent.com/dchwebb/Punck/master/Drum_Sequences/Punck.wav)
+
+Punck is drum machine designed for use with Eurorack modular synthesizers. Its five primary voices are Kick, Snare, High Hat and two sample playback channels. In addition Toms and Claps voices are available via MIDI.
 
 It features a built-in drum sequencer with five patterns each with up to 4 bars in length and either 16 or 24 beats per bar.
 
@@ -12,7 +14,7 @@ Voices can be triggered via front panel illuminated buttons, gate input, USB MID
 
 Samples are stored on 32MB of internal Flash memory. This storage space is made available as a standard USB drive, requiring no external drives or SD cards.
 
-A browser-based editor allows drum sequences to be entered graphically and detailed parameters of internal voices to be edited.
+A browser-based editor allows drum sequences to be entered graphically and detailed parameters of internal voices to be edited. A MIDI mapping facility provides access to different articulations of voices and different samples for the sampler tracks.
 
 
 Audio DSP

@@ -20,7 +20,6 @@ float __attribute__((section (".ram_d1_data"))) reverbMixBuffer[94000];
 // Sample panning (naming? web interface?)
 // Performance updates
 // Web editor: finish handling non-float values in config
-// Band pass filter to main filter class
 // Sample playback does not account for samples stored in discontinuous memory locations
 
 USB usb;

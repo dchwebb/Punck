@@ -157,9 +157,7 @@ void Sequencer::Play()
 
 		if (position == 0) {
 			if (clockEveryTick || (currentBeat % (seq.info.beatsPerBar == 16 ? 4 : 6) == 0)) {
-#ifndef TIMINGDEBUG
 				GPIOD->ODR |= GPIO_ODR_OD9;					// PD9: activate tempo out
-#endif
 				clockOn = SysTickVal;
 			}
 
@@ -175,9 +173,7 @@ void Sequencer::Play()
 		// Turn off clock pulse after 6ms
 		if (clockOn > 0 && SysTickVal > clockOn + 6) {
 			clockOn = 0;
-#ifndef TIMINGDEBUG
 			GPIOD->ODR &= ~GPIO_ODR_OD9;				// PD9: clear tempo out pin
-#endif
 		}
 
 		if (++position > beatLen) {
