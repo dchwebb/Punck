@@ -4,7 +4,8 @@
 Overview
 --------
 
-Audio Demo: [Punck.wav](https://raw.githubusercontent.com/dchwebb/Punck/master/Drum_Sequences/Punck.wav)
+- Audio Demo with Kick, snare and hi hats: [Punck.wav](https://raw.githubusercontent.com/dchwebb/Punck/master/Drum_Sequences/Punck.wav)
+- Audio Demo with all voices and samples: [Punck2.wav](https://raw.githubusercontent.com/dchwebb/Punck/master/Drum_Sequences/Punck2.wav)
 
 Punck is drum machine designed for use with Eurorack modular synthesizers. Its five primary voices are Kick, Snare, High Hat and two sample playback channels. In addition Toms and Claps voices are available via MIDI.
 

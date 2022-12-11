@@ -8,7 +8,7 @@
 
 extern volatile uint32_t SysTickVal;
 
-#define TIMINGDEBUG true
+#define TIMINGDEBUG false					// Capture detailed timing information
 
 #define ADC1_BUFFER_LENGTH 8
 #define ADC2_BUFFER_LENGTH 7
@@ -23,7 +23,7 @@ static constexpr uint32_t systemSampleRate = 48000;
 static constexpr float systemMaxFreq = 22000.0f;
 
 extern volatile uint16_t ADC_array[ADC1_BUFFER_LENGTH + ADC2_BUFFER_LENGTH];
-
+extern uint32_t i2sUnderrun;					// Debug counter for I2S underruns
 
 // Define ADC array positions of various controls
 enum ADC_Controls {

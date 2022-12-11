@@ -203,8 +203,9 @@ void MidiHandler::ProcessSysex()
 			configManager.configBuffer[2] = sequencer.activeSequence; 					// active sequence
 			configManager.configBuffer[3] = sequencer.currentBar;     					// current bar
 			configManager.configBuffer[4] = sequencer.currentBeat;    					// current beat
+			configManager.configBuffer[5] = i2sUnderrun;		    					// I2S Underrun
 
-			const uint32_t len = ConstructSysEx(configManager.configBuffer, 5, nullptr, 0, noSplit);
+			const uint32_t len = ConstructSysEx(configManager.configBuffer, 6, nullptr, 0, noSplit);
 			usb->SendData(sysExOut, len, inEP);
 			break;
 		}

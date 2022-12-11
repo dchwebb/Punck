@@ -5,9 +5,6 @@
 
 VoiceManager voiceManager;
 
-#ifdef TIMINGDEBUG
-	uint32_t reverbTime = 0, maxReverbTime = 0;
-#endif
 
 VoiceManager::VoiceManager()
 {
@@ -112,13 +109,13 @@ void VoiceManager::Output()
 	if (std::abs(combinedOutput[right]) > 1.0f) { ++rightOverflow; }
 
 	// reverb
-#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 	uint32_t reverbStart = TIM3->CNT;
 #endif
 
 	auto [reverbL, reverbR] = reverb.Process(combinedOutput[left], combinedOutput[right]);
 
-	#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 	reverbTime = TIM3->CNT - reverbStart;
 	if (reverbTime > maxReverbTime && SysTickVal > 100) {
 		maxReverbTime = reverbTime;
@@ -138,11 +135,11 @@ void VoiceManager::Output()
 		if (nm.drumVoice != nullptr && nm.voiceIndex == 0) {			// If voiceIndex is > 0 drum voice has multiple channels (eg sampler)
 			nm.drumVoice->PlayQueued();			// MIDI notes will be queued from serial/usb interrupts to play in main I2S interrupt
 
-#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 			uint32_t debugStart = TIM3->CNT;
 #endif
 			nm.drumVoice->CalcOutput();
-#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 			nm.drumVoice->debugTime = TIM3->CNT - debugStart;
 			if (nm.drumVoice->debugTime > nm.drumVoice->debugMaxTime) {
 				nm.drumVoice->debugMaxTime = nm.drumVoice->debugTime;

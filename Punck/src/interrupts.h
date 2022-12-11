@@ -3,39 +3,31 @@ void OTG_FS_IRQHandler(void)
 	usb.InterruptHandler();
 }
 
-bool debugSuspend = false;
 
-uint32_t spiUnderrun = 0;		// Debug
-#ifdef TIMINGDEBUG
-uint32_t loopTime = 0;
-uint32_t maxLoopTime = 0;
-uint32_t outputTime = 0;
-uint32_t maxOutputTime = 0;
-#endif
+// Detailed debug timings
+uint32_t loopTime = 0, maxLoopTime = 0, outputTime = 0, maxOutputTime = 0, reverbTime = 0, maxReverbTime = 0;
+
 
 void SPI2_IRQHandler()									// I2S Interrupt
 {
 
-#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 	loopTime = TIM3->CNT;
 	if (loopTime > maxLoopTime && SysTickVal > 100) {
 		maxLoopTime = loopTime;
 	}
-	TIM3->EGR |= TIM_EGR_UG;							// 1: Re-initialize debug counter
+	TIM3->EGR |= TIM_EGR_UG;							// Re-initialize debug counter
 #endif
 
 	if ((SPI2->SR & SPI_SR_UDR) == SPI_SR_UDR) {		// Check for Underrun condition
 		SPI2->IFCR |= SPI_IFCR_UDRC;					// Clear underrun condition
-		++spiUnderrun;
-		if (debugSuspend) {
-			volatile int susp = 1;
-		}
+		++i2sUnderrun;
 		return;
 	}
 
 	voiceManager.Output();
 
-#ifdef TIMINGDEBUG
+#if (TIMINGDEBUG)
 	outputTime = TIM3->CNT;
 	if (outputTime > maxOutputTime) {
 		maxOutputTime = outputTime;

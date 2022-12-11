@@ -84,7 +84,7 @@ int32_t CDCHandler::ParseInt(const std::string_view cmd, const char precedingCha
 }
 
 // Timing debug variables
-extern uint32_t loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun, reverbTime, maxReverbTime;
+extern uint32_t loopTime, maxLoopTime, outputTime, maxOutputTime, reverbTime, maxReverbTime;
 
 void CDCHandler::ProcessCommand()
 {
@@ -131,15 +131,12 @@ void CDCHandler::ProcessCommand()
 		debugStart = true;
 #endif
 
-#ifdef TIMINGDEBUG
-	} else if (cmd.compare("timingon") == 0) {					// Print timing debug info
-		extern bool debugSuspend;
-		debugSuspend = true;
 
 
 	} else if (cmd.compare("timing") == 0) {					// Print timing debug info
+#if (TIMINGDEBUG)
 		printf("Timings: Loop: %ld, Max: %ld, Output: %ld, Max: %ld, Underrun: %ld\r\n",
-				loopTime, maxLoopTime, outputTime, maxOutputTime, spiUnderrun);
+				loopTime, maxLoopTime, outputTime, maxOutputTime, i2sUnderrun);
 		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
 			case VoiceManager::kick:
@@ -167,14 +164,16 @@ void CDCHandler::ProcessCommand()
 			printf(": %ld\r\n", note.drumVoice->debugMaxTime);
 		}
 		printf("Reverb current: %ld maximum: %ld\r\n", reverbTime, maxReverbTime);
+#else
+		printf("I2C Underrun: %ld\r\n", i2sUnderrun);
+#endif
 
-
-	} else if (cmd.compare("resettiming") == 0) {					// Print timing debug info
+	} else if (cmd.compare("resettiming") == 0) {				// Print timing debug info
 		loopTime = 0;
 		maxLoopTime = 0;
 		outputTime = 0;
 		maxOutputTime = 0;
-		spiUnderrun = 0;
+		i2sUnderrun = 0;
 		reverbTime = 0;
 		maxReverbTime = 0;
 
@@ -183,7 +182,6 @@ void CDCHandler::ProcessCommand()
 		}
 		printf("Reset Debug Timings\r\n");
 
-#endif
 
 
 	} else if (cmd.compare("saveconfig") == 0) {				// Serialise config to internal flash

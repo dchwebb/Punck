@@ -7,6 +7,7 @@
 
 
 volatile uint32_t SysTickVal;		// 1 ms resolution
+uint32_t i2sUnderrun = 0;				// Debug counter for I2S underruns
 extern uint32_t SystemCoreClock;
 
 // Create DMA buffer that need to live in non-cached memory area

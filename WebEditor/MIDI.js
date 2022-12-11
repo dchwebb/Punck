@@ -8,6 +8,7 @@ var midi = null;			// global MIDIAccess object
 var output = null;
 var requestNo = 0;			// Config is retrieved in chunks - this holds index of current chunk of data being recovered
 var barClip = null;			// Clipboard for copying and pasting bars
+var i2sUnderrun = 0;		// Debug for missed samples
 
 // enum from c++ code to match voice
 var voiceEnum = {
@@ -770,6 +771,13 @@ function DisplayPosition()
 			}
 		}
 	}
+
+	// Display underruns
+	if (i2sUnderrun > 0) {
+		var underrun = document.getElementById("txtI2SUnderrun");
+		underrun.innerHTML = `I2S Underrun ${i2sUnderrun}`;
+	}
+
 	if (document.getElementById("autoUpdate").checked) {
 		StatusTimer();
 	}
@@ -805,6 +813,7 @@ function getMIDIMessage(midiMessage)
 				seqSettings.playingSeq = midiMessage.data[3];
 				seqSettings.playingBar = midiMessage.data[4];
 				seqSettings.playingBeat = midiMessage.data[5];
+				i2sUnderrun = midiMessage.data[6];
 				DisplayPosition();
 				break;
 
@@ -1038,7 +1047,6 @@ function checkConnection()
         return true;
     }
 }
-
 
 function onMIDISuccess(midiAccess)
 {
