@@ -400,23 +400,13 @@ void InitADC2()
 }
 
 
-void InitI2S() {
-	//	Enable GPIO and SPI clocks
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port clock
-	RCC->APB1LENR |= RCC_APB1LENR_SPI2EN;
+void InitI2S()
+{
+	RCC->APB1LENR |= RCC_APB1LENR_SPI2EN;			//	Enable SPI clock
 
-	// PB12: I2S2_WS [alternate function AF5]
-	GPIOB->MODER &= ~GPIO_MODER_MODE12_0;			// 10: Alternate function mode
-	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL12_Pos;	// Alternate Function 5 (I2S2)
-
-	// PB13 I2S2_CK [alternate function AF5]
-	GPIOB->MODER &= ~GPIO_MODER_MODE13_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
-	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL13_Pos;	// Alternate Function 5 (I2S2)
-
-	// PB15 I2S2_SDO [alternate function AF5]
-	GPIOB->MODER &= ~GPIO_MODER_MODE15_0;			// 00: Input (reset state)	01: General purpose output mode	10: Alternate function mode	11: Analog mode
-	GPIOB->AFR[1] |= 5 << GPIO_AFRH_AFSEL15_Pos;	// Alternate Function 5 (I2S2)
-
+	GpioPin::Init(GPIOB, 12, GpioPin::Type::AlternateFunction, 5);		// PB12 I2S2_WS [alternate function AF5]
+	GpioPin::Init(GPIOB, 13, GpioPin::Type::AlternateFunction, 5);		// PB13 I2S2_CK [alternate function AF5]
+	GpioPin::Init(GPIOB, 15, GpioPin::Type::AlternateFunction, 5);		// PB15 I2S2_SDO [alternate function AF5]
 
 	// Configure SPI (Shown as SPI2->CGFR in SFR)
 	SPI2->I2SCFGR |= SPI_I2SCFGR_I2SMOD;			// I2S Mode
@@ -520,65 +510,20 @@ void InitDebugTimer()
 
 void InitIO()
 {
-//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
-//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
-//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
-//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
-//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
-
-	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
-	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
-
-	// Switch
-	GpioPin::Init(GPIOC, 6, GpioPin::Type::InputPullup);		// PC6: Seq Select
-	GpioPin::Init(GPIOE, 1, GpioPin::Type::InputPullup);		// PE1: MIDI Learn
-	GpioPin::Init(GPIOB, 6, GpioPin::Type::InputPullup);		// PB6: Kick button
-	GpioPin::Init(GPIOB, 5, GpioPin::Type::InputPullup);		// PB5: Snare button
+	GpioPin::Init(GPIOC, 6,  GpioPin::Type::InputPullup);		// PC6: Seq Select
+	GpioPin::Init(GPIOE, 1,  GpioPin::Type::InputPullup);		// PE1: MIDI Learn
+	GpioPin::Init(GPIOB, 6,  GpioPin::Type::InputPullup);		// PB6: Kick button
+	GpioPin::Init(GPIOB, 5,  GpioPin::Type::InputPullup);		// PB5: Snare button
 	GpioPin::Init(GPIOE, 11, GpioPin::Type::InputPullup);		// PE11: HiHat button
-	GpioPin::Init(GPIOB, 7, GpioPin::Type::InputPullup);		// PB7: Sample A button
+	GpioPin::Init(GPIOB, 7,  GpioPin::Type::InputPullup);		// PB7: Sample A button
 	GpioPin::Init(GPIOG, 13, GpioPin::Type::InputPullup);		// PG13: Sample B button
-	GpioPin::Init(GPIOD, 1, GpioPin::Type::Input);				// PD1: Kick
-	GpioPin::Init(GPIOD, 3, GpioPin::Type::Input);				// PD3: Snare
+	GpioPin::Init(GPIOD, 1,  GpioPin::Type::Input);				// PD1: Kick
+	GpioPin::Init(GPIOD, 3,  GpioPin::Type::Input);				// PD3: Snare
 	GpioPin::Init(GPIOG, 10, GpioPin::Type::Input);				// PG10: Closed Hihat
-	GpioPin::Init(GPIOD, 7, GpioPin::Type::Input);				// PD7: Open Hihat
+	GpioPin::Init(GPIOD, 7,  GpioPin::Type::Input);				// PD7: Open Hihat
 	GpioPin::Init(GPIOE, 14, GpioPin::Type::Input);				// PE14: Sampler A
 	GpioPin::Init(GPIOE, 15, GpioPin::Type::Input);				// PE15: Sampler B
-	GpioPin::Init(GPIOD, 9, GpioPin::Type::Output);				// PD9: Tempo out
-	/*
-	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Seq Select
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
-
-	GPIOE->MODER &= ~GPIO_MODER_MODE1;				// PE1: MIDI Learn
-	GPIOE->PUPDR |= GPIO_PUPDR_PUPD1_0;				// Pull up
-
-	// Buttons
-	GPIOB->MODER &= ~GPIO_MODER_MODE6;				// PB6: Kick button
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
-
-	GPIOB->MODER &= ~GPIO_MODER_MODE5;				// PB5: Snare button
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD5_0;				// Pull up
-
-	GPIOE->MODER &= ~GPIO_MODER_MODE11;				// PE11: HiHat button
-	GPIOE->PUPDR |= GPIO_PUPDR_PUPD11_0;			// Pull up
-
-	GPIOB->MODER &= ~GPIO_MODER_MODE7;				// PB7: Sample A button
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD7_0;				// Pull up
-
-	GPIOG->MODER &= ~GPIO_MODER_MODE13;				// PG13: Sample B button
-	GPIOG->PUPDR |= GPIO_PUPDR_PUPD13_0;			// Pull up
-
-	// Trigger inputs
-	GPIOD->MODER &= ~GPIO_MODER_MODE1;				// PD1 Kick
-	GPIOD->MODER &= ~GPIO_MODER_MODE3;				// PD3 Snare
-	GPIOG->MODER &= ~GPIO_MODER_MODE10;				// PG10 Closed Hihat
-	GPIOD->MODER &= ~GPIO_MODER_MODE7;				// PD7 Open Hihat
-	GPIOE->MODER &= ~GPIO_MODER_MODE14;				// PE14 Sampler A
-	GPIOE->MODER &= ~GPIO_MODER_MODE15;				// PE15 Sampler B
-
-	// Tempo out PD9
-	GPIOD->MODER &= ~GPIO_MODER_MODE9_1;
-
-*/
+	GpioPin::Init(GPIOD, 9,  GpioPin::Type::Output);			// PD9: Tempo out
 }
 
 
@@ -587,40 +532,18 @@ void InitQSPI()
 	RCC->D1CCIPR &= ~RCC_D1CCIPR_QSPISEL;			// 00: hsi_ker_ck clock selected as per_ck cloc
 	RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN;				// Enable QSPI clock
 
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
+	GpioPin::Init(GPIOB, 2,  GpioPin::Type::AlternateFunction, 9);		// PB2:  CLK Flash 1
+	GpioPin::Init(GPIOD, 11, GpioPin::Type::AlternateFunction, 9);		// PD11: IO0 Flash 1
+	GpioPin::Init(GPIOD, 12, GpioPin::Type::AlternateFunction, 9);		// PD12: IO1 Flash 1
+	GpioPin::Init(GPIOD, 13, GpioPin::Type::AlternateFunction, 9);		// PD13: IO3 Flash 1
+	GpioPin::Init(GPIOE, 2,  GpioPin::Type::AlternateFunction, 9);		// PE2:  IO2 Flash 1
+	GpioPin::Init(GPIOG, 6,  GpioPin::Type::AlternateFunction, 10);		// PG6:  NCS Flash 1
 
-	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
-
-	// Flash 1
-	GPIOB->MODER &= ~GPIO_MODER_MODE2_0;			// PB2: CLK
-	GPIOD->MODER &= ~GPIO_MODER_MODE11_0;			// PD11: IO0
-	GPIOD->MODER &= ~GPIO_MODER_MODE12_0;			// PD12: IO1
-	GPIOD->MODER &= ~GPIO_MODER_MODE13_0;			// PD13: IO3
-	GPIOE->MODER &= ~GPIO_MODER_MODE2_0;			// PE2: IO2
-	GPIOG->MODER &= ~GPIO_MODER_MODE6_0;			// PG6: NCS
-
-	GPIOB->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
-	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL11_Pos;	// Alternate function 9
-	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL12_Pos;	// Alternate function 9
-	GPIOD->AFR[1] |= 9 << GPIO_AFRH_AFSEL13_Pos;	// Alternate function 9
-	GPIOE->AFR[0] |= 9 << GPIO_AFRL_AFSEL2_Pos;		// Alternate function 9
-	GPIOG->AFR[0] |= 10 << GPIO_AFRL_AFSEL6_Pos;	// Alternate function 10
-
-	// Flash 2
-	GPIOE->MODER &= ~GPIO_MODER_MODE7_0;			// PE7: IO0
-	GPIOE->MODER &= ~GPIO_MODER_MODE8_0;			// PE8: IO1
-	GPIOE->MODER &= ~GPIO_MODER_MODE9_0;			// PE9: IO2
-	GPIOE->MODER &= ~GPIO_MODER_MODE10_0;			// PE10: IO3
-	GPIOC->MODER &= ~GPIO_MODER_MODE11_0;			// PC11: NCS
-
-	GPIOE->AFR[0] |= 10 << GPIO_AFRL_AFSEL7_Pos;	// Alternate function 10
-	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL8_Pos;	// Alternate function 10
-	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL9_Pos;	// Alternate function 10
-	GPIOE->AFR[1] |= 10 << GPIO_AFRH_AFSEL10_Pos;	// Alternate function 10
-	GPIOC->AFR[1] |= 9 << GPIO_AFRH_AFSEL11_Pos;	// Alternate function 9
+	GpioPin::Init(GPIOE, 7,  GpioPin::Type::AlternateFunction, 10);		// PE7:  IO0 Flash 2
+	GpioPin::Init(GPIOE, 8,  GpioPin::Type::AlternateFunction, 10);		// PE8:  IO1 Flash 2
+	GpioPin::Init(GPIOE, 9,  GpioPin::Type::AlternateFunction, 10);		// PE9:  IO2 Flash 2
+	GpioPin::Init(GPIOE, 10, GpioPin::Type::AlternateFunction, 10);		// PE10: IO3 Flash 2
+	GpioPin::Init(GPIOC, 11, GpioPin::Type::AlternateFunction, 9);		// PC11: NCS Flash 2
 
 	QUADSPI->CR |= 6 << QUADSPI_CR_PRESCALER_Pos;	// Set prescaler to n + 1 => 200MHz / 7 = ~29MHz
 
@@ -638,10 +561,7 @@ void InitMidiUART() {
 	// PE0 (USART8 RX)
 
 	RCC->APB1LENR |= RCC_APB1LENR_UART8EN;			// UART8 clock enable
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E
-
-	GPIOE->MODER &= ~GPIO_MODER_MODE0_0;			// Set alternate function on PE0
-	GPIOE->AFR[0] |= 8 << GPIO_AFRL_AFSEL0_Pos;		// Alternate function on PD9 for USART8_RX is AF8
+	GpioPin::Init(GPIOE, 0, GpioPin::Type::AlternateFunction, 8);		// PE0 (USART8 RX) AF8
 
 	// By default clock source is muxed to peripheral clock 1 which is system clock / 4 (change clock source in RCC->D2CCIP2R)
 	// Calculations depended on oversampling mode set in CR1 OVER8. Default = 0: Oversampling by 16
