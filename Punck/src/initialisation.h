@@ -51,7 +51,8 @@ enum ADC_Controls {
 };
 enum channel {left = 0, right = 1};
 
-void SystemClock_Config();
+void InitClocks();
+void InitHardware();
 void InitCache();
 void InitSysTick();
 void InitADC();

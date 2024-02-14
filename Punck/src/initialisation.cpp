@@ -1,6 +1,7 @@
 #include "stm32h743xx.h"
 #include "initialisation.h"
 #include "extFlash.h"
+#include "GpioPin.h"
 #include <cstring>
 
 // Clock overview:
@@ -28,7 +29,7 @@
 #endif
 
 
-void SystemClock_Config()
+void InitClocks()
 {
 	RCC->APB4ENR |= RCC_APB4ENR_SYSCFGEN;			// Enable System configuration controller clock
 
@@ -78,6 +79,23 @@ void SystemClock_Config()
 	// By default Flash latency is set to 7 wait states - set to 4 for now but may need to increase
 	FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_4WS;
 	while ((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != FLASH_ACR_LATENCY_4WS);
+
+	SystemCoreClockUpdate();						// Update SystemCoreClock (system clock frequency)
+}
+
+
+void InitHardware()
+{
+	InitSysTick();
+	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
+	InitDebugTimer();				// Timer 3 used for performance testing
+	InitRNG();						// Init random number generator
+	InitMidiUART();					// UART for receiving serial MIDI
+	InitADC();						// ADCs used to monitor potentiometer inputs
+	//InitDAC();					// Available on debug pins
+	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
+	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
+	InitIO();						// Initialise buttons, switches and Tempo out
 }
 
 
@@ -502,16 +520,31 @@ void InitDebugTimer()
 
 void InitIO()
 {
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
+//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN;			// GPIO port B clock
+//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;			// GPIO port C clock
+//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;			// GPIO port D clock
+//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;			// GPIO port E clock
+//	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOGEN;			// GPIO port G clock
 
 	// MODER: 00: Input, 01: General purpose output mode, 10: Alternate function mode, 11: Analog mode (reset state)
 	// PUPDR: 00: No pull-up, pull-down, 01: Pull-up, 10: Pull-down
 
 	// Switch
+	GpioPin::Init(GPIOC, 6, GpioPin::Type::InputPullup);		// PC6: Seq Select
+	GpioPin::Init(GPIOE, 1, GpioPin::Type::InputPullup);		// PE1: MIDI Learn
+	GpioPin::Init(GPIOB, 6, GpioPin::Type::InputPullup);		// PB6: Kick button
+	GpioPin::Init(GPIOB, 5, GpioPin::Type::InputPullup);		// PB5: Snare button
+	GpioPin::Init(GPIOE, 11, GpioPin::Type::InputPullup);		// PE11: HiHat button
+	GpioPin::Init(GPIOB, 7, GpioPin::Type::InputPullup);		// PB7: Sample A button
+	GpioPin::Init(GPIOG, 13, GpioPin::Type::InputPullup);		// PG13: Sample B button
+	GpioPin::Init(GPIOD, 1, GpioPin::Type::Input);				// PD1: Kick
+	GpioPin::Init(GPIOD, 3, GpioPin::Type::Input);				// PD3: Snare
+	GpioPin::Init(GPIOG, 10, GpioPin::Type::Input);				// PG10: Closed Hihat
+	GpioPin::Init(GPIOD, 7, GpioPin::Type::Input);				// PD7: Open Hihat
+	GpioPin::Init(GPIOE, 14, GpioPin::Type::Input);				// PE14: Sampler A
+	GpioPin::Init(GPIOE, 15, GpioPin::Type::Input);				// PE15: Sampler B
+	GpioPin::Init(GPIOD, 9, GpioPin::Type::Output);				// PD9: Tempo out
+	/*
 	GPIOC->MODER &= ~GPIO_MODER_MODE6;				// PC6: Seq Select
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPD6_0;				// Pull up
 
@@ -545,6 +578,7 @@ void InitIO()
 	// Tempo out PD9
 	GPIOD->MODER &= ~GPIO_MODER_MODE9_1;
 
+*/
 }
 
 

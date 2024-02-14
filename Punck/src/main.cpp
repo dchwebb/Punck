@@ -32,25 +32,14 @@ extern "C" {
 
 int main(void) {
 
-	SystemClock_Config();			// Configure the clock and PLL
-	SystemCoreClockUpdate();		// Update SystemCoreClock (system clock frequency)
-	InitSysTick();
+	InitClocks();			// Configure the clock and PLL
+	InitHardware();
 
 #if (USB_DEBUG)
 	uart.Init();					// Used for debugging USB
 #endif
 
-	InitPWMTimer();					// PWM Timers used for adjustable LED brightness
-	InitDebugTimer();				// Timer 3 used for performance testing
-	InitRNG();						// Init random number generator
-	InitMidiUART();					// UART for receiving serial MIDI
-	InitADC();						// ADCs used to monitor potentiometer inputs
-	//InitDAC();					// Available on debug pins
-	InitCache();					// Configure MPU to not cache memory regions where DMA buffers reside
-	InitMDMA();						// Initialise MDMA for background QSPI Flash transfers
-
 	extFlash.Init();				// Initialise external QSPI Flash
-	InitIO();						// Initialise buttons, switches and Tempo out
 	configManager.RestoreConfig();	// Restore configuration settings (voice config, MIDI mapping, drum sequences)
 
 	usb.Init(false);				// Pass false to indicate hard reset
