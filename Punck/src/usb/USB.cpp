@@ -1,5 +1,7 @@
 #include "USB.h"
 
+USB usb;
+
 volatile bool debugStart = false;
 
 extern "C" {
@@ -447,6 +449,10 @@ void USB::Init(bool softReset)
 
     USBx_DEVICE->DCTL &= ~USB_OTG_DCTL_SDIS;							// Activate USB
     USB_OTG_FS->GAHBCFG |= USB_OTG_GAHBCFG_GINT;						// Activate USB Interrupts
+
+#if (USB_DEBUG)
+	uart.Init();					// Used for debugging USB
+#endif
 
 }
 

@@ -557,23 +557,21 @@ void InitQSPI()
 }
 
 
-void InitMidiUART() {
-	// PE0 (USART8 RX)
-
+void InitMidiUART()
+{
 	RCC->APB1LENR |= RCC_APB1LENR_UART8EN;			// UART8 clock enable
-	GpioPin::Init(GPIOE, 0, GpioPin::Type::AlternateFunction, 8);		// PE0 (USART8 RX) AF8
+	GpioPin::Init(GPIOE, 0, GpioPin::Type::AlternateFunction, 8);	// PE0 (USART8 RX) AF8
 
 	// By default clock source is muxed to peripheral clock 1 which is system clock / 4 (change clock source in RCC->D2CCIP2R)
 	// Calculations depended on oversampling mode set in CR1 OVER8. Default = 0: Oversampling by 16
-	int USARTDIV = (SystemCoreClock / 4) / 31250;	//clk / desired_baud
+	const int usartDiv = (SystemCoreClock / 4) / 31250;				//clk / desired_baud
 
-	UART8->BRR |= USARTDIV & USART_BRR_DIV_MANTISSA_Msk;
-	UART8->CR1 &= ~USART_CR1_M;						// 0: 1 Start bit, 8 Data bits, n Stop bit; 	1: 1 Start bit, 9 Data bits, n Stop bit
+	UART8->BRR |= usartDiv & USART_BRR_DIV_MANTISSA_Msk;
+	UART8->CR1 &= ~USART_CR1_M;						// 0: 1 Start bit, 8 Data bits, n Stop bit; 1: 1 Start bit, 9 Data bits, n Stop bit
 	UART8->CR1 |= USART_CR1_RE;						// Receive enable
 	UART8->CR2 |= USART_CR2_RXINV;					// Invert UART receive to allow use of inverting buffer
 
-	// Set up interrupts
-	UART8->CR1 |= USART_CR1_RXNEIE;
+	UART8->CR1 |= USART_CR1_RXNEIE;					// Set up interrupts
 	NVIC_SetPriority(UART8_IRQn, 3);				// Lower is higher priority
 	NVIC_EnableIRQ(UART8_IRQn);
 
@@ -590,20 +588,12 @@ void InitRNG()
 
 void InitPWMTimer()
 {
-	// TIM8: [Channel 1 Output: PC6;] Channel 2: PC7; Channel 3: PC8; Channel 4: PC9
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
+	// TIM8
 	RCC->APB2ENR |= RCC_APB2ENR_TIM8EN;
 
-	// Enable channel 1, 2, 3 PWM output pins on PC7, PC8, PC9
-	// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
-	GPIOC->MODER &= ~(GPIO_MODER_MODE7_0);
-	GPIOC->AFR[0] |= (GPIO_AFRL_AFSEL7_0 | GPIO_AFRL_AFSEL7_1);			// Timer 8 Output channel is AF3
-
-	GPIOC->MODER &= ~(GPIO_MODER_MODE8_0);
-	GPIOC->AFR[1] |= (GPIO_AFRH_AFSEL8_0 | GPIO_AFRH_AFSEL8_1);			// Timer 8 Output channel is AF3
-
-	GPIOC->MODER &= ~(GPIO_MODER_MODE9_0);
-	GPIOC->AFR[1] |= (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1);			// Timer 8 Output channel is AF3
+	GpioPin::Init(GPIOC, 7, GpioPin::Type::AlternateFunction, 3);	// PC7 TIM8 Channel 2
+	GpioPin::Init(GPIOC, 8, GpioPin::Type::AlternateFunction, 3);	// PC8 TIM8 Channel 3
+	GpioPin::Init(GPIOC, 9, GpioPin::Type::AlternateFunction, 3);	// PC9 TIM8 Channel 4
 
 	// Timing calculations: Clock = 400MHz / (PSC + 1) = 200m counts per second
 	// ARR = number of counts per PWM tick = 4096
@@ -634,15 +624,11 @@ void InitPWMTimer()
 
 
 	//******************************************************************************
-	// TIM4: Channel 3: PD14; Channel 4: PD15
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN;
+	// TIM4
 	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
 
-	GPIOD->MODER &= ~(GPIO_MODER_MODE14_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
-	GPIOD->AFR[1] |= GPIO_AFRH_AFSEL14_1;			// Timer 4 Output channel is AF2
-
-	GPIOD->MODER &= ~(GPIO_MODER_MODE15_0);			// 00: Input mode; 01: General purpose output mode; 10: Alternate function mode; 11: Analog mode (default)
-	GPIOD->AFR[1] |= GPIO_AFRH_AFSEL15_1;			// Timer 8 Output channel is AF2
+	GpioPin::Init(GPIOD, 14, GpioPin::Type::AlternateFunction, 2);	// PD14 TIM4 Channel 3
+	GpioPin::Init(GPIOD, 15, GpioPin::Type::AlternateFunction, 2);	// PD15 TIM4 Channel 4
 
 	// Timing calculations: Clock = 400MHz / (PSC + 1) = 200m counts per second
 	// ARR = number of counts per PWM tick = 4096

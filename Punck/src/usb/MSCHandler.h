@@ -69,7 +69,7 @@
 
 #define REQUEST_SENSE_DATA_LEN                      0x12U
 
-// SCSI Meduim codes
+// SCSI Medium codes
 #define SCSI_MEDIUM_UNLOCKED                        0x00U
 #define SCSI_MEDIUM_LOCKED                          0x01U
 #define SCSI_MEDIUM_EJECTED                         0x02U

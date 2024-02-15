@@ -23,7 +23,6 @@ float __attribute__((section (".ram_d1_data"))) reverbMixBuffer[94000];
 // Web editor: finish handling non-float values in config
 // Sample playback does not account for samples stored in discontinuous memory locations
 
-USB usb;
 
 extern "C" {
 #include "interrupts.h"
@@ -32,16 +31,10 @@ extern "C" {
 
 int main(void) {
 
-	InitClocks();			// Configure the clock and PLL
+	InitClocks();					// Configure the clock and PLL
 	InitHardware();
-
-#if (USB_DEBUG)
-	uart.Init();					// Used for debugging USB
-#endif
-
 	extFlash.Init();				// Initialise external QSPI Flash
 	configManager.RestoreConfig();	// Restore configuration settings (voice config, MIDI mapping, drum sequences)
-
 	usb.Init(false);				// Pass false to indicate hard reset
 	InitI2S();						// Initialise I2S which will start main sample interrupts
 
