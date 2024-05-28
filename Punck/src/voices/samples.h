@@ -3,6 +3,7 @@
 #include "initialisation.h"
 #include "DrumVoice.h"
 #include <string>
+#include <array>
 
 class NoteMapper;
 

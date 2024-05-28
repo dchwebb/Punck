@@ -116,8 +116,8 @@ void InitMDMA()
 	MDMA_Channel0->CTCR |= MDMA_CTCR_SWRM;			// Software Request Mode
 	MDMA_Channel0->CTCR |= MDMA_CTCR_TRGM;			// 01: Each MDMA request triggers a block transfer
 
-	MDMA_Channel0->CTBR &= ~MDMA_CTBR_SBUS;			// Source: AXI Bus used for QSPI
-	MDMA_Channel0->CTBR |= MDMA_CTBR_DBUS;			// Destination: AHB Bus used for addresses starting 0x20xxxxxx (DTCMRAM)
+	MDMA_Channel0->CTBR &= ~MDMA_CTBR_SBUS;			// Source: 0* System/AXI bus; 1 AHB bus/TCM
+	MDMA_Channel0->CTBR |= MDMA_CTBR_DBUS;			// Destination: 0 System/AXI bus; 1* AHB bus/TCM: used for addresses starting 0x20xxxxxx (DTCMRAM)
 
 	MDMA_Channel0->CCR |= MDMA_CCR_BTIE;			// Enable Block Transfer complete interrupt
 
