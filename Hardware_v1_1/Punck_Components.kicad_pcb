@@ -15464,7 +15464,7 @@
 				)
 			)
 		)
-		(property "Value" "8MHz 20pF"
+		(property "Value" "12MHz 20pF"
 			(at 0 2.8 0)
 			(layer "F.Fab")
 			(uuid "8f896d0c-a4f5-4c10-982a-902fb551af6d")

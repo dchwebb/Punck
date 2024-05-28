@@ -93,4 +93,4 @@ U4,PCM5100APW,SSOP-20_4.4x6.5mm_Pitch0.65mm_Round_Pads,55.3,-86.8,0.0,top
 U5,W25Q128JVS,SOIC-8_5.23x5.23mm_P1.27mm,23.5,-42.8,90.0,top
 U6,TPS561201,SOT-23-6_Handsoldering,71.55,-6.3,0.0,top
 U7,LD1117-3.3-4Tab,SOT-223-3_TabPin2,27.4,-8.2,270.0,top
-Y1,8MHz 20pF,Crystal_SMD_5032-2Pin_5.0x3.2mm,43.85,-24.6,0.0,top
+Y1,12MHz 20pF,Crystal_SMD_5032-2Pin_5.0x3.2mm,43.85,-24.6,0.0,top
