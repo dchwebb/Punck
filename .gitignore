@@ -1,4 +1,3 @@
-Punck/Debug/*
 Punck/Drivers/FatFs/doc/*
 
 #*.html
@@ -26,3 +25,5 @@ Punck/Drivers/FatFs/doc/*
 
 ~$hat analysis.docx
 Hardware/\#auto_saved_files\#
+*.cyclo
+Punck/Debug/makefile
