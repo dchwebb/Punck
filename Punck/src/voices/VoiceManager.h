@@ -91,6 +91,7 @@ public:
 	Claps clapsPlayer;
 
 	NoteMapper noteMapper[Voice::count];
+	uint8_t midiChannel = 0;
 
 private:
 	float FastTanh(const float x);

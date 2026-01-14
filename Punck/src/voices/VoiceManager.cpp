@@ -289,6 +289,7 @@ uint32_t VoiceManager:: GetConfig(uint8_t** buff)
 		config[i++] = nm.midiLow;
 		config[i++] = nm.midiHigh;
 	}
+	config[i++] = midiChannel;
 	*buff = config;
 	return sizeof(config);
 }
@@ -302,6 +303,7 @@ uint32_t VoiceManager:: StoreConfig(uint8_t* buff)
 		nm.midiLow = buff[i++];
 		nm.midiHigh = buff[i++];
 	}
+	midiChannel = buff[i++];
 	return sizeof(config);
 }
 

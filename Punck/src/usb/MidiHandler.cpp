@@ -268,19 +268,21 @@ void MidiHandler::midiEvent(const uint32_t data)
 	auto midiData = MidiData(data);
 	MidiNote midiNote(midiData.db1, midiData.db2);
 
-	switch (midiData.msg) {
-	case NoteOff:
-		break;
+	if (voiceManager.midiChannel == 0 || midiData.chn + 1 == voiceManager.midiChannel) {
 
-	case NoteOn:
-		voiceManager.NoteOn(midiNote);
-		break;
+		switch (midiData.msg) {
+		case NoteOff:
+			break;
 
-	case PitchBend:
-		pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
-		break;
+		case NoteOn:
+			voiceManager.NoteOn(midiNote);
+			break;
+
+		case PitchBend:
+			pitchBend = static_cast<uint32_t>(midiData.db1) + (midiData.db2 << 7);
+			break;
+		}
 	}
-
 }
 
 

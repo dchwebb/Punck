@@ -104,6 +104,7 @@ void CDCHandler::ProcessCommand()
 				"dir         -  Print list of all files and their directories\r\n"
 				"samplelist  -  Show details of all samples found in flash\r\n"
 				"midimap     -  Display MIDI note mapping\r\n"
+				"midichn:x   -  Set MIDI channel (0 = omni)\r\n"
 				"reboot      -  Reboot device\r\n"
 				"leds:x      -  Set all LEDs to brightness from 1-100%\r\n"
 				"revertleds  -  Reset all LEDs\r\n"
@@ -216,8 +217,16 @@ void CDCHandler::ProcessCommand()
 		DelayMS(10);
 		Reboot();
 
+	} else if (cmd.compare(0, 8, "midichn:") == 0) {			// Set MIDI channel
+		const int32_t midichannel = ParseInt(cmd, ':', 0, 16);
+		if (midichannel >= 0) {
+			voiceManager.midiChannel = midichannel;
+			configManager.SaveConfig();
+			printf("MIDI Channel: %d\r\n", voiceManager.midiChannel);
+		}
+
 	} else if (cmd.compare("midimap") == 0) {					// Display MIDI note mapping
-		printf("MIDI mapping:\r\n");
+		printf("MIDI mapping: Channel: %d\r\n", voiceManager.midiChannel);
 		for (auto note : voiceManager.noteMapper) {
 			switch (note.voice) {
 			case VoiceManager::kick:
